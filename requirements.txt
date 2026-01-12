@@ -1,0 +1,12 @@
+customtkinter
+requests
+cryptography
+fpdf
+pyttsx3
+edge-tts
+pygame
+plyer
+bcrypt
+python-dotenv
+paramiko
+argon2-cffi
