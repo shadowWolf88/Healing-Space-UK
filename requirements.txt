@@ -10,3 +10,6 @@ bcrypt
 python-dotenv
 paramiko
 argon2-cffi
+flask
+flask-cors
+gunicorn

@@ -2,9 +2,14 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "python main.py"
+startCommand = "gunicorn api:app"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
 
 [nixpacks]
 # Nixpacks will auto-detect Python and install dependencies
+
+[[deploy.healthcheck]]
+httpPath = "/api/health"
+initialDelaySeconds = 30
+periodSeconds = 10
