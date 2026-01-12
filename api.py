@@ -7,14 +7,31 @@ from flask_cors import CORS
 import sqlite3
 import os
 import json
+import hashlib
+import requests
 from datetime import datetime
 import sys
 
-# Import existing modules (no changes to them)
+# Import existing modules (avoid importing main.py which has tkinter)
 from secrets_manager import SecretsManager
 from audit import log_event
 from fhir_export import export_patient_fhir
-import main
+
+# Import password hashing libraries with fallbacks (same logic as main.py)
+try:
+    from argon2 import PasswordHasher
+    _ph = PasswordHasher()
+    HAS_ARGON2 = True
+except Exception:
+    _ph = None
+    HAS_ARGON2 = False
+
+try:
+    import bcrypt
+    HAS_BCRYPT = True
+except Exception:
+    bcrypt = None
+    HAS_BCRYPT = False
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 CORS(app)
@@ -22,9 +39,178 @@ CORS(app)
 # Initialize with same settings as main app
 DEBUG = os.environ.get('DEBUG', '').lower() in ('1', 'true', 'yes')
 
+# Load secrets
+secrets = SecretsManager(debug=DEBUG)
+GROQ_API_KEY = secrets.get_secret("GROQ_API_KEY") or os.environ.get("GROQ_API_KEY")
+API_URL = os.environ.get("API_URL", "https://api.groq.com/openai/v1/chat/completions")
+PIN_SALT = secrets.get_secret("PIN_SALT") or os.environ.get("PIN_SALT") or 'dev_fallback_salt'
+
+# Password/PIN hashing functions (copied from main.py to avoid tkinter import)
+def hash_password(password: str) -> str:
+    """Hash password using Argon2 > bcrypt > PBKDF2 fallback"""
+    if HAS_ARGON2 and _ph:
+        return _ph.hash(password)
+    if HAS_BCRYPT:
+        return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    # Fallback PBKDF2
+    import hashlib
+    salt = hashlib.sha256(password.encode()).hexdigest()[:16]
+    dk = hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 200000)
+    return f"pbkdf2${dk.hex()}"
+
+def verify_password(stored: str, password: str) -> bool:
+    """Verify password against stored hash"""
+    if not stored:
+        return False
+    if HAS_ARGON2 and _ph and stored.startswith('$argon2'):
+        try:
+            _ph.verify(stored, password)
+            return True
+        except Exception:
+            return False
+    if HAS_BCRYPT and stored.startswith("$2"):
+        return bcrypt.checkpw(password.encode(), stored.encode())
+    if stored.startswith("pbkdf2$"):
+        dk = stored.split("$", 1)[1]
+        salt = hashlib.sha256(password.encode()).hexdigest()[:16]
+        new = hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 200000).hex()
+        return new == dk
+    # Legacy SHA256 support
+    if len(stored) == 64 and all(c in '0123456789abcdef' for c in stored.lower()):
+        return hashlib.sha256(password.encode()).hexdigest() == stored
+    return False
+
+def hash_pin(pin: str) -> str:
+    """Hash PIN using bcryhash_password(password)
+        hashed_pin = 
+        return bcrypt.hashpw(pin.encode(), bcrypt.gensalt()).decode()
+    salt = hashlib.sha256(PIN_SALT.encode()).hexdigest()[:16]
+    dk = hashlib.pbkdf2_hmac('sha256', pin.encode(), salt.encode(), 100000)
+    return f"pbkdf2${dk.hex()}"
+
+def check_pin(pin: str, stored: str) -> bool:
+    """Verify PIN against stored hash"""
+    if not stored:
+        return False
+    if stored.startswith("$2") and HAS_BCRYPT:
+        return bcrypt.checkpw(pin.encode(), stored.encode())
+    if stored.startswith("pbkdf2$"):
+        dk = stored.split("$", 1)[1]
+        salt = hashlib.sha256(PIN_SALT.encode()).hexdigest()[:16]
+        new = hashlib.pbkdf2_hmac('sha256', pin.encode(), salt.encode(), 100000).hex()
+        return new == dk
+    return pin == stored
+
+def init_db():
+    """Initialize database with all required tables"""
+    conn = sqlite3.connect("therapist_app.db")
+    cursor = conn.cursor()
+    
+    cursor.execute('''CREATE TABLE IF NOT EXISTS users 
+                      (username TEXT PRIMARY KEY, password TEXT, pin TEXT, last_login TIMESTAMP, 
+                       full_name TEXT, dob TEXT, conditions TEXT, role TEXT DEFAULT 'user')''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS sessions 
+                      (session_id TEXT PRIMARY KEY, username TEXT, title TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS gratitude_logs 
+                      (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, entry TEXT, entry_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS mood_logs 
+                      (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, mood_val INTEGER, 
+                       sleep_val REAL, meds TEXT, notes TEXT, sentiment TEXT,
+                       exercise_mins INTEGER DEFAULT 0, outside_mins INTEGER DEFAULT 0, water_pints REAL DEFAULT 0,
+                       entrestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS safety_plans
+                      (username TEXT PRIMARY KEY, triggers TEXT, coping TEXT, contacts TEXT)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS ai_memory 
+                      (username TEXT PRIMARY KEY, memory_summary TEXT, last_updated DATETIME)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS cbt_records 
+                      (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, situation TEXT, thought TEXT, evidence TEXT, entry_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS clinical_scales
+                      (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, scale_name TEXT, score INTEGER, severity TEXT, entry_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS community_posts
+                      (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, message TEXT, likes INTEGER DEFAULT 0, entry_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS audit_logs
+                      (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, actor TEXT, action TEXT, details TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS alerts
+                      (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, alert_type TEXT, details TEXT, status TEXT DEFAULT 'open', created_at DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS chat_history 
+                      (session_id TEXT, sender TEXT, message TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)''')
+    
+    conn.commit()
+    conn.close()
+
+class SafetyMonitor:
+    """Safety monitoring for crisis detection"""
+    def __init__(self):
+        self.risk_keywords = [
+            "kill myself", "suicide", "end my life", "want to die",
+            "hurt myself", "self harm", "don't want to live", 
+            "better off dead", "swallow pills", "overdose", "hanging myself", 
+            "hurt someone else", "violent thoughts", "feeling hopeless", "no reason to live"
+        ]
+
+    def is_high_risk(self, text):
+        clean_text = text.lower().strip()
+        return any(phrase in clean_text for phrase in self.risk_keywords)
+    
+    def send_crisis_alert(self, user_details):
+        try:
+            username = user_details if isinstance(user_details, str) else user_details.get('username')
+            details = str(user_details)
+            conn = sqlite3.connect("therapist_app.db")
+            conn.execute("INSERT INTO alerts (username, alert_type, details) VALUES (?,?,?)", (username, 'crisis', details))
+            conn.commit()
+            conn.close()
+            log_event(username or 'unknown', 'system', 'crisis_alert_sent', details)
+            return True
+        except Exception:
+            return False
+
+class TherapistAI:
+    """AI therapy interface"""
+    def __init__(self, username=None):
+        self.username = username
+        self.headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
+
+    def get_response(self, user_message, chat_history=None):
+        """Get AI response for therapy chat"""
+        try:
+            messages = [{"role": "system", "content": "You are a compassionate AI therapist. Provide supportive, empathetic responses."}]
+            
+            if chat_history:
+                for sender, msg in chat_history[-10:]:
+                    role = "assistant" if sender == "ai" else "user"
+                    messages.append({"role": role, "content": msg})
+            
+            messages.append({"role": "user", "content": user_message})
+            
+            payload = {
+                "model": "llama-3.3-70b-versatile",
+                "messages": messages,
+                "temperature": 0.7,
+                "max_tokens": 500
+            }
+            
+            response = requests.post(API_URL, headers=self.headers, json=payload, timeout=30)
+            response.raise_for_status()
+            
+            return response.json()["choices"][0]["message"]["content"]
+        except Exception as e:
+            return f"I apologize, but I'm having trouble connecting right now. Error: {str(e)}"
+
+# Crisis resources text
+CRISIS_RESOURCES = """
+*** IMPORTANT SAFETY NOTICE ***
+If you are feeling overwhelmed and considering self-harm or ending your life, please reach out for help immediately. 
+
+- UK: Call 999 or 111, or text SHOUT to 85258.
+- USA/Canada: Call or text 988.
+- International: Visit findahelpline.com
+"""
+
 # Initialize database on startup
 try:
-    main.init_db()
+    init_db()
 except Exception as e:
     print(f"Database initialization: {e}")
 
@@ -125,8 +311,8 @@ def therapy_chat():
         if not username or not message:
             return jsonify({'error': 'Username and message required'}), 400
         
-        # Use existing TherapistAI class
-        ai = main.TherapistAI(username)
+        # Use TherapistAI class
+        ai = TherapistAI(username)
         
         # Get conversation history
         conn = sqlite3.connect("therapist_app.db")
@@ -294,8 +480,8 @@ def safety_check():
         if not text:
             return jsonify({'error': 'Text required'}), 400
         
-        # Use existing SafetyMonitor
-        monitor = main.SafetyMonitor()
+        # Use SafetyMonitor
+        monitor = SafetyMonitor()
         is_high_risk = monitor.is_high_risk(text)
         
         if is_high_risk and username:
@@ -305,7 +491,7 @@ def safety_check():
         return jsonify({
             'success': True,
             'is_high_risk': is_high_risk,
-            'crisis_resources': main.CRISIS_RESOURCES if is_high_risk else None
+            'crisis_resources': CRISIS_RESOURCES if is_high_risk else None
         }), 200
         
     except Exception as e:
