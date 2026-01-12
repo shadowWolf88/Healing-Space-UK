@@ -81,8 +81,8 @@ def verify_password(stored: str, password: str) -> bool:
     return False
 
 def hash_pin(pin: str) -> str:
-    """Hash PIN using bcryhash_password(password)
-        hashed_pin = 
+    """Hash PIN using bcrypt or PBKDF2"""
+    if HAS_BCRYPT:
         return bcrypt.hashpw(pin.encode(), bcrypt.gensalt()).decode()
     salt = hashlib.sha256(PIN_SALT.encode()).hexdigest()[:16]
     dk = hashlib.pbkdf2_hmac('sha256', pin.encode(), salt.encode(), 100000)
