@@ -457,6 +457,132 @@
             gap: 15px;
         }
         
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .sleep-checklist {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .sleep-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .sleep-item:hover {
+            background: #e8e8e8;
+        }
+        
+        .sleep-item input[type="checkbox"] {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+        }
+        
+        .sleep-item span {
+            font-size: 16px;
+        }
+        
+        .community-post {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .community-post .post-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .community-post .post-message {
+            line-height: 1.6;
+            color: #333;
+        }
+        
+        .community-post .post-likes {
+            margin-top: 8px;
+            color: #999;
+            font-size: 13px;
+        }
+        
+        .patient-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .patient-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+        
+        .patient-card .patient-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .patient-card .patient-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .patient-stat {
+            text-align: center;
+            padding: 8px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+        
+        .patient-stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .patient-stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+        }
+        
         @media (max-width: 768px) {
             .tabs {
                 flex-direction: column;
@@ -529,7 +655,12 @@
                 <button class="tab-btn" onclick="switchTab('cbt', this)">🧠 CBT Tools</button>
                 <button class="tab-btn" onclick="switchTab('pet', this)">🐶 My Pet</button>
                 <button class="tab-btn" onclick="switchTab('clinical', this)">📋 Assessments</button>
+                <button class="tab-btn" onclick="switchTab('community', this)">👥 Community</button>
+                <button class="tab-btn" onclick="switchTab('safety', this)">🆘 Safety Plan</button>
+                <button class="tab-btn" onclick="switchTab('insights', this)">💡 Insights</button>
+                <button class="tab-btn" onclick="switchTab('sleep', this)">😴 Sleep Hygiene</button>
                 <button class="tab-btn" onclick="switchTab('history', this)">📈 My History</button>
+                <button class="tab-btn" id="professionalTabBtn" onclick="switchTab('professional', this)" style="display:none;">👨‍⚕️ Professional</button>
             </div>
             
             <!-- Therapy Chat Tab -->
@@ -765,6 +896,181 @@
                 
                 <div id="historyContent">
                     <p style="text-align: center; color: #999; padding: 40px;">Click "Load My History" to view your mood logs</p>
+                </div>
+            </div>
+            
+            <!-- Community Support Tab -->
+            <div id="communityTab" class="tab-content">
+                <h3>Community Support Board</h3>
+                <p style="color: #666; margin-bottom: 20px;">Connect with others on their mental health journey.</p>
+                
+                <div class="card">
+                    <h4>Share Your Message</h4>
+                    <textarea id="communityMessage" rows="4" style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e0e0e0; margin-bottom: 10px;" placeholder="Share encouragement, hope, or ask for support..."></textarea>
+                    <button class="btn" onclick="postCommunity()">Post Message</button>
+                </div>
+                
+                <div class="card" style="margin-top: 20px;">
+                    <h4>Recent Posts</h4>
+                    <button class="btn btn-secondary" onclick="loadCommunity()" style="margin-bottom: 15px;">Refresh Posts</button>
+                    <div id="communityPosts">
+                        <p style="text-align: center; color: #999;">Click "Refresh Posts" to load community messages</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Safety Plan Tab -->
+            <div id="safetyTab" class="tab-content">
+                <h3>🆘 My Safety Plan</h3>
+                <p style="color: #666; margin-bottom: 20px;">Create a plan for when you're feeling in crisis.</p>
+                
+                <div class="card">
+                    <div class="form-group">
+                        <label><strong>Warning Signs/Triggers:</strong></label>
+                        <textarea id="safetyTriggers" rows="3" style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e0e0e0;" placeholder="What triggers distress for me..."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><strong>Coping Strategies:</strong></label>
+                        <textarea id="safetyCoping" rows="3" style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e0e0e0;" placeholder="What helps me calm down..."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><strong>Support Contacts:</strong></label>
+                        <textarea id="safetySupport" rows="3" style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e0e0e0;" placeholder="Friends/family I can call..."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label><strong>Professional Contacts:</strong></label>
+                        <textarea id="safetyProfessional" rows="3" style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e0e0e0;" placeholder="Therapist, crisis hotline numbers..."></textarea>
+                    </div>
+                    
+                    <button class="btn" onclick="saveSafetyPlan()">Save Safety Plan</button>
+                    <button class="btn btn-secondary" onclick="loadSafetyPlan()">Load Saved Plan</button>
+                </div>
+                
+                <div class="card" style="margin-top: 20px; background: #ffebee;">
+                    <h4 style="color: #c62828;">🚨 Crisis Resources</h4>
+                    <p><strong>988 Suicide & Crisis Lifeline:</strong> Call or text 988 (US)</p>
+                    <p><strong>Crisis Text Line:</strong> Text HOME to 741741</p>
+                    <p><strong>International:</strong> <a href="https://findahelpline.com" target="_blank">findahelpline.com</a></p>
+                </div>
+            </div>
+            
+            <!-- Progress Insights Tab -->
+            <div id="insightsTab" class="tab-content">
+                <h3>💡 Progress Insights & Export</h3>
+                <p style="color: #666; margin-bottom: 20px;">View AI-generated insights and export your data.</p>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                    <button class="btn" onclick="loadInsights()">Generate Insights</button>
+                    <button class="btn" onclick="exportCSV()" style="background: #34495e;">📥 Export CSV</button>
+                    <button class="btn" onclick="exportPDF()" style="background: #e74c3c;">📄 Export PDF</button>
+                </div>
+                
+                <div id="insightsContent">
+                    <div class="card">
+                        <h4>Your Stats</h4>
+                        <div id="statsDisplay" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                            <div class="stat-card">
+                                <div class="stat-value" id="avgMood">-</div>
+                                <div class="stat-label">Average Mood</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="avgSleep">-</div>
+                                <div class="stat-label">Average Sleep</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="moodTrend">-</div>
+                                <div class="stat-label">Trend</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card" style="margin-top: 20px;">
+                        <h4>AI Insights</h4>
+                        <div id="aiInsight" style="padding: 20px; background: #f5f5f5; border-radius: 12px; line-height: 1.6;">
+                            <p style="color: #999;">Click "Generate Insights" to get personalized analysis of your progress.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="card" style="margin-top: 20px;">
+                        <h4>Mood Trend (Last 7 Entries)</h4>
+                        <canvas id="moodChart" width="600" height="200" style="max-width: 100%;"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sleep Hygiene Tab -->
+            <div id="sleepTab" class="tab-content">
+                <h3>😴 Sleep Hygiene Checklist</h3>
+                <p style="color: #666; margin-bottom: 20px;">Complete your bedtime routine for better sleep.</p>
+                
+                <div class="card">
+                    <h4>Bedtime Routine</h4>
+                    <p style="margin-bottom: 15px;">Check off each task as you complete it:</p>
+                    
+                    <div class="sleep-checklist">
+                        <label class="sleep-item">
+                            <input type="checkbox" class="sleep-check">
+                            <span>💡 Lights Dimmed (at least 1 hour before bed)</span>
+                        </label>
+                        <label class="sleep-item">
+                            <input type="checkbox" class="sleep-check">
+                            <span>📱 Phone on Do Not Disturb</span>
+                        </label>
+                        <label class="sleep-item">
+                            <input type="checkbox" class="sleep-check">
+                            <span>📺 No Screens for 30 mins</span>
+                        </label>
+                        <label class="sleep-item">
+                            <input type="checkbox" class="sleep-check">
+                            <span>🙏 Gratitude Recorded</span>
+                        </label>
+                        <label class="sleep-item">
+                            <input type="checkbox" class="sleep-check">
+                            <span>🧘 Deep Breathing Done</span>
+                        </label>
+                        <label class="sleep-item">
+                            <input type="checkbox" class="sleep-check">
+                            <span>🛏️ Bedroom Cool & Dark</span>
+                        </label>
+                        <label class="sleep-item">
+                            <input type="checkbox" class="sleep-check">
+                            <span>📖 Reading Something Calming</span>
+                        </label>
+                    </div>
+                    
+                    <button class="btn" onclick="resetSleepChecklist()" style="margin-top: 20px;">Reset Checklist</button>
+                </div>
+                
+                <div class="card" style="margin-top: 20px;">
+                    <h4>Sleep Tips</h4>
+                    <ul style="line-height: 1.8; color: #555;">
+                        <li>Maintain a consistent sleep schedule (same bedtime & wake time)</li>
+                        <li>Avoid caffeine after 2 PM</li>
+                        <li>Keep bedroom temperature between 60-67°F (15-19°C)</li>
+                        <li>Use your bed only for sleep (not work or TV)</li>
+                        <li>If you can't sleep after 20 minutes, get up and do a calm activity</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Professional Dashboard Tab -->
+            <div id="professionalTab" class="tab-content">
+                <h3>👨‍⚕️ Professional Dashboard</h3>
+                <p style="color: #666; margin-bottom: 20px;">Overview of all patients under your care.</p>
+                
+                <button class="btn" onclick="loadPatients()" style="margin-bottom: 20px;">Load Patient List</button>
+                
+                <div id="patientList">
+                    <p style="text-align: center; color: #999; padding: 40px;">Click "Load Patient List" to view all patients</p>
+                </div>
+                
+                <div id="patientDetail" style="display: none;" class="card">
+                    <button class="btn btn-secondary" onclick="closeProfessionalDetail()" style="margin-bottom: 15px;">← Back to Patient List</button>
+                    <h4 id="patientDetailName"></h4>
+                    <div id="patientDetailContent"></div>
                 </div>
             </div>
         </div>
@@ -1362,6 +1668,341 @@
             el.className = `alert alert-${type}`;
             el.classList.remove('hidden');
             setTimeout(() => el.classList.add('hidden'), 5000);
+        }
+        
+        // Community Functions
+        async function loadCommunity() {
+            const postsDiv = document.getElementById('communityPosts');
+            postsDiv.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="loading" style="margin: 0 auto;"></div></div>';
+            
+            try {
+                const response = await fetch('/api/community/posts');
+                const data = await response.json();
+                
+                if (response.ok && data.posts && data.posts.length > 0) {
+                    const html = data.posts.map(post => `
+                        <div class="community-post">
+                            <div class="post-header">
+                                <strong>${post.username}</strong>
+                                <span>${new Date(post.timestamp).toLocaleString()}</span>
+                            </div>
+                            <div class="post-message">${post.message}</div>
+                            <div class="post-likes">❤️ ${post.likes} likes</div>
+                        </div>
+                    `).join('');
+                    postsDiv.innerHTML = html;
+                } else {
+                    postsDiv.innerHTML = '<p style="text-align: center; color: #999;">No posts yet. Be the first to share!</p>';
+                }
+            } catch (error) {
+                postsDiv.innerHTML = '<p style="text-align: center; color: #dc3545;">Error loading posts</p>';
+                console.error('Community load error:', error);
+            }
+        }
+        
+        async function postCommunity() {
+            const message = document.getElementById('communityMessage').value.trim();
+            
+            if (!message) {
+                alert('Please write a message before posting');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/community/post', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: currentUser, message })
+                });
+                
+                if (response.ok) {
+                    document.getElementById('communityMessage').value = '';
+                    alert('Message posted successfully!');
+                    loadCommunity();
+                } else {
+                    alert('Error posting message');
+                }
+            } catch (error) {
+                alert('Connection error');
+                console.error('Post error:', error);
+            }
+        }
+        
+        // Safety Plan Functions
+        async function loadSafetyPlan() {
+            try {
+                const response = await fetch(`/api/safety-plan?username=${encodeURIComponent(currentUser)}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('safetyTriggers').value = data.triggers || '';
+                    document.getElementById('safetyCoping').value = data.coping_strategies || '';
+                    document.getElementById('safetySupport').value = data.support_contacts || '';
+                    document.getElementById('safetyProfessional').value = data.professional_contacts || '';
+                    alert('Safety plan loaded successfully');
+                } else {
+                    alert('Error loading safety plan');
+                }
+            } catch (error) {
+                alert('Connection error');
+                console.error('Safety plan load error:', error);
+            }
+        }
+        
+        async function saveSafetyPlan() {
+            const triggers = document.getElementById('safetyTriggers').value;
+            const coping = document.getElementById('safetyCoping').value;
+            const support = document.getElementById('safetySupport').value;
+            const professional = document.getElementById('safetyProfessional').value;
+            
+            try {
+                const response = await fetch('/api/safety-plan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: currentUser,
+                        triggers,
+                        coping_strategies: coping,
+                        support_contacts: support,
+                        professional_contacts: professional
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Safety plan saved successfully!');
+                } else {
+                    alert('Error saving safety plan');
+                }
+            } catch (error) {
+                alert('Connection error');
+                console.error('Safety plan save error:', error);
+            }
+        }
+        
+        // Insights Functions
+        async function loadInsights() {
+            try {
+                const response = await fetch(`/api/insights?username=${encodeURIComponent(currentUser)}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('avgMood').textContent = data.avg_mood.toFixed(1);
+                    document.getElementById('avgSleep').textContent = data.avg_sleep.toFixed(1) + 'h';
+                    document.getElementById('moodTrend').textContent = data.trend;
+                    document.getElementById('aiInsight').innerHTML = `<p>${data.insight}</p>`;
+                    
+                    // Draw mood chart
+                    if (data.mood_data && data.mood_data.length > 0) {
+                        drawMoodChart(data.mood_data);
+                    }
+                } else {
+                    alert('Error loading insights');
+                }
+            } catch (error) {
+                alert('Connection error');
+                console.error('Insights load error:', error);
+            }
+        }
+        
+        function drawMoodChart(moodData) {
+            const canvas = document.getElementById('moodChart');
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = 40;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Background
+            ctx.fillStyle = '#f5f5f5';
+            ctx.fillRect(0, 0, width, height);
+            
+            // Draw grid
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 10; i++) {
+                const y = height - padding - (i * (height - 2 * padding) / 10);
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(width - padding, y);
+                ctx.stroke();
+                
+                // Y-axis labels
+                ctx.fillStyle = '#666';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'right';
+                ctx.fillText(i, padding - 10, y + 4);
+            }
+            
+            // Draw line
+            if (moodData.length > 1) {
+                const stepX = (width - 2 * padding) / (moodData.length - 1);
+                
+                ctx.strokeStyle = '#667eea';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                
+                moodData.forEach((point, index) => {
+                    const x = padding + index * stepX;
+                    const y = height - padding - (point.value * (height - 2 * padding) / 10);
+                    
+                    if (index === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                    
+                    // Draw points
+                    ctx.fillStyle = '#667eea';
+                    ctx.beginPath();
+                    ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                    ctx.fill();
+                });
+                
+                ctx.stroke();
+            }
+            
+            // X-axis labels
+            ctx.fillStyle = '#666';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'center';
+            moodData.forEach((point, index) => {
+                const x = padding + index * ((width - 2 * padding) / (moodData.length - 1));
+                const date = new Date(point.timestamp);
+                const label = `${date.getMonth() + 1}/${date.getDate()}`;
+                ctx.fillText(label, x, height - padding + 20);
+            });
+        }
+        
+        async function exportCSV() {
+            window.location.href = `/api/export/csv?username=${encodeURIComponent(currentUser)}`;
+        }
+        
+        async function exportPDF() {
+            window.location.href = `/api/export/pdf?username=${encodeURIComponent(currentUser)}`;
+        }
+        
+        // Sleep Hygiene Functions
+        function resetSleepChecklist() {
+            document.querySelectorAll('.sleep-check').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        }
+        
+        // Professional Dashboard Functions
+        async function loadPatients() {
+            const listDiv = document.getElementById('patientList');
+            listDiv.innerHTML = '<div style="text-align: center; padding: 40px;"><div class="loading" style="margin: 0 auto;"></div></div>';
+            
+            try {
+                const response = await fetch('/api/professional/patients');
+                const data = await response.json();
+                
+                if (response.ok && data.patients && data.patients.length > 0) {
+                    const html = data.patients.map(patient => `
+                        <div class="patient-card" onclick="viewPatientDetail('${patient.username}')">
+                            <div class="patient-header">
+                                <strong style="font-size: 18px;">${patient.username}</strong>
+                                ${patient.alert_count_7d > 0 ? `<span style="background: #e74c3c; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px;">🚨 ${patient.alert_count_7d} alerts</span>` : ''}
+                            </div>
+                            <div class="patient-stats">
+                                <div class="patient-stat">
+                                    <div class="patient-stat-value">${patient.avg_mood_7d}</div>
+                                    <div class="patient-stat-label">Avg Mood (7d)</div>
+                                </div>
+                                <div class="patient-stat">
+                                    <div class="patient-stat-value">${patient.latest_assessment ? patient.latest_assessment.score : 'N/A'}</div>
+                                    <div class="patient-stat-label">${patient.latest_assessment ? patient.latest_assessment.name : 'No Assessment'}</div>
+                                </div>
+                                <div class="patient-stat">
+                                    <div class="patient-stat-value" style="color: ${getSeverityColor(patient.latest_assessment?.severity)}">${patient.latest_assessment?.severity || '-'}</div>
+                                    <div class="patient-stat-label">Severity</div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                    listDiv.innerHTML = html;
+                } else {
+                    listDiv.innerHTML = '<p style="text-align: center; color: #999;">No patients found</p>';
+                }
+            } catch (error) {
+                listDiv.innerHTML = '<p style="text-align: center; color: #dc3545;">Error loading patients</p>';
+                console.error('Patient load error:', error);
+            }
+        }
+        
+        async function viewPatientDetail(username) {
+            document.getElementById('patientList').style.display = 'none';
+            document.getElementById('patientDetail').style.display = 'block';
+            document.getElementById('patientDetailName').textContent = username;
+            document.getElementById('patientDetailContent').innerHTML = '<div style="text-align: center; padding: 40px;"><div class="loading" style="margin: 0 auto;"></div></div>';
+            
+            try {
+                const response = await fetch(`/api/professional/patient/${encodeURIComponent(username)}`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    let html = `
+                        <div class="card" style="margin-bottom: 20px;">
+                            <h4>Profile</h4>
+                            <p><strong>Name:</strong> ${data.profile.name || 'Not provided'}</p>
+                            <p><strong>DOB:</strong> ${data.profile.dob || 'Not provided'}</p>
+                            <p><strong>Conditions:</strong> ${data.profile.conditions || 'Not provided'}</p>
+                        </div>
+                        
+                        <div class="card" style="margin-bottom: 20px;">
+                            <h4>Recent Mood Logs</h4>
+                            ${data.recent_moods.map(m => `
+                                <div style="padding: 8px; border-bottom: 1px solid #eee;">
+                                    <strong>Mood:</strong> ${m.mood}/10 | <strong>Sleep:</strong> ${m.sleep}h | ${new Date(m.timestamp).toLocaleDateString()}
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div class="card" style="margin-bottom: 20px;">
+                            <h4>Clinical Assessments</h4>
+                            ${data.clinical_scales.length > 0 ? data.clinical_scales.map(s => `
+                                <div style="padding: 8px; border-bottom: 1px solid #eee;">
+                                    <strong>${s.name}:</strong> Score ${s.score} (${s.severity}) | ${new Date(s.timestamp).toLocaleDateString()}
+                                </div>
+                            `).join('') : '<p>No assessments yet</p>'}
+                        </div>
+                        
+                        <div class="card">
+                            <h4>Recent Alerts</h4>
+                            ${data.recent_alerts.length > 0 ? data.recent_alerts.map(a => `
+                                <div style="padding: 8px; border-bottom: 1px solid #eee; background: #ffebee; margin-bottom: 4px; border-radius: 4px;">
+                                    <strong>${a.type}:</strong> ${a.message} | ${new Date(a.timestamp).toLocaleString()}
+                                </div>
+                            `).join('') : '<p style="color: #28a745;">No recent alerts</p>'}
+                        </div>
+                    `;
+                    document.getElementById('patientDetailContent').innerHTML = html;
+                } else {
+                    document.getElementById('patientDetailContent').innerHTML = '<p style="color: #dc3545;">Error loading patient data</p>';
+                }
+            } catch (error) {
+                document.getElementById('patientDetailContent').innerHTML = '<p style="color: #dc3545;">Connection error</p>';
+                console.error('Patient detail error:', error);
+            }
+        }
+        
+        function closeProfessionalDetail() {
+            document.getElementById('patientList').style.display = 'block';
+            document.getElementById('patientDetail').style.display = 'none';
+        }
+        
+        function getSeverityColor(severity) {
+            if (!severity) return '#999';
+            const colors = {
+                'Minimal': '#28a745',
+                'Mild': '#ffc107',
+                'Moderate': '#fd7e14',
+                'Moderately Severe': '#dc3545',
+                'Severe': '#dc3545'
+            };
+            return colors[severity] || '#999';
         }
         
         // Initialize

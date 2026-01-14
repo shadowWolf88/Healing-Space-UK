@@ -774,6 +774,423 @@ def submit_gad7():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# === COMMUNITY SUPPORT BOARD ===
+@app.route('/api/community/posts', methods=['GET'])
+def get_community_posts():
+    """Get recent community posts"""
+    try:
+        conn = sqlite3.connect("therapist_app.db")
+        cur = conn.cursor()
+        posts = cur.execute(
+            "SELECT username, message, likes, entry_timestamp FROM community_posts ORDER BY entry_timestamp DESC LIMIT 20"
+        ).fetchall()
+        conn.close()
+        
+        return jsonify({'posts': [
+            {
+                'username': p[0],
+                'message': p[1],
+                'likes': p[2] or 0,
+                'timestamp': p[3]
+            } for p in posts
+        ]}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/community/post', methods=['POST'])
+def create_community_post():
+    """Create a new community post"""
+    try:
+        data = request.json
+        username = data.get('username')
+        message = data.get('message')
+        
+        if not username or not message:
+            return jsonify({'error': 'Username and message required'}), 400
+        
+        conn = sqlite3.connect("therapist_app.db")
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO community_posts (username, message) VALUES (?,?)",
+            (username, message)
+        )
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# === SAFETY PLAN ===
+@app.route('/api/safety-plan', methods=['GET'])
+def get_safety_plan():
+    """Get user's safety plan"""
+    try:
+        username = request.args.get('username')
+        if not username:
+            return jsonify({'error': 'Username required'}), 400
+        
+        conn = sqlite3.connect("therapist_app.db")
+        cur = conn.cursor()
+        plan = cur.execute(
+            "SELECT triggers, coping_strategies, support_contacts, professional_contacts FROM safety_plans WHERE username=?",
+            (username,)
+        ).fetchone()
+        conn.close()
+        
+        if plan:
+            return jsonify({
+                'triggers': plan[0],
+                'coping_strategies': plan[1],
+                'support_contacts': plan[2],
+                'professional_contacts': plan[3]
+            }), 200
+        else:
+            return jsonify({'triggers': '', 'coping_strategies': '', 'support_contacts': '', 'professional_contacts': ''}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/safety-plan', methods=['POST'])
+def save_safety_plan():
+    """Save or update user's safety plan"""
+    try:
+        data = request.json
+        username = data.get('username')
+        triggers = data.get('triggers', '')
+        coping = data.get('coping_strategies', '')
+        support = data.get('support_contacts', '')
+        professional = data.get('professional_contacts', '')
+        
+        if not username:
+            return jsonify({'error': 'Username required'}), 400
+        
+        conn = sqlite3.connect("therapist_app.db")
+        cur = conn.cursor()
+        # Check if plan exists
+        existing = cur.execute("SELECT username FROM safety_plans WHERE username=?", (username,)).fetchone()
+        if existing:
+            cur.execute(
+                "UPDATE safety_plans SET triggers=?, coping_strategies=?, support_contacts=?, professional_contacts=? WHERE username=?",
+                (triggers, coping, support, professional, username)
+            )
+        else:
+            cur.execute(
+                "INSERT INTO safety_plans (username, triggers, coping_strategies, support_contacts, professional_contacts) VALUES (?,?,?,?,?)",
+                (username, triggers, coping, support, professional)
+            )
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# === DATA EXPORT ===
+@app.route('/api/export/csv', methods=['GET'])
+def export_csv():
+    """Export user data as CSV"""
+    try:
+        username = request.args.get('username')
+        if not username:
+            return jsonify({'error': 'Username required'}), 400
+        
+        import io
+        import csv
+        
+        conn = sqlite3.connect("therapist_app.db")
+        cur = conn.cursor()
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Profile
+        writer.writerow(["USER PROFILE"])
+        prof = cur.execute("SELECT full_name, dob, conditions FROM users WHERE username=?", (username,)).fetchone()
+        if prof:
+            writer.writerow(["username", username])
+            writer.writerow(["full_name", prof[0]])
+            writer.writerow(["dob", prof[1]])
+            writer.writerow(["conditions", prof[2]])
+        writer.writerow([])
+        
+        # Mood logs
+        writer.writerow(["MOOD_LOGS"])
+        writer.writerow(["timestamp", "mood_val", "sleep_val", "meds", "notes", "sentiment", "exercise_mins", "outside_mins", "water_pints"])
+        for r in cur.execute("SELECT entry_timestamp, mood_val, sleep_val, meds, notes, sentiment, exercise_mins, outside_mins, water_pints FROM mood_logs WHERE username=? ORDER BY entry_timestamp DESC", (username,)).fetchall():
+            writer.writerow([r[0], r[1], r[2], r[3], r[4] or "", r[5], r[6], r[7], r[8]])
+        writer.writerow([])
+        
+        # Gratitude
+        writer.writerow(["GRATITUDE_LOGS"])
+        writer.writerow(["timestamp", "entry"])
+        for r in cur.execute("SELECT entry_timestamp, entry FROM gratitude_logs WHERE username=? ORDER BY entry_timestamp DESC", (username,)).fetchall():
+            writer.writerow([r[0], r[1]])
+        writer.writerow([])
+        
+        # CBT
+        writer.writerow(["CBT_RECORDS"])
+        writer.writerow(["timestamp", "situation", "thought", "evidence"])
+        for r in cur.execute("SELECT entry_timestamp, situation, thought, evidence FROM cbt_records WHERE username=? ORDER BY entry_timestamp DESC", (username,)).fetchall():
+            writer.writerow([r[0], r[1], r[2], r[3]])
+        writer.writerow([])
+        
+        # Clinical Scales
+        writer.writerow(["CLINICAL_SCALES"])
+        writer.writerow(["timestamp", "scale_name", "score", "severity"])
+        for r in cur.execute("SELECT entry_timestamp, scale_name, score, severity FROM clinical_scales WHERE username=? ORDER BY entry_timestamp DESC", (username,)).fetchall():
+            writer.writerow([r[0], r[1], r[2], r[3]])
+        
+        conn.close()
+        
+        response = make_response(output.getvalue())
+        response.headers["Content-Disposition"] = f"attachment; filename={username}_data.csv"
+        response.headers["Content-Type"] = "text/csv"
+        return response
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/export/pdf', methods=['GET'])
+def export_pdf():
+    """Export user data as PDF report"""
+    try:
+        username = request.args.get('username')
+        if not username:
+            return jsonify({'error': 'Username required'}), 400
+        
+        try:
+            from fpdf import FPDF
+        except ImportError:
+            return jsonify({'error': 'PDF library not available'}), 500
+        
+        conn = sqlite3.connect("therapist_app.db")
+        cur = conn.cursor()
+        
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 10, txt=f"Mental Health Report - {username}", ln=True, align='C')
+        pdf.ln(5)
+        
+        # Profile
+        prof = cur.execute("SELECT full_name, dob, conditions FROM users WHERE username=?", (username,)).fetchone()
+        if prof:
+            pdf.set_font("Arial", 'B', 14)
+            pdf.cell(200, 8, txt="Profile", ln=True)
+            pdf.set_font("Arial", size=11)
+            pdf.multi_cell(0, 6, txt=f"Name: {prof[0]}\nDOB: {prof[1]}\nConditions: {prof[2]}")
+            pdf.ln(3)
+        
+        # Mood logs
+        pdf.set_font("Arial", 'B', 14)
+        pdf.cell(200, 8, txt="Mood Logs", ln=True)
+        pdf.set_font("Arial", size=11)
+        moods = cur.execute("SELECT entry_timestamp, mood_val, sleep_val, meds FROM mood_logs WHERE username=? ORDER BY entry_timestamp DESC LIMIT 10", (username,)).fetchall()
+        for m in moods:
+            pdf.multi_cell(0, 6, txt=f"[{m[0]}] Mood: {m[1]}/10, Sleep: {m[2]}h, Meds: {m[3] or 'None'}")
+        pdf.ln(3)
+        
+        # Clinical scales
+        pdf.set_font("Arial", 'B', 14)
+        pdf.cell(200, 8, txt="Clinical Assessments", ln=True)
+        pdf.set_font("Arial", size=11)
+        scales = cur.execute("SELECT entry_timestamp, scale_name, score, severity FROM clinical_scales WHERE username=? ORDER BY entry_timestamp DESC", (username,)).fetchall()
+        for s in scales:
+            pdf.multi_cell(0, 6, txt=f"[{s[0]}] {s[1]}: Score {s[2]} ({s[3]})")
+        
+        conn.close()
+        
+        import tempfile
+        import os
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+        pdf.output(temp_file.name)
+        
+        with open(temp_file.name, 'rb') as f:
+            pdf_data = f.read()
+        
+        os.unlink(temp_file.name)
+        
+        response = make_response(pdf_data)
+        response.headers["Content-Disposition"] = f"attachment; filename={username}_report.pdf"
+        response.headers["Content-Type"] = "application/pdf"
+        return response
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# === PROGRESS INSIGHTS ===
+@app.route('/api/insights', methods=['GET'])
+def get_insights():
+    """Get AI-generated progress insights"""
+    try:
+        username = request.args.get('username')
+        if not username:
+            return jsonify({'error': 'Username required'}), 400
+        
+        conn = sqlite3.connect("therapist_app.db")
+        cur = conn.cursor()
+        
+        # Get recent mood data for trends
+        moods = cur.execute(
+            "SELECT mood_val, sleep_val, entry_timestamp FROM mood_logs WHERE username=? ORDER BY entry_timestamp DESC LIMIT 7",
+            (username,)
+        ).fetchall()
+        
+        # Get recent gratitude entries
+        gratitudes = cur.execute(
+            "SELECT entry FROM gratitude_logs WHERE username=? ORDER BY entry_timestamp DESC LIMIT 5",
+            (username,)
+        ).fetchall()
+        
+        # Get CBT records
+        cbt = cur.execute(
+            "SELECT COUNT(*) FROM cbt_records WHERE username=?",
+            (username,)
+        ).fetchone()[0]
+        
+        # Get safety plan
+        safety = cur.execute(
+            "SELECT triggers, coping_strategies FROM safety_plans WHERE username=?",
+            (username,)
+        ).fetchone()
+        
+        conn.close()
+        
+        # Calculate trends
+        mood_trend = "stable"
+        if len(moods) >= 3:
+            recent_avg = sum(m[0] for m in moods[:3]) / 3
+            older_avg = sum(m[0] for m in moods[3:]) / max(1, len(moods) - 3)
+            if recent_avg > older_avg + 1:
+                mood_trend = "improving"
+            elif recent_avg < older_avg - 1:
+                mood_trend = "declining"
+        
+        avg_mood = sum(m[0] for m in moods) / len(moods) if moods else 0
+        avg_sleep = sum(m[1] for m in moods) / len(moods) if moods else 0
+        
+        insight = f"Your average mood over the last 7 entries is {avg_mood:.1f}/10 (trend: {mood_trend}). "
+        insight += f"Average sleep: {avg_sleep:.1f} hours. "
+        insight += f"You've completed {cbt} CBT thought records. "
+        insight += f"You've logged {len(gratitudes)} gratitude entries recently. "
+        
+        if mood_trend == "declining":
+            insight += "Consider reaching out to your support network or reviewing your safety plan."
+        elif mood_trend == "improving":
+            insight += "Great progress! Keep up the self-care routines that are working for you."
+        
+        return jsonify({
+            'insight': insight,
+            'mood_data': [{'value': m[0], 'timestamp': m[2]} for m in reversed(moods)],
+            'sleep_data': [{'value': m[1], 'timestamp': m[2]} for m in reversed(moods)],
+            'avg_mood': round(avg_mood, 1),
+            'avg_sleep': round(avg_sleep, 1),
+            'trend': mood_trend
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# === PROFESSIONAL DASHBOARD ===
+@app.route('/api/professional/patients', methods=['GET'])
+def get_patients():
+    """Get list of all patients (for professional dashboard)"""
+    try:
+        conn = sqlite3.connect("therapist_app.db")
+        cur = conn.cursor()
+        
+        # Get all users with basic stats
+        users = cur.execute("SELECT username FROM users WHERE is_professional=0 OR is_professional IS NULL").fetchall()
+        
+        patient_list = []
+        for user in users:
+            username = user[0]
+            
+            # Get recent mood average
+            mood_avg = cur.execute(
+                "SELECT AVG(mood_val) FROM mood_logs WHERE username=? AND entry_timestamp > datetime('now', '-7 days')",
+                (username,)
+            ).fetchone()[0] or 0
+            
+            # Get alert count
+            alert_count = cur.execute(
+                "SELECT COUNT(*) FROM safety_alerts WHERE username=? AND entry_timestamp > datetime('now', '-7 days')",
+                (username,)
+            ).fetchone()[0]
+            
+            # Get latest assessment
+            latest_scale = cur.execute(
+                "SELECT scale_name, score, severity, entry_timestamp FROM clinical_scales WHERE username=? ORDER BY entry_timestamp DESC LIMIT 1",
+                (username,)
+            ).fetchone()
+            
+            patient_list.append({
+                'username': username,
+                'avg_mood_7d': round(mood_avg, 1),
+                'alert_count_7d': alert_count,
+                'latest_assessment': {
+                    'name': latest_scale[0],
+                    'score': latest_scale[1],
+                    'severity': latest_scale[2],
+                    'date': latest_scale[3]
+                } if latest_scale else None
+            })
+        
+        conn.close()
+        return jsonify({'patients': patient_list}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/professional/patient/<username>', methods=['GET'])
+def get_patient_detail(username):
+    """Get detailed patient data (for professional dashboard)"""
+    try:
+        conn = sqlite3.connect("therapist_app.db")
+        cur = conn.cursor()
+        
+        # Profile
+        profile = cur.execute(
+            "SELECT full_name, dob, conditions FROM users WHERE username=?",
+            (username,)
+        ).fetchone()
+        
+        # Recent moods
+        moods = cur.execute(
+            "SELECT mood_val, sleep_val, entry_timestamp FROM mood_logs WHERE username=? ORDER BY entry_timestamp DESC LIMIT 10",
+            (username,)
+        ).fetchall()
+        
+        # Recent alerts
+        alerts = cur.execute(
+            "SELECT alert_type, message, entry_timestamp FROM safety_alerts WHERE username=? ORDER BY entry_timestamp DESC LIMIT 5",
+            (username,)
+        ).fetchall()
+        
+        # Clinical scales
+        scales = cur.execute(
+            "SELECT scale_name, score, severity, entry_timestamp FROM clinical_scales WHERE username=? ORDER BY entry_timestamp DESC LIMIT 5",
+            (username,)
+        ).fetchall()
+        
+        conn.close()
+        
+        return jsonify({
+            'username': username,
+            'profile': {
+                'name': profile[0] if profile else '',
+                'dob': profile[1] if profile else '',
+                'conditions': profile[2] if profile else ''
+            },
+            'recent_moods': [
+                {'mood': m[0], 'sleep': m[1], 'timestamp': m[2]} for m in moods
+            ],
+            'recent_alerts': [
+                {'type': a[0], 'message': a[1], 'timestamp': a[2]} for a in alerts
+            ],
+            'clinical_scales': [
+                {'name': s[0], 'score': s[1], 'severity': s[2], 'timestamp': s[3]} for s in scales
+            ]
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.errorhandler(404)
 def not_found(e):
     return jsonify({'error': 'Endpoint not found'}), 404
