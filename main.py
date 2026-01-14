@@ -351,6 +351,17 @@ def init_db():
     # Alerts table for crisis escalations and clinician triage
     cursor.execute('''CREATE TABLE IF NOT EXISTS alerts
                       (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, alert_type TEXT, details TEXT, status TEXT DEFAULT 'open', created_at DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    
+    # Patient approval system - clinicians must approve patients who select them
+    cursor.execute('''CREATE TABLE IF NOT EXISTS patient_approvals
+                      (id INTEGER PRIMARY KEY AUTOINCREMENT, patient_username TEXT, clinician_username TEXT, 
+                       status TEXT DEFAULT 'pending', request_date DATETIME DEFAULT CURRENT_TIMESTAMP, 
+                       approval_date DATETIME)''')
+    
+    # Notifications for clinician-patient interactions
+    cursor.execute('''CREATE TABLE IF NOT EXISTS notifications
+                      (id INTEGER PRIMARY KEY AUTOINCREMENT, recipient_username TEXT, message TEXT, 
+                       notification_type TEXT, read INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)''')
 
     # --- DATABASE REPAIR BLOCK ---
     cursor.execute("PRAGMA table_info(users)")

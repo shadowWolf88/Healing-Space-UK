@@ -583,6 +583,142 @@
             margin-top: 4px;
         }
         
+        /* Notification Styles */
+        .notification-bell {
+            position: relative;
+            cursor: pointer;
+            font-size: 24px;
+            padding: 10px;
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #f44336;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        
+        .notification-panel {
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            width: 350px;
+            max-height: 500px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            overflow: hidden;
+            z-index: 1000;
+        }
+        
+        .notification-header {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .notification-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        
+        .notification-body {
+            max-height: 450px;
+            overflow-y: auto;
+        }
+        
+        .notification-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .notification-item:hover {
+            background: #f5f5f5;
+        }
+        
+        .notification-item.unread {
+            background: #e3f2fd;
+        }
+        
+        .notification-item strong {
+            display: block;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .notification-item p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        .notification-item small {
+            color: #999;
+            font-size: 12px;
+        }
+        
+        /* Approval Styles */
+        .approval-request {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ffc107;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .approval-request strong {
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .approval-request p {
+            margin: 5px 0;
+            color: #666;
+            font-size: 13px;
+        }
+        
+        /* Password Strength Bar */
+        .password-strength-bar {
+            height: 5px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        
+        .password-strength-fill {
+            height: 100%;
+            transition: width 0.3s, background-color 0.3s;
+            width: 0%;
+            background-color: #ccc;
+        }
+        
+        .password-strength-text {
+            font-size: 12px;
+            margin-top: 5px;
+            color: #666;
+        }
+        
         @media (max-width: 768px) {
             .tabs {
                 flex-direction: column;
@@ -592,6 +728,11 @@
             }
             .mood-scale {
                 grid-template-columns: repeat(2, 1fr);
+            }
+            .notification-panel {
+                right: 10px;
+                left: 10px;
+                width: auto;
             }
         }
     </style>
@@ -612,6 +753,10 @@
                     <label>Password</label>
                     <input type="password" id="loginPassword" placeholder="Enter password">
                 </div>
+                <div class="form-group">
+                    <label>PIN (4 digits) - 2FA</label>
+                    <input type="password" id="loginPin" placeholder="Enter your 4-digit PIN" maxlength="4">
+                </div>
                 <button class="btn" onclick="login()">Login</button>
                 <button class="btn btn-secondary" onclick="showRegister()">Create Account</button>
             </div>
@@ -623,7 +768,11 @@
                 </div>
                 <div class="form-group">
                     <label>Password</label>
-                    <input type="password" id="regPassword" placeholder="Choose password (min 8 chars)">
+                    <input type="password" id="regPassword" placeholder="Min 8 chars, must include: number, letter, special char" oninput="checkPasswordStrength(this.value)">
+                    <div id="passwordStrengthBar" style="height: 5px; background: #e0e0e0; border-radius: 3px; margin-top: 5px; overflow: hidden;">
+                        <div id="passwordStrengthFill" style="height: 100%; width: 0%; background: #dc3545; transition: all 0.3s;"></div>
+                    </div>
+                    <small id="passwordStrengthText" style="color: #999; display: block; margin-top: 3px;">Password strength: Weak</small>
                 </div>
                 <div class="form-group">
                     <label>PIN (4 digits)</label>
@@ -667,9 +816,22 @@
         <div class="app-header">
             <h2>🌿 Healing Space</h2>
             <div class="user-info">
+                <button onclick="showNotifications()" style="position: relative; background: transparent; border: 2px solid #667eea; color: #667eea; padding: 8px 15px; border-radius: 8px; cursor: pointer; margin-right: 15px; font-size: 18px;">
+                    🔔
+                    <span id="notificationBadge" style="position: absolute; top: -5px; right: -5px; background: #e74c3c; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; display: none; justify-content: center; align-items: center;">0</span>
+                </button>
                 <span id="usernameDisplay"></span>
                 <button class="btn" onclick="logout()" style="width: auto; padding: 10px 20px;">Logout</button>
             </div>
+        </div>
+        
+        <!-- Notification Panel -->
+        <div id="notificationPanel" style="display: none; position: fixed; top: 80px; right: 20px; background: white; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); width: 400px; max-height: 500px; overflow-y: auto; z-index: 1000; padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0;">Notifications</h3>
+                <button onclick="closeNotifications()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
+            </div>
+            <div id="notificationList"></div>
         </div>
         
         <div class="app-content">
@@ -1084,9 +1246,18 @@
             <!-- Professional Dashboard Tab -->
             <div id="professionalTab" class="tab-content">
                 <h3>👨‍⚕️ Professional Dashboard</h3>
-                <p style="color: #666; margin-bottom: 20px;">Overview of all patients under your care.</p>
+                <p style="color: #666; margin-bottom: 20px;">Manage your patients and approval requests.</p>
                 
-                <button class="btn" onclick="loadPatients()" style="margin-bottom: 20px;">Load Patient List</button>
+                <div class="card" style="margin-bottom: 20px; background: #fff3cd; border-left: 4px solid #ffc107;">
+                    <h4>Pending Patient Requests</h4>
+                    <div id="pendingApprovals">
+                        <p style="color: #999; text-align: center;">Loading...</p>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h4>My Patients</h4>
+                    <button class="btn" onclick="loadPatients()" style="margin-bottom: 20px;">Refresh Patient List</button>
                 
                 <div id="patientList">
                     <p style="text-align: center; color: #999; padding: 40px;">Click "Load Patient List" to view all patients</p>
@@ -1137,9 +1308,15 @@
         async function login() {
             const username = document.getElementById('loginUsername').value.trim();
             const password = document.getElementById('loginPassword').value;
+            const pin = document.getElementById('loginPin').value;
             
             if (!username || !password) {
                 showAuthMessage('Please enter username and password', 'error');
+                return;
+            }
+            
+            if (!pin) {
+                showAuthMessage('Please enter your 4-digit PIN for 2FA', 'error');
                 return;
             }
             
@@ -1147,7 +1324,7 @@
                 const response = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password })
+                    body: JSON.stringify({ username, password, pin })
                 });
                 
                 const data = await response.json();
@@ -1162,10 +1339,20 @@
                     // Show professional tab only for clinicians
                     if (currentUserRole === 'clinician') {
                         document.getElementById('professionalTabBtn').style.display = 'block';
+                        loadPendingApprovals();
                     }
                     
+                    // Check approval status for patients
+                    if (data.approval_status === 'pending') {
+                        alert('Your clinician has not yet approved your account. Some features may be limited until approval.');
+                    }
+                    
+                    loadNotifications();
                     addSystemMessage('Welcome to Healing Space! How are you feeling today?');
                     loadPetStatus();
+                    
+                    // Refresh notifications every 30 seconds
+                    setInterval(loadNotifications, 30000);
                 } else {
                     showAuthMessage(data.error || 'Login failed', 'error');
                 }
@@ -1173,6 +1360,39 @@
                 showAuthMessage('Connection error. Please try again.', 'error');
                 console.error('Login error:', error);
             }
+        }
+        
+        function checkPasswordStrength(password) {
+            const strengthBar = document.getElementById('passwordStrengthFill');
+            const strengthText = document.getElementById('passwordStrengthText');
+            
+            let strength = 0;
+            let feedback = 'Weak';
+            let color = '#dc3545';
+            
+            if (password.length >= 8) strength += 25;
+            if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength += 25;
+            if (/[0-9]/.test(password)) strength += 25;
+            if (/[^a-zA-Z0-9]/.test(password)) strength += 25;
+            
+            if (strength <= 25) {
+                feedback = 'Weak';
+                color = '#dc3545';
+            } else if (strength <= 50) {
+                feedback = 'Fair';
+                color = '#ffc107';
+            } else if (strength <= 75) {
+                feedback = 'Good';
+                color = '#17a2b8';
+            } else {
+                feedback = 'Strong';
+                color = '#28a745';
+            }
+            
+            strengthBar.style.width = strength + '%';
+            strengthBar.style.background = color;
+            strengthText.textContent = `Password strength: ${feedback}`;
+            strengthText.style.color = color;
         }
         
         async function register() {
@@ -1196,6 +1416,22 @@
                 return;
             }
             
+            // Validate password requirements
+            if (!/[a-z]/.test(password) || !/[A-Z]/.test(password)) {
+                showAuthMessage('Password must contain both lowercase and uppercase letters', 'error');
+                return;
+            }
+            
+            if (!/[0-9]/.test(password)) {
+                showAuthMessage('Password must contain at least one number', 'error');
+                return;
+            }
+            
+            if (!/[^a-zA-Z0-9]/.test(password)) {
+                showAuthMessage('Password must contain at least one special character (!@#$%^&* etc.)', 'error');
+                return;
+            }
+            
             if (pin.length !== 4 || !/^\d+$/.test(pin)) {
                 showAuthMessage('PIN must be 4 digits', 'error');
                 return;
@@ -1211,11 +1447,11 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    showAuthMessage('Account created successfully! Please login.', 'success');
+                    showAuthMessage('Account created! Awaiting clinician approval.', 'success');
                     setTimeout(() => {
                         showLogin();
                         document.getElementById('loginUsername').value = username;
-                    }, 2000);
+                    }, 3000);
                 } else {
                     showAuthMessage(data.error || 'Registration failed', 'error');
                 }
@@ -1313,6 +1549,145 @@
             msgDiv.classList.remove('hidden');
         }
         
+        // Notification Functions
+        async function loadNotifications() {
+            if (!currentUser) return;
+            
+            try {
+                const response = await fetch(`/api/notifications?username=${currentUser}`);
+                const data = await response.json();
+                
+                if (response.ok && data.notifications) {
+                    const unreadCount = data.notifications.filter(n => !n.read).length;
+                    const badge = document.getElementById('notificationBadge');
+                    
+                    if (unreadCount > 0) {
+                        badge.textContent = unreadCount;
+                        badge.style.display = 'inline';
+                    } else {
+                        badge.style.display = 'none';
+                    }
+                    
+                    const list = document.getElementById('notificationList');
+                    if (data.notifications.length === 0) {
+                        list.innerHTML = '<div class="notification-item">No notifications</div>';
+                    } else {
+                        list.innerHTML = data.notifications.map(n => `
+                            <div class="notification-item ${n.read ? '' : 'unread'}" onclick="markNotificationRead(${n.id})">
+                                <strong>${n.notification_type}</strong>
+                                <p>${n.message}</p>
+                                <small>${new Date(n.created_at).toLocaleString()}</small>
+                            </div>
+                        `).join('');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading notifications:', error);
+            }
+        }
+        
+        function showNotifications() {
+            const panel = document.getElementById('notificationPanel');
+            panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function closeNotifications() {
+            document.getElementById('notificationPanel').style.display = 'none';
+        }
+        
+        async function markNotificationRead(id) {
+            try {
+                await fetch(`/api/notifications/${id}/read`, { method: 'POST' });
+                loadNotifications();
+            } catch (error) {
+                console.error('Error marking notification as read:', error);
+            }
+        }
+        
+        // Patient Approval Functions
+        async function loadPendingApprovals() {
+            if (currentUserRole !== 'clinician') return;
+            
+            try {
+                const response = await fetch(`/api/approvals/pending?clinician=${currentUser}`);
+                const data = await response.json();
+                
+                const container = document.getElementById('pendingApprovals');
+                if (response.ok && data.approvals && data.approvals.length > 0) {
+                    container.innerHTML = data.approvals.map(approval => `
+                        <div class="approval-request">
+                            <div>
+                                <strong>${approval.patient_username}</strong>
+                                <p>Requested: ${new Date(approval.request_date).toLocaleString()}</p>
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn btn-success" onclick="approvePatient(${approval.id})">
+                                    ✓ Approve
+                                </button>
+                                <button class="btn btn-danger" onclick="rejectPatient(${approval.id})">
+                                    ✗ Reject
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p style="color: #666;">No pending approval requests</p>';
+                }
+            } catch (error) {
+                console.error('Error loading pending approvals:', error);
+            }
+        }
+        
+        async function approvePatient(approvalId) {
+            if (!confirm('Approve this patient?')) return;
+            
+            try {
+                const response = await fetch(`/api/approvals/${approvalId}/approve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ clinician_username: currentUser })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Patient approved successfully!');
+                    loadPendingApprovals();
+                    loadNotifications();
+                } else {
+                    alert(data.error || 'Failed to approve patient');
+                }
+            } catch (error) {
+                console.error('Error approving patient:', error);
+                alert('Error approving patient');
+            }
+        }
+        
+        async function rejectPatient(approvalId) {
+            if (!confirm('Reject this patient request?')) return;
+            
+            try {
+                const response = await fetch(`/api/approvals/${approvalId}/reject`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ clinician_username: currentUser })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Patient request rejected');
+                    loadPendingApprovals();
+                    loadNotifications();
+                } else {
+                    alert(data.error || 'Failed to reject patient');
+                }
+            } catch (error) {
+                console.error('Error rejecting patient:', error);
+                alert('Error rejecting patient');
+            }
+        }
+        
         function logout() {
             if (confirm('Are you sure you want to logout?')) {
                 currentUser = null;
@@ -1339,6 +1714,11 @@
             // Load pet when switching to pet tab
             if (tabName === 'pet') {
                 loadPetStatus();
+            }
+            
+            // Load pending approvals when switching to professional tab
+            if (tabName === 'professional' && currentUserRole === 'clinician') {
+                loadPendingApprovals();
             }
         }
         

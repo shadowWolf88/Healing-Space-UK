@@ -132,6 +132,13 @@ def init_db():
                       (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, actor TEXT, action TEXT, details TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS alerts
                       (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, alert_type TEXT, details TEXT, status TEXT DEFAULT 'open', created_at DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS patient_approvals
+                      (id INTEGER PRIMARY KEY AUTOINCREMENT, patient_username TEXT, clinician_username TEXT, 
+                       status TEXT DEFAULT 'pending', request_date DATETIME DEFAULT CURRENT_TIMESTAMP, 
+                       approval_date DATETIME)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS notifications
+                      (id INTEGER PRIMARY KEY AUTOINCREMENT, recipient_username TEXT, message TEXT, 
+                       notification_type TEXT, read INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS chat_history 
                       (session_id TEXT, sender TEXT, message TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)''')
@@ -267,18 +274,32 @@ def register():
         hashed_password = hash_password(password)
         hashed_pin = hash_pin(pin)
         
-        # Create user with clinician link
-        cur.execute("INSERT INTO users (username, password, pin, last_login, role, clinician_id) VALUES (?,?,?,?,?,?)",
-                   (username, hashed_password, hashed_pin, datetime.now(), 'user', clinician_id))
+        # Create user WITHOUT clinician link (pending approval)
+        cur.execute("INSERT INTO users (username, password, pin, last_login, role) VALUES (?,?,?,?,?)",
+                   (username, hashed_password, hashed_pin, datetime.now(), 'user'))
+        
+        # Create pending approval request
+        cur.execute("INSERT INTO patient_approvals (patient_username, clinician_username, status) VALUES (?,?,?)",
+                   (username, clinician_id, 'pending'))
+        
+        # Notify clinician of new patient request
+        cur.execute("INSERT INTO notifications (recipient_username, message, notification_type) VALUES (?,?,?)",
+                   (clinician_id, f'New patient request from {username}', 'patient_request'))
+        
+        # Notify patient that request is pending
+        cur.execute("INSERT INTO notifications (recipient_username, message, notification_type) VALUES (?,?,?)",
+                   (username, f'Your request to join Dr. {clinician_id} is pending approval', 'approval_pending'))
+        
         conn.commit()
         conn.close()
         
-        log_event(username, 'api', 'user_registered', f'Registration via API, assigned to clinician: {clinician_id}')
+        log_event(username, 'api', 'user_registered', f'Registration via API, pending approval from clinician: {clinician_id}')
         
         return jsonify({
             'success': True,
-            'message': 'User registered successfully',
-            'username': username
+            'message': 'Account created! Your clinician will approve your request shortly.',
+            'username': username,
+            'pending_approval': True
         }), 201
         
     except Exception as e:
@@ -286,30 +307,61 @@ def register():
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
-    """Authenticate user"""
+    """Authenticate user with 2FA PIN"""
     try:
         data = request.json
         username = data.get('username')
         password = data.get('password')
+        pin = data.get('pin')  # Required for 2FA
         
         if not username or not password:
             return jsonify({'error': 'Username and password required'}), 400
         
+        if not pin:
+            return jsonify({'error': 'PIN required for 2FA authentication'}), 400
+        
         conn = sqlite3.connect("therapist_app.db")
         cur = conn.cursor()
-        user = cur.execute("SELECT username, password, role FROM users WHERE username=?", (username,)).fetchone()
-        conn.close()
+        user = cur.execute("SELECT username, password, role, pin, clinician_id FROM users WHERE username=?", (username,)).fetchone()
         
-        if not user or not verify_password(user[1], password):
+        if not user:
+            conn.close()
             return jsonify({'error': 'Invalid credentials'}), 401
         
-        log_event(username, 'api', 'user_login', 'Login via API')
+        # Verify password
+        if not verify_password(user[1], password):
+            conn.close()
+            return jsonify({'error': 'Invalid credentials'}), 401
+        
+        # Verify PIN (2FA)
+        if not check_pin(user[3], pin):
+            conn.close()
+            return jsonify({'error': 'Invalid PIN'}), 401
+        
+        role = user[2] or 'user'
+        clinician_id = user[4]
+        
+        # Check approval status for patients
+        approval_status = 'approved'
+        if role == 'user':
+            approval = cur.execute(
+                "SELECT status FROM patient_approvals WHERE patient_username=? ORDER BY request_date DESC LIMIT 1",
+                (username,)
+            ).fetchone()
+            if approval:
+                approval_status = approval[0]
+        
+        conn.close()
+        
+        log_event(username, 'api', 'user_login', 'Login via API with 2FA')
         
         return jsonify({
             'success': True,
             'message': 'Login successful',
             'username': username,
-            'role': user[2] or 'user'
+            'role': role,
+            'approval_status': approval_status,
+            'clinician_id': clinician_id
         }), 200
         
     except Exception as e:
@@ -372,6 +424,168 @@ def get_clinicians():
                 for c in clinicians
             ]
         }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# === NOTIFICATIONS ===
+@app.route('/api/notifications', methods=['GET'])
+def get_notifications():
+    """Get notifications for user"""
+    try:
+        username = request.args.get('username')
+        if not username:
+            return jsonify({'error': 'Username required'}), 400
+        
+        conn = sqlite3.connect("therapist_app.db")
+        cur = conn.cursor()
+        notifications = cur.execute(
+            "SELECT id, message, notification_type, read, created_at FROM notifications WHERE recipient_username=? ORDER BY created_at DESC LIMIT 20",
+            (username,)
+        ).fetchall()
+        conn.close()
+        
+        return jsonify({
+            'notifications': [
+                {
+                    'id': n[0],
+                    'message': n[1],
+                    'type': n[2],
+                    'read': bool(n[3]),
+                    'created_at': n[4]
+                } for n in notifications
+            ]
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/notifications/<int:notification_id>/read', methods=['POST'])
+def mark_notification_read(notification_id):
+    """Mark notification as read"""
+    try:
+        conn = sqlite3.connect("therapist_app.db")
+        cur = conn.cursor()
+        cur.execute("UPDATE notifications SET read=1 WHERE id=?", (notification_id,))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# === PATIENT APPROVAL SYSTEM ===
+@app.route('/api/approvals/pending', methods=['GET'])
+def get_pending_approvals():
+    """Get pending patient approval requests for clinician"""
+    try:
+        clinician = request.args.get('clinician')
+        if not clinician:
+            return jsonify({'error': 'Clinician username required'}), 400
+        
+        conn = sqlite3.connect("therapist_app.db")
+        cur = conn.cursor()
+        approvals = cur.execute(
+            "SELECT id, patient_username, request_date FROM patient_approvals WHERE clinician_username=? AND status='pending' ORDER BY request_date DESC",
+            (clinician,)
+        ).fetchall()
+        conn.close()
+        
+        return jsonify({
+            'pending_approvals': [
+                {
+                    'id': a[0],
+                    'patient_username': a[1],
+                    'request_date': a[2]
+                } for a in approvals
+            ]
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/approvals/<int:approval_id>/approve', methods=['POST'])
+def approve_patient(approval_id):
+    """Approve patient request"""
+    try:
+        conn = sqlite3.connect("therapist_app.db")
+        cur = conn.cursor()
+        
+        # Get approval details
+        approval = cur.execute(
+            "SELECT patient_username, clinician_username FROM patient_approvals WHERE id=?",
+            (approval_id,)
+        ).fetchone()
+        
+        if not approval:
+            conn.close()
+            return jsonify({'error': 'Approval request not found'}), 404
+        
+        patient_username, clinician_username = approval
+        
+        # Update approval status
+        cur.execute(
+            "UPDATE patient_approvals SET status='approved', approval_date=? WHERE id=?",
+            (datetime.now(), approval_id)
+        )
+        
+        # Link patient to clinician
+        cur.execute(
+            "UPDATE users SET clinician_id=? WHERE username=?",
+            (clinician_username, patient_username)
+        )
+        
+        # Notify patient of approval
+        cur.execute(
+            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (?,?,?)",
+            (patient_username, f'Dr. {clinician_username} has approved your request! You can now access all features.', 'approval_accepted')
+        )
+        
+        # Notify clinician
+        cur.execute(
+            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (?,?,?)",
+            (clinician_username, f'You approved {patient_username} as your patient', 'patient_approved')
+        )
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Patient approved successfully'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/approvals/<int:approval_id>/reject', methods=['POST'])
+def reject_patient(approval_id):
+    """Reject patient request"""
+    try:
+        conn = sqlite3.connect("therapist_app.db")
+        cur = conn.cursor()
+        
+        # Get approval details
+        approval = cur.execute(
+            "SELECT patient_username, clinician_username FROM patient_approvals WHERE id=?",
+            (approval_id,)
+        ).fetchone()
+        
+        if not approval:
+            conn.close()
+            return jsonify({'error': 'Approval request not found'}), 404
+        
+        patient_username, clinician_username = approval
+        
+        # Update approval status
+        cur.execute(
+            "UPDATE patient_approvals SET status='rejected' WHERE id=?",
+            (approval_id,)
+        )
+        
+        # Notify patient of rejection
+        cur.execute(
+            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (?,?,?)",
+            (patient_username, f'Dr. {clinician_username} declined your request. Please select another clinician.', 'approval_rejected')
+        )
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Patient request rejected'}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
