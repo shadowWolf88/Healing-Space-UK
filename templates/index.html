@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Healing Space - Mental Health Companion</title>
+    <title>Healing Space - Complete Mental Health Companion</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -54,7 +54,7 @@
             font-weight: 600;
         }
         
-        .form-group input {
+        .form-group input, .form-group textarea {
             width: 100%;
             padding: 12px;
             border: 2px solid #e0e0e0;
@@ -63,7 +63,7 @@
             transition: border-color 0.3s;
         }
         
-        .form-group input:focus {
+        .form-group input:focus, .form-group textarea:focus {
             outline: none;
             border-color: #667eea;
         }
@@ -128,7 +128,7 @@
         }
         
         .app-content {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 20px auto;
             padding: 0 20px;
         }
@@ -143,7 +143,7 @@
         .tab-btn {
             background: rgba(255,255,255,0.9);
             border: 2px solid transparent;
-            padding: 12px 24px;
+            padding: 12px 20px;
             border-radius: 12px;
             cursor: pointer;
             transition: all 0.3s;
@@ -270,6 +270,83 @@
             margin-bottom: 10px;
         }
         
+        /* Medication List */
+        .med-list {
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px;
+            min-height: 60px;
+            margin: 10px 0;
+        }
+        
+        .med-item {
+            background: #f0f4ff;
+            border: 1px solid #667eea;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin: 5px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .med-item button {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        /* Pet Display */
+        .pet-container {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 20px;
+            color: white;
+            margin-bottom: 20px;
+        }
+        
+        .pet-display {
+            text-align: center;
+            font-size: 80px;
+            margin: 20px 0;
+        }
+        
+        .pet-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-bar {
+            background: rgba(255,255,255,0.2);
+            border-radius: 8px;
+            padding: 10px;
+        }
+        
+        .stat-bar label {
+            display: block;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        
+        .progress-bar {
+            background: rgba(255,255,255,0.3);
+            height: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            background: white;
+            height: 100%;
+            transition: width 0.3s;
+        }
+        
         /* History Cards */
         .history-grid {
             display: grid;
@@ -293,6 +370,12 @@
             color: #999;
             font-size: 14px;
             margin-bottom: 10px;
+        }
+        
+        /* CBT Tools */
+        .cbt-container {
+            display: grid;
+            gap: 20px;
         }
         
         /* Alert Messages */
@@ -336,9 +419,21 @@
             min-height: 120px;
         }
         
-        textarea:focus, input[type="text"]:focus, input[type="password"]:focus, input[type="number"]:focus {
-            outline: none;
-            border-color: #667eea;
+        input[type="number"] {
+            width: 100px;
+        }
+        
+        .inline-form {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        
+        .inline-form .form-group {
+            flex: 1;
+            min-width: 150px;
+            margin-bottom: 0;
         }
         
         .loading {
@@ -354,6 +449,12 @@
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
         }
         
         @media (max-width: 768px) {
@@ -374,7 +475,7 @@
     <div id="authScreen" class="auth-container">
         <div class="auth-box">
             <h1>🌿 Healing Space</h1>
-            <p class="subtitle">Your Mental Health Companion</p>
+            <p class="subtitle">Complete Mental Health Companion</p>
             
             <div id="loginForm">
                 <div class="form-group">
@@ -423,8 +524,11 @@
         <div class="app-content">
             <div class="tabs">
                 <button class="tab-btn active" onclick="switchTab('therapy', this)">🤖 AI Therapy</button>
-                <button class="tab-btn" onclick="switchTab('mood', this)">📊 Mood Tracker</button>
+                <button class="tab-btn" onclick="switchTab('mood', this)">📊 Mood & Habits</button>
                 <button class="tab-btn" onclick="switchTab('gratitude', this)">🙏 Gratitude Journal</button>
+                <button class="tab-btn" onclick="switchTab('cbt', this)">🧠 CBT Tools</button>
+                <button class="tab-btn" onclick="switchTab('pet', this)">🐶 My Pet</button>
+                <button class="tab-btn" onclick="switchTab('clinical', this)">📋 Assessments</button>
                 <button class="tab-btn" onclick="switchTab('history', this)">📈 My History</button>
             </div>
             
@@ -444,48 +548,75 @@
             
             <!-- Mood Tracker Tab -->
             <div id="moodTab" class="tab-content">
-                <h3>How are you feeling today?</h3>
-                <p style="color: #666; margin-bottom: 20px;">Track your mood to understand patterns and progress.</p>
+                <h3>Mood, Sleep, Habits & Medications</h3>
+                <p style="color: #666; margin-bottom: 20px;">Complete daily check-in to track your wellness journey.</p>
                 
                 <div class="mood-scale">
                     <div class="mood-option" data-mood="1" onclick="selectMood(1, this)">
                         <div class="emoji">😢</div>
-                        <div>Very Low</div>
+                        <div>Very Low (1)</div>
                     </div>
                     <div class="mood-option" data-mood="3" onclick="selectMood(3, this)">
                         <div class="emoji">😔</div>
-                        <div>Low</div>
+                        <div>Low (3)</div>
                     </div>
                     <div class="mood-option" data-mood="5" onclick="selectMood(5, this)">
                         <div class="emoji">😐</div>
-                        <div>Neutral</div>
+                        <div>Neutral (5)</div>
                     </div>
                     <div class="mood-option" data-mood="7" onclick="selectMood(7, this)">
                         <div class="emoji">🙂</div>
-                        <div>Good</div>
+                        <div>Good (7)</div>
                     </div>
                     <div class="mood-option" data-mood="10" onclick="selectMood(10, this)">
                         <div class="emoji">😄</div>
-                        <div>Great</div>
+                        <div>Great (10)</div>
                     </div>
                 </div>
                 
-                <div class="form-group">
-                    <label>Hours of Sleep</label>
-                    <input type="number" id="sleepHours" min="0" max="24" step="0.5" placeholder="e.g., 7.5">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label>Hours of Sleep</label>
+                        <input type="number" id="sleepHours" min="0" max="24" step="0.5" placeholder="e.g., 7.5">
+                    </div>
+                    <div class="form-group">
+                        <label>Water (Pints)</label>
+                        <input type="number" id="waterPints" min="0" step="0.5" placeholder="e.g., 4">
+                    </div>
+                    <div class="form-group">
+                        <label>Exercise (Minutes)</label>
+                        <input type="number" id="exerciseMins" min="0" placeholder="e.g., 30">
+                    </div>
+                    <div class="form-group">
+                        <label>Outdoor Time (Minutes)</label>
+                        <input type="number" id="outsideMins" min="0" placeholder="e.g., 20">
+                    </div>
                 </div>
                 
-                <div class="form-group">
-                    <label>Medications Taken</label>
-                    <input type="text" id="medications" placeholder="List any medications">
+                <h4 style="margin-top: 20px;">Medications Taken Today</h4>
+                <div class="inline-form">
+                    <div class="form-group">
+                        <label>Medication Name</label>
+                        <input type="text" id="medName" placeholder="e.g., Sertraline">
+                    </div>
+                    <div class="form-group" style="max-width: 120px;">
+                        <label>Strength (mg)</label>
+                        <input type="number" id="medStrength" placeholder="50">
+                    </div>
+                    <div class="form-group" style="max-width: 80px;">
+                        <label>Quantity</label>
+                        <input type="number" id="medQty" placeholder="1" value="1">
+                    </div>
+                    <button class="btn" onclick="addMedication()" style="width: auto; padding: 12px 20px;">+ Add</button>
                 </div>
+                <div id="medList" class="med-list"></div>
                 
                 <div class="form-group">
-                    <label>Notes</label>
+                    <label>Journal Notes</label>
                     <textarea id="moodNotes" placeholder="How are you feeling? Any specific thoughts or events?"></textarea>
                 </div>
                 
-                <button class="btn" onclick="logMood()">Log Mood</button>
+                <button class="btn" onclick="logMood()">Save Full Check-In</button>
                 <div id="moodMessage" class="hidden"></div>
             </div>
             
@@ -502,10 +633,133 @@
                 <div id="gratitudeMessage" class="hidden"></div>
             </div>
             
+            <!-- CBT Tools Tab -->
+            <div id="cbtTab" class="tab-content">
+                <h3>Cognitive Behavioral Therapy Tools</h3>
+                <p style="color: #666; margin-bottom: 20px;">Challenge negative thoughts and build healthier thinking patterns.</p>
+                
+                <div class="cbt-container">
+                    <div class="form-group">
+                        <label>What situation triggered this thought?</label>
+                        <input type="text" id="cbtSituation" placeholder="e.g., Received critical feedback at work">
+                    </div>
+                    <div class="form-group">
+                        <label>What automatic thought came to mind?</label>
+                        <textarea id="cbtThought" placeholder="e.g., I'm terrible at my job and everyone thinks so"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>What evidence challenges this thought?</label>
+                        <textarea id="cbtEvidence" placeholder="e.g., I received positive feedback last week, my manager praised my recent project"></textarea>
+                    </div>
+                    <button class="btn" onclick="saveCBT()">Save Thought Record</button>
+                    <div id="cbtMessage" class="hidden"></div>
+                    
+                    <hr style="margin: 20px 0;">
+                    
+                    <h4>Breathing Exercise</h4>
+                    <p style="color: #666; margin-bottom: 10px;">Follow the guided 4-7-8 breathing technique.</p>
+                    <button class="btn" onclick="startBreathing()">Start Breathing Exercise</button>
+                    <div id="breathingDisplay" class="hidden" style="text-align: center; padding: 40px; font-size: 24px; font-weight: bold;"></div>
+                </div>
+            </div>
+            
+            <!-- Pet Game Tab -->
+            <div id="petTab" class="tab-content">
+                <div id="petCreate" class="hidden">
+                    <h3>Adopt Your Companion</h3>
+                    <p style="color: #666; margin-bottom: 20px;">Choose a virtual pet to care for as you care for yourself.</p>
+                    
+                    <div class="form-group">
+                        <label>Pet Name</label>
+                        <input type="text" id="petName" placeholder="e.g., Buddy">
+                    </div>
+                    <div class="form-group">
+                        <label>Species</label>
+                        <select id="petSpecies" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px;">
+                            <option value="Dog">🐶 Dog</option>
+                            <option value="Cat">🐱 Cat</option>
+                            <option value="Rabbit">🐰 Rabbit</option>
+                            <option value="Fox">🦊 Fox</option>
+                            <option value="Panda">🐼 Panda</option>
+                            <option value="Penguin">🐧 Penguin</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Gender</label>
+                        <select id="petGender" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px;">
+                            <option value="Neutral">Neutral</option>
+                            <option value="Male">Male</option>
+                            <option value="Female">Female</option>
+                        </select>
+                    </div>
+                    <button class="btn" onclick="createPet()">Adopt Pet!</button>
+                </div>
+                
+                <div id="petDisplay" class="hidden">
+                    <div class="pet-container">
+                        <h3 style="text-align: center; margin-bottom: 10px;" id="petNameDisplay"></h3>
+                        <div class="pet-display" id="petEmojiDisplay"></div>
+                        <div style="text-align: center; margin-bottom: 20px;">
+                            <div style="font-size: 18px;">🪙 Coins: <span id="petCoins">0</span></div>
+                            <div style="font-size: 14px; margin-top: 5px;">⭐ XP: <span id="petXP">0</span> (<span id="petStage">Baby</span>)</div>
+                        </div>
+                        <div class="pet-stats">
+                            <div class="stat-bar">
+                                <label>Hunger</label>
+                                <div class="progress-bar"><div class="progress-fill" id="hungerBar"></div></div>
+                            </div>
+                            <div class="stat-bar">
+                                <label>Happiness</label>
+                                <div class="progress-bar"><div class="progress-fill" id="happinessBar"></div></div>
+                            </div>
+                            <div class="stat-bar">
+                                <label>Energy</label>
+                                <div class="progress-bar"><div class="progress-fill" id="energyBar"></div></div>
+                            </div>
+                            <div class="stat-bar">
+                                <label>Hygiene</label>
+                                <div class="progress-bar"><div class="progress-fill" id="hygieneBar"></div></div>
+                            </div>
+                        </div>
+                    </div>
+                    <p style="color: #666; text-align: center; margin-top: 20px;">
+                        💡 Earn coins and XP by completing self-care actions! Your pet grows as you grow.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Clinical Assessments Tab -->
+            <div id="clinicalTab" class="tab-content">
+                <h3>Clinical Assessments</h3>
+                <p style="color: #666; margin-bottom: 20px;">Track your mental health with validated clinical scales.</p>
+                
+                <div class="grid-2">
+                    <div style="border: 2px solid #e0e0e0; border-radius: 12px; padding: 20px;">
+                        <h4>PHQ-9 (Depression)</h4>
+                        <p style="color: #666; font-size: 14px; margin-bottom: 10px;">9-question screening for depression severity.</p>
+                        <button class="btn" onclick="startPHQ9()">Start PHQ-9</button>
+                    </div>
+                    <div style="border: 2px solid #e0e0e0; border-radius: 12px; padding: 20px;">
+                        <h4>GAD-7 (Anxiety)</h4>
+                        <p style="color: #666; font-size: 14px; margin-bottom: 10px;">7-question screening for anxiety severity.</p>
+                        <button class="btn" onclick="startGAD7()">Start GAD-7</button>
+                    </div>
+                </div>
+                
+                <div id="assessmentModal" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000;">
+                    <div style="background: white; padding: 40px; border-radius: 20px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                        <h3 id="assessmentTitle"></h3>
+                        <div id="assessmentQuestions"></div>
+                        <button class="btn" onclick="submitAssessment()">Submit</button>
+                        <button class="btn btn-secondary" onclick="closeAssessment()">Cancel</button>
+                    </div>
+                </div>
+            </div>
+            
             <!-- History Tab -->
             <div id="historyTab" class="tab-content">
                 <h3>Your Progress</h3>
-                <p style="color: #666; margin-bottom: 20px;">View your mood history and patterns.</p>
+                <p style="color: #666; margin-bottom: 20px;">View your mood history and wellness patterns.</p>
                 
                 <button class="btn" onclick="loadHistory()" style="margin-bottom: 20px;">Load My History</button>
                 
@@ -519,6 +773,33 @@
     <script>
         let currentUser = null;
         let selectedMoodValue = null;
+        let medications = [];
+        let currentAssessment = null;
+        let assessmentScores = [];
+        
+        const speciesEmojis = {Dog: '🐶', Cat: '🐱', Rabbit: '🐰', Fox: '🦊', Panda: '🐼', Penguin: '🐧'};
+        
+        const PHQ9_QUESTIONS = [
+            "Little interest or pleasure in doing things",
+            "Feeling down, depressed, or hopeless",
+            "Trouble falling/staying asleep, or sleeping too much",
+            "Feeling tired or having little energy",
+            "Poor appetite or overeating",
+            "Feeling bad about yourself or that you are a failure",
+            "Trouble concentrating on things",
+            "Moving or speaking slowly, or being fidgety/restless",
+            "Thoughts that you would be better off dead or hurting yourself"
+        ];
+        
+        const GAD7_QUESTIONS = [
+            "Feeling nervous, anxious or on edge",
+            "Not being able to stop or control worrying",
+            "Worrying too much about different things",
+            "Trouble relaxing",
+            "Being so restless that it is hard to sit still",
+            "Becoming easily annoyed or irritable",
+            "Feeling afraid as if something awful might happen"
+        ];
         
         // Auth Functions
         async function login() {
@@ -545,6 +826,7 @@
                     document.getElementById('authScreen').style.display = 'none';
                     document.getElementById('appScreen').style.display = 'block';
                     addSystemMessage('Welcome to Healing Space! How are you feeling today?');
+                    loadPetStatus();
                 } else {
                     showAuthMessage(data.error || 'Login failed', 'error');
                 }
@@ -626,6 +908,7 @@
                 document.getElementById('loginUsername').value = '';
                 document.getElementById('loginPassword').value = '';
                 selectedMoodValue = null;
+                medications = [];
             }
         }
         
@@ -636,6 +919,11 @@
             
             document.getElementById(tabName + 'Tab').classList.add('active');
             buttonEl.classList.add('active');
+            
+            // Load pet when switching to pet tab
+            if (tabName === 'pet') {
+                loadPetStatus();
+            }
         }
         
         // Chat Functions
@@ -667,6 +955,8 @@
                 
                 if (response.ok) {
                     addMessage(data.response, 'ai');
+                    // Reward pet for therapy session
+                    await rewardPet('therapy');
                 } else {
                     addMessage('Sorry, I encountered an error. Please try again.', 'ai');
                 }
@@ -698,14 +988,50 @@
             element.classList.add('selected');
         }
         
+        function addMedication() {
+            const name = document.getElementById('medName').value.trim();
+            const strength = document.getElementById('medStrength').value.trim();
+            const qty = document.getElementById('medQty').value.trim() || '1';
+            
+            if (!name) {
+                showMessage('moodMessage', 'Please enter medication name', 'error');
+                return;
+            }
+            
+            medications.push({name, strength, quantity: qty});
+            updateMedList();
+            
+            // Clear inputs
+            document.getElementById('medName').value = '';
+            document.getElementById('medStrength').value = '';
+            document.getElementById('medQty').value = '1';
+        }
+        
+        function updateMedList() {
+            const listEl = document.getElementById('medList');
+            listEl.innerHTML = medications.map((med, idx) => `
+                <div class="med-item">
+                    <span>${med.name} ${med.strength}mg (x${med.quantity})</span>
+                    <button onclick="removeMed(${idx})">Remove</button>
+                </div>
+            `).join('');
+        }
+        
+        function removeMed(index) {
+            medications.splice(index, 1);
+            updateMedList();
+        }
+        
         async function logMood() {
             if (!selectedMoodValue) {
                 showMessage('moodMessage', 'Please select a mood level', 'error');
                 return;
             }
             
-            const sleep_val = parseFloat(document.getElementById('sleepHours').value) || 0;
-            const meds = document.getElementById('medications').value.trim();
+            const sleep = parseFloat(document.getElementById('sleepHours').value) || 0;
+            const water = parseFloat(document.getElementById('waterPints').value) || 0;
+            const exercise = parseInt(document.getElementById('exerciseMins').value) || 0;
+            const outside = parseInt(document.getElementById('outsideMins').value) || 0;
             const notes = document.getElementById('moodNotes').value.trim();
             
             try {
@@ -715,8 +1041,11 @@
                     body: JSON.stringify({
                         username: currentUser,
                         mood_val: selectedMoodValue,
-                        sleep_val,
-                        meds,
+                        sleep_val: sleep,
+                        water_pints: water,
+                        exercise_mins: exercise,
+                        outside_mins: outside,
+                        meds: medications,
                         notes
                     })
                 });
@@ -724,13 +1053,19 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    showMessage('moodMessage', 'Mood logged successfully! 🎉 Keep tracking your progress!', 'success');
+                    showMessage('moodMessage', 'Mood logged successfully! 🎉 Keep tracking your progress! (+5 Coins)', 'success');
+                    // Reward pet
+                    await rewardPet('mood');
                     // Clear form
                     selectedMoodValue = null;
+                    medications = [];
                     document.querySelectorAll('.mood-option').forEach(opt => opt.classList.remove('selected'));
                     document.getElementById('sleepHours').value = '';
-                    document.getElementById('medications').value = '';
+                    document.getElementById('waterPints').value = '';
+                    document.getElementById('exerciseMins').value = '';
+                    document.getElementById('outsideMins').value = '';
                     document.getElementById('moodNotes').value = '';
+                    updateMedList();
                 } else {
                     showMessage('moodMessage', data.error || 'Failed to log mood', 'error');
                 }
@@ -759,7 +1094,8 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    showMessage('gratitudeMessage', 'Gratitude entry saved! 🙏 Practice makes perfect!', 'success');
+                    showMessage('gratitudeMessage', 'Gratitude entry saved! 🙏 Practice makes perfect! (+5 Coins)', 'success');
+                    await rewardPet('gratitude');
                     document.getElementById('gratitudeEntry').value = '';
                 } else {
                     showMessage('gratitudeMessage', data.error || 'Failed to save entry', 'error');
@@ -768,6 +1104,219 @@
                 showMessage('gratitudeMessage', 'Connection error. Please try again.', 'error');
                 console.error('Gratitude log error:', error);
             }
+        }
+        
+        // CBT Tools
+        async function saveCBT() {
+            const situation = document.getElementById('cbtSituation').value.trim();
+            const thought = document.getElementById('cbtThought').value.trim();
+            const evidence = document.getElementById('cbtEvidence').value.trim();
+            
+            if (!situation || !thought) {
+                showMessage('cbtMessage', 'Please fill in situation and thought fields', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/cbt/thought-record', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: currentUser, situation, thought, evidence })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage('cbtMessage', 'Thought record saved! 🧠 Great work challenging your thoughts!', 'success');
+                    document.getElementById('cbtSituation').value = '';
+                    document.getElementById('cbtThought').value = '';
+                    document.getElementById('cbtEvidence').value = '';
+                } else {
+                    showMessage('cbtMessage', data.error || 'Failed to save record', 'error');
+                }
+            } catch (error) {
+                showMessage('cbtMessage', 'Connection error. Please try again.', 'error');
+            }
+        }
+        
+        async function startBreathing() {
+            const display = document.getElementById('breathingDisplay');
+            display.classList.remove('hidden');
+            
+            for (let cycle = 0; cycle < 3; cycle++) {
+                display.textContent = 'Breathe IN for 4...';
+                await sleep(4000);
+                display.textContent = 'HOLD for 7...';
+                await sleep(7000);
+                display.textContent = 'Breathe OUT for 8...';
+                await sleep(8000);
+            }
+            
+            display.textContent = '✅ Exercise Complete! Well done!';
+            await rewardPet('breathing');
+            setTimeout(() => display.classList.add('hidden'), 3000);
+        }
+        
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+        
+        // Pet Game
+        async function loadPetStatus() {
+            try {
+                const response = await fetch(`/api/pet/status?username=${encodeURIComponent(currentUser)}`);
+                const data = await response.json();
+                
+                if (data.exists) {
+                    document.getElementById('petCreate').classList.add('hidden');
+                    document.getElementById('petDisplay').classList.remove('hidden');
+                    updatePetDisplay(data.pet);
+                } else {
+                    document.getElementById('petCreate').classList.remove('hidden');
+                    document.getElementById('petDisplay').classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Pet load error:', error);
+            }
+        }
+        
+        async function createPet() {
+            const name = document.getElementById('petName').value.trim();
+            const species = document.getElementById('petSpecies').value;
+            const gender = document.getElementById('petGender').value;
+            
+            if (!name) {
+                alert('Please enter a pet name');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/pet/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, species, gender })
+                });
+                
+                if (response.ok) {
+                    alert(`${name} adopted! 🎉 Take good care of your companion!`);
+                    loadPetStatus();
+                }
+            } catch (error) {
+                console.error('Pet create error:', error);
+            }
+        }
+        
+        function updatePetDisplay(pet) {
+            document.getElementById('petNameDisplay').textContent = pet.name;
+            document.getElementById('petEmojiDisplay').textContent = speciesEmojis[pet.species] || '🐾';
+            document.getElementById('petCoins').textContent = pet.coins;
+            document.getElementById('petXP').textContent = pet.xp;
+            document.getElementById('petStage').textContent = pet.stage;
+            
+            document.getElementById('hungerBar').style.width = pet.hunger + '%';
+            document.getElementById('happinessBar').style.width = pet.happiness + '%';
+            document.getElementById('energyBar').style.width = pet.energy + '%';
+            document.getElementById('hygieneBar').style.width = pet.hygiene + '%';
+        }
+        
+        async function rewardPet(action) {
+            try {
+                const response = await fetch('/api/pet/reward', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.success) {
+                        // Refresh pet display if on pet tab
+                        if (document.getElementById('petTab').classList.contains('active')) {
+                            loadPetStatus();
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Pet reward error:', error);
+            }
+        }
+        
+        // Clinical Assessments
+        function startPHQ9() {
+            currentAssessment = 'PHQ-9';
+            assessmentScores = [];
+            showAssessmentModal('PHQ-9 Depression Screening', PHQ9_QUESTIONS);
+        }
+        
+        function startGAD7() {
+            currentAssessment = 'GAD-7';
+            assessmentScores = [];
+            showAssessmentModal('GAD-7 Anxiety Screening', GAD7_QUESTIONS);
+        }
+        
+        function showAssessmentModal(title, questions) {
+            document.getElementById('assessmentTitle').textContent = title;
+            const container = document.getElementById('assessmentQuestions');
+            container.innerHTML = questions.map((q, idx) => `
+                <div style="margin: 20px 0; padding: 15px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                    <p style="margin-bottom: 10px; font-weight: 600;">${idx + 1}. ${q}</p>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <label style="flex: 1; min-width: 120px;">
+                            <input type="radio" name="q${idx}" value="0" onchange="setScore(${idx}, 0)"> Not at all
+                        </label>
+                        <label style="flex: 1; min-width: 120px;">
+                            <input type="radio" name="q${idx}" value="1" onchange="setScore(${idx}, 1)"> Several days
+                        </label>
+                        <label style="flex: 1; min-width: 120px;">
+                            <input type="radio" name="q${idx}" value="2" onchange="setScore(${idx}, 2)"> More than half
+                        </label>
+                        <label style="flex: 1; min-width: 120px;">
+                            <input type="radio" name="q${idx}" value="3" onchange="setScore(${idx}, 3)"> Nearly every day
+                        </label>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('assessmentModal').classList.remove('hidden');
+        }
+        
+        function setScore(index, value) {
+            assessmentScores[index] = parseInt(value);
+        }
+        
+        async function submitAssessment() {
+            const expectedLength = currentAssessment === 'PHQ-9' ? 9 : 7;
+            
+            if (assessmentScores.length !== expectedLength || assessmentScores.includes(undefined)) {
+                alert('Please answer all questions');
+                return;
+            }
+            
+            try {
+                const endpoint = currentAssessment === 'PHQ-9' ? '/api/clinical/phq9' : '/api/clinical/gad7';
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: currentUser, scores: assessmentScores })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert(`Assessment Complete!\n\nScore: ${data.score}\nSeverity: ${data.severity}\n\nConsult with a mental health professional for personalized care.`);
+                    closeAssessment();
+                } else {
+                    alert('Error submitting assessment');
+                }
+            } catch (error) {
+                alert('Connection error');
+                console.error('Assessment error:', error);
+            }
+        }
+        
+        function closeAssessment() {
+            document.getElementById('assessmentModal').classList.add('hidden');
+            assessmentScores = [];
+            currentAssessment = null;
         }
         
         // History
@@ -787,6 +1336,9 @@
                                 <div class="date">${new Date(log.timestamp).toLocaleString()}</div>
                                 <div style="font-size: 24px; margin: 10px 0;">${moodEmojis[log.mood_val]} <strong>${log.mood_val}/10</strong></div>
                                 <div><strong>Sleep:</strong> ${log.sleep_val} hours</div>
+                                ${log.water_pints ? `<div><strong>Water:</strong> ${log.water_pints} pints</div>` : ''}
+                                ${log.exercise_mins ? `<div><strong>Exercise:</strong> ${log.exercise_mins} mins</div>` : ''}
+                                ${log.outside_mins ? `<div><strong>Outdoors:</strong> ${log.outside_mins} mins</div>` : ''}
                                 ${log.meds ? `<div><strong>Medications:</strong> ${log.meds}</div>` : ''}
                                 ${log.notes ? `<div style="margin-top: 10px;"><strong>Notes:</strong><br>${log.notes}</div>` : ''}
                             </div>
@@ -795,7 +1347,7 @@
                     historyContent.innerHTML = html;
                 } else {
                     historyContent.innerHTML = 
-                        '<p style="text-align: center; color: #999; padding: 40px;">No mood logs yet. Start tracking your mood in the Mood Tracker tab! 📊</p>';
+                        '<p style="text-align: center; color: #999; padding: 40px;">No mood logs yet. Start tracking in the Mood & Habits tab! 📊</p>';
                 }
             } catch (error) {
                 historyContent.innerHTML = 
@@ -813,7 +1365,7 @@
         }
         
         // Initialize
-        console.log('Healing Space initialized');
+        console.log('Healing Space Complete Edition initialized');
     </script>
 </body>
 </html>

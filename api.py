@@ -349,23 +349,33 @@ def therapy_chat():
 
 @app.route('/api/mood/log', methods=['POST'])
 def log_mood():
-    """Log mood entry"""
+    """Log mood entry with full tracking (water, exercise, meds with strength)"""
     try:
         data = request.json
         username = data.get('username')
         mood_val = data.get('mood_val')
         sleep_val = data.get('sleep_val', 0)
-        meds = data.get('meds', '')
+        meds = data.get('meds', '')  # Now expects JSON array of {name, strength, quantity}
         notes = data.get('notes', '')
+        water_pints = data.get('water_pints', 0)
+        exercise_mins = data.get('exercise_mins', 0)
+        outside_mins = data.get('outside_mins', 0)
         
         if not username or mood_val is None:
             return jsonify({'error': 'Username and mood_val required'}), 400
         
+        # Format medications if it's an array
+        if isinstance(meds, list):
+            meds_str = ", ".join([f"{m.get('name')} {m.get('strength')}mg (x{m.get('quantity', 1)})" for m in meds])
+        else:
+            meds_str = meds
+        
         conn = sqlite3.connect("therapist_app.db")
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO mood_logs (username, mood_val, sleep_val, meds, notes, sentiment) VALUES (?,?,?,?,?,?)",
-            (username, mood_val, sleep_val, meds, notes, 'Neutral')
+            """INSERT INTO mood_logs (username, mood_val, sleep_val, meds, notes, sentiment, 
+               water_pints, exercise_mins, outside_mins) VALUES (?,?,?,?,?,?,?,?,?)""",
+            (username, mood_val, sleep_val, meds_str, notes, 'Neutral', water_pints, exercise_mins, outside_mins)
         )
         conn.commit()
         log_id = cur.lastrowid
@@ -384,7 +394,7 @@ def log_mood():
 
 @app.route('/api/mood/history', methods=['GET'])
 def mood_history():
-    """Get mood history for user"""
+    """Get mood history for user with all tracking data"""
     try:
         username = request.args.get('username')
         limit = request.args.get('limit', 30)
@@ -395,7 +405,9 @@ def mood_history():
         conn = sqlite3.connect("therapist_app.db")
         cur = conn.cursor()
         logs = cur.execute(
-            "SELECT id, mood_val, sleep_val, meds, notes, entry_timestamp FROM mood_logs WHERE username=? ORDER BY entry_timestamp DESC LIMIT ?",
+            """SELECT id, mood_val, sleep_val, meds, notes, entry_timestamp, 
+               water_pints, exercise_mins, outside_mins 
+               FROM mood_logs WHERE username=? ORDER BY entry_timestamp DESC LIMIT ?""",
             (username, limit)
         ).fetchall()
         conn.close()
@@ -406,7 +418,10 @@ def mood_history():
             'sleep_val': log[2],
             'meds': log[3],
             'notes': log[4],
-            'timestamp': log[5]
+            'timestamp': log[5],
+            'water_pints': log[6] if len(log) > 6 else 0,
+            'exercise_mins': log[7] if len(log) > 7 else 0,
+            'outside_mins': log[8] if len(log) > 8 else 0
         } for log in logs]
         
         return jsonify({
@@ -494,6 +509,268 @@ def safety_check():
             'crisis_resources': CRISIS_RESOURCES if is_high_risk else None
         }), 200
         
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ===== PET GAME ENDPOINTS =====
+@app.route('/api/pet/status', methods=['GET'])
+def pet_status():
+    """Get pet status"""
+    try:
+        username = request.args.get('username')
+        if not username:
+            return jsonify({'error': 'Username required'}), 400
+        
+        conn = sqlite3.connect("pet_game.db")
+        cur = conn.cursor()
+        pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
+        conn.close()
+        
+        if not pet:
+            return jsonify({'exists': False}), 200
+        
+        return jsonify({
+            'exists': True,
+            'pet': {
+                'name': pet[1], 'species': pet[2], 'gender': pet[3],
+                'hunger': pet[4], 'happiness': pet[5], 'energy': pet[6],
+                'hygiene': pet[7], 'coins': pet[8], 'xp': pet[9],
+                'stage': pet[10], 'hat': pet[13] if len(pet) > 13 else 'None'
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/pet/create', methods=['POST'])
+def pet_create():
+    """Create new pet"""
+    try:
+        data = request.json
+        name = data.get('name')
+        species = data.get('species', 'Dog')
+        gender = data.get('gender', 'Neutral')
+        
+        if not name:
+            return jsonify({'error': 'Pet name required'}), 400
+        
+        conn = sqlite3.connect("pet_game.db")
+        cur = conn.cursor()
+        
+        # Create table if not exists
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS pet (
+                id INTEGER PRIMARY KEY,
+                name TEXT, species TEXT, gender TEXT,
+                hunger INTEGER, happiness INTEGER, energy INTEGER, hygiene INTEGER,
+                coins INTEGER, xp INTEGER, stage TEXT, adventure_end REAL,
+                last_updated REAL, hat TEXT
+            )
+        """)
+        
+        # Insert pet
+        cur.execute("""
+            INSERT INTO pet (name, species, gender, hunger, happiness, energy, hygiene, 
+                           coins, xp, stage, adventure_end, last_updated, hat)
+            VALUES (?, ?, ?, 70, 70, 70, 80, 0, 0, 'Baby', 0, ?, 'None')
+        """, (name, species, gender, datetime.now().timestamp()))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Pet created!'}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/pet/feed', methods=['POST'])
+def pet_feed():
+    """Feed pet (from shop)"""
+    try:
+        data = request.json
+        item_cost = data.get('cost', 10)
+        
+        conn = sqlite3.connect("pet_game.db")
+        cur = conn.cursor()
+        pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
+        
+        if not pet:
+            conn.close()
+            return jsonify({'error': 'No pet found'}), 404
+        
+        coins = pet[8]
+        if coins < item_cost:
+            conn.close()
+            return jsonify({'error': 'Not enough coins'}), 400
+        
+        # Update pet
+        new_hunger = min(100, pet[4] + 30)
+        new_coins = coins - item_cost
+        cur.execute("UPDATE pet SET hunger=?, coins=? WHERE id=?", (new_hunger, new_coins, pet[0]))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True, 'new_hunger': new_hunger, 'coins': new_coins}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/pet/reward', methods=['POST'])
+def pet_reward():
+    """Reward pet for user self-care actions"""
+    try:
+        data = request.json
+        action = data.get('action')  # 'therapy', 'mood', 'gratitude', 'breathing'
+        
+        conn = sqlite3.connect("pet_game.db")
+        cur = conn.cursor()
+        pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
+        
+        if not pet:
+            conn.close()
+            return jsonify({'success': False, 'message': 'No pet'}), 200
+        
+        # Reward logic (from original pet_game.py)
+        coins_earned = 5
+        xp_earned = 10
+        happiness_boost = 5
+        
+        new_coins = pet[8] + coins_earned
+        new_xp = pet[9] + xp_earned
+        new_happiness = min(100, pet[5] + happiness_boost)
+        
+        cur.execute("UPDATE pet SET coins=?, xp=?, happiness=? WHERE id=?",
+                   (new_coins, new_xp, new_happiness, pet[0]))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'coins_earned': coins_earned,
+            'new_coins': new_coins,
+            'new_xp': new_xp
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ===== CBT TOOLS ENDPOINTS =====
+@app.route('/api/cbt/thought-record', methods=['POST'])
+def cbt_thought_record():
+    """Save CBT thought record"""
+    try:
+        data = request.json
+        username = data.get('username')
+        situation = data.get('situation')
+        thought = data.get('thought')
+        evidence = data.get('evidence')
+        
+        if not all([username, situation, thought]):
+            return jsonify({'error': 'Username, situation, and thought required'}), 400
+        
+        conn = sqlite3.connect("therapist_app.db")
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO cbt_records (username, situation, thought, evidence) VALUES (?,?,?,?)",
+            (username, situation, thought, evidence or '')
+        )
+        conn.commit()
+        record_id = cur.lastrowid
+        conn.close()
+        
+        return jsonify({'success': True, 'record_id': record_id}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/cbt/records', methods=['GET'])
+def get_cbt_records():
+    """Get user's CBT thought records"""
+    try:
+        username = request.args.get('username')
+        if not username:
+            return jsonify({'error': 'Username required'}), 400
+        
+        conn = sqlite3.connect("therapist_app.db")
+        cur = conn.cursor()
+        records = cur.execute(
+            "SELECT id, situation, thought, evidence, entry_timestamp FROM cbt_records WHERE username=? ORDER BY entry_timestamp DESC LIMIT 20",
+            (username,)
+        ).fetchall()
+        conn.close()
+        
+        result = [{
+            'id': r[0], 'situation': r[1], 'thought': r[2],
+            'evidence': r[3], 'timestamp': r[4]
+        } for r in records]
+        
+        return jsonify({'success': True, 'records': result}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ===== CLINICAL SCALES ENDPOINTS =====
+@app.route('/api/clinical/phq9', methods=['POST'])
+def submit_phq9():
+    """Submit PHQ-9 depression assessment"""
+    try:
+        data = request.json
+        username = data.get('username')
+        scores = data.get('scores')  # Array of 9 scores (0-3 each)
+        
+        if not username or not scores or len(scores) != 9:
+            return jsonify({'error': 'Username and 9 scores required'}), 400
+        
+        total = sum(scores)
+        if total <= 4:
+            severity = "Minimal"
+        elif total <= 9:
+            severity = "Mild"
+        elif total <= 14:
+            severity = "Moderate"
+        elif total <= 19:
+            severity = "Moderately Severe"
+        else:
+            severity = "Severe"
+        
+        conn = sqlite3.connect("therapist_app.db")
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO clinical_scales (username, scale_name, score, severity) VALUES (?,?,?,?)",
+            (username, 'PHQ-9', total, severity)
+        )
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True, 'score': total, 'severity': severity}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/clinical/gad7', methods=['POST'])
+def submit_gad7():
+    """Submit GAD-7 anxiety assessment"""
+    try:
+        data = request.json
+        username = data.get('username')
+        scores = data.get('scores')  # Array of 7 scores (0-3 each)
+        
+        if not username or not scores or len(scores) != 7:
+            return jsonify({'error': 'Username and 7 scores required'}), 400
+        
+        total = sum(scores)
+        if total <= 4:
+            severity = "Minimal"
+        elif total <= 9:
+            severity = "Mild"
+        elif total <= 14:
+            severity = "Moderate"
+        else:
+            severity = "Severe"
+        
+        conn = sqlite3.connect("therapist_app.db")
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO clinical_scales (username, scale_name, score, severity) VALUES (?,?,?,?)",
+            (username, 'GAD-7', total, severity)
+        )
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True, 'score': total, 'severity': severity}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
