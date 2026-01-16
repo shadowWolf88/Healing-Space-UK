@@ -43,6 +43,16 @@ CORS(app)
 # Initialize with same settings as main app
 DEBUG = os.environ.get('DEBUG', '').lower() in ('1', 'true', 'yes')
 
+# Database path - use volume on Railway, local otherwise
+def get_db_path():
+    """Get database path - use Railway volume if available"""
+    if os.path.exists('/app/data'):
+        # Railway volume mounted
+        return '/app/data/therapist_app.db'
+    return 'therapist_app.db'
+
+DB_PATH = get_db_path()
+
 # Load secrets
 secrets = SecretsManager(debug=DEBUG)
 GROQ_API_KEY = secrets.get_secret("GROQ_API_KEY") or os.environ.get("GROQ_API_KEY")
@@ -107,7 +117,7 @@ def check_pin(pin: str, stored: str) -> bool:
 
 def init_db():
     """Initialize database with all required tables"""
-    conn = sqlite3.connect("therapist_app.db")
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
     cursor.execute('''CREATE TABLE IF NOT EXISTS users 
@@ -190,7 +200,7 @@ class SafetyMonitor:
         try:
             username = user_details if isinstance(user_details, str) else user_details.get('username')
             details = str(user_details)
-            conn = sqlite3.connect("therapist_app.db")
+            conn = sqlite3.connect(DB_PATH)
             conn.execute("INSERT INTO alerts (username, alert_type, details) VALUES (?,?,?)", (username, 'crisis', details))
             conn.commit()
             conn.close()
@@ -290,7 +300,7 @@ def register():
         if not clinician_id:
             return jsonify({'error': 'Please select your clinician'}), 400
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         
         # Verify clinician exists
@@ -358,7 +368,7 @@ def login():
         if not pin:
             return jsonify({'error': 'PIN required for 2FA authentication'}), 400
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         user = cur.execute("SELECT username, password, role, pin, clinician_id FROM users WHERE username=?", (username,)).fetchone()
         
@@ -424,7 +434,7 @@ def forgot_password():
         if not username or not email:
             return jsonify({'error': 'Username and email required'}), 400
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         
         # Verify user exists and email matches
@@ -556,7 +566,7 @@ def clinician_register():
         hashed_password = hash_password(password)
         hashed_pin = hash_pin(pin)
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         
         # Check if username exists
@@ -589,7 +599,7 @@ def accept_disclaimer():
         if not username:
             return jsonify({'error': 'Username required'}), 400
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         cur.execute("UPDATE users SET disclaimer_accepted=1 WHERE username=?", (username,))
         conn.commit()
@@ -603,7 +613,7 @@ def accept_disclaimer():
 def get_clinicians():
     """Get list of all clinicians for patient signup"""
     try:
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         clinicians = cur.execute(
             "SELECT username, full_name FROM users WHERE role='clinician' ORDER BY username"
@@ -628,7 +638,7 @@ def get_notifications():
         if not username:
             return jsonify({'error': 'Username required'}), 400
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         notifications = cur.execute(
             "SELECT id, message, notification_type, read, created_at FROM notifications WHERE recipient_username=? ORDER BY created_at DESC LIMIT 20",
@@ -654,7 +664,7 @@ def get_notifications():
 def mark_notification_read(notification_id):
     """Mark notification as read"""
     try:
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         cur.execute("UPDATE notifications SET read=1 WHERE id=?", (notification_id,))
         conn.commit()
@@ -673,7 +683,7 @@ def get_pending_approvals():
         if not clinician:
             return jsonify({'error': 'Clinician username required'}), 400
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         approvals = cur.execute(
             "SELECT id, patient_username, request_date FROM patient_approvals WHERE clinician_username=? AND status='pending' ORDER BY request_date DESC",
@@ -697,7 +707,7 @@ def get_pending_approvals():
 def approve_patient(approval_id):
     """Approve patient request"""
     try:
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         
         # Get approval details
@@ -747,7 +757,7 @@ def approve_patient(approval_id):
 def reject_patient(approval_id):
     """Reject patient request"""
     try:
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         
         # Get approval details
@@ -796,7 +806,7 @@ def therapy_chat():
         ai = TherapistAI(username)
         
         # Get conversation history
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         history = cur.execute(
             "SELECT sender, message FROM chat_history WHERE session_id=? ORDER BY timestamp DESC LIMIT 10",
@@ -808,7 +818,7 @@ def therapy_chat():
         response = ai.get_response(message, history[::-1])
         
         # Save to chat history
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         cur.execute("INSERT INTO chat_history (session_id, sender, message) VALUES (?,?,?)",
                    (f"{username}_session", "user", message))
@@ -851,7 +861,7 @@ def log_mood():
         else:
             meds_str = meds
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         cur.execute(
             """INSERT INTO mood_logs (username, mood_val, sleep_val, meds, notes, sentiment, 
@@ -883,7 +893,7 @@ def mood_history():
         if not username:
             return jsonify({'error': 'Username required'}), 400
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         logs = cur.execute(
             """SELECT id, mood_val, sleep_val, meds, notes, entry_timestamp, 
@@ -925,7 +935,7 @@ def log_gratitude():
         if not username or not entry:
             return jsonify({'error': 'Username and entry required'}), 400
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         cur.execute("INSERT INTO gratitude_logs (username, entry) VALUES (?,?)", (username, entry))
         conn.commit()
@@ -1419,7 +1429,7 @@ def cbt_thought_record():
         if not all([username, situation, thought]):
             return jsonify({'error': 'Username, situation, and thought required'}), 400
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         cur.execute(
             "INSERT INTO cbt_records (username, situation, thought, evidence) VALUES (?,?,?,?)",
@@ -1441,7 +1451,7 @@ def get_cbt_records():
         if not username:
             return jsonify({'error': 'Username required'}), 400
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         records = cur.execute(
             "SELECT id, situation, thought, evidence, entry_timestamp FROM cbt_records WHERE username=? ORDER BY entry_timestamp DESC LIMIT 20",
@@ -1482,7 +1492,7 @@ def submit_phq9():
         else:
             severity = "Severe"
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         cur.execute(
             "INSERT INTO clinical_scales (username, scale_name, score, severity) VALUES (?,?,?,?)",
@@ -1516,7 +1526,7 @@ def submit_gad7():
         else:
             severity = "Severe"
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         cur.execute(
             "INSERT INTO clinical_scales (username, scale_name, score, severity) VALUES (?,?,?,?)",
@@ -1534,7 +1544,7 @@ def submit_gad7():
 def get_community_posts():
     """Get recent community posts"""
     try:
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         posts = cur.execute(
             "SELECT username, message, likes, entry_timestamp FROM community_posts ORDER BY entry_timestamp DESC LIMIT 20"
@@ -1563,7 +1573,7 @@ def create_community_post():
         if not username or not message:
             return jsonify({'error': 'Username and message required'}), 400
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         cur.execute(
             "INSERT INTO community_posts (username, message) VALUES (?,?)",
@@ -1585,7 +1595,7 @@ def get_safety_plan():
         if not username:
             return jsonify({'error': 'Username required'}), 400
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         plan = cur.execute(
             "SELECT triggers, coping_strategies, support_contacts, professional_contacts FROM safety_plans WHERE username=?",
@@ -1619,7 +1629,7 @@ def save_safety_plan():
         if not username:
             return jsonify({'error': 'Username required'}), 400
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         # Check if plan exists
         existing = cur.execute("SELECT username FROM safety_plans WHERE username=?", (username,)).fetchone()
@@ -1652,7 +1662,7 @@ def export_csv():
         import io
         import csv
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         
         output = io.StringIO()
@@ -1717,7 +1727,7 @@ def export_pdf():
         except ImportError:
             return jsonify({'error': 'PDF library not available'}), 500
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         
         pdf = FPDF()
@@ -1780,7 +1790,7 @@ def get_insights():
         if not username:
             return jsonify({'error': 'Username required'}), 400
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         
         # Get recent mood data for trends
@@ -1853,7 +1863,7 @@ def get_patients():
         if not clinician_username:
             return jsonify({'error': 'Clinician username required'}), 400
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         
         # Get only APPROVED patients assigned to this clinician
@@ -1870,13 +1880,13 @@ def get_patients():
             
             # Get recent mood average
             mood_avg = cur.execute(
-                "SELECT AVG(mood_val) FROM mood_logs WHERE username=? AND entry_timestamp > datetime('now', '-7 days')",
+                "SELECT AVG(mood_val) FROM mood_logs WHERE username=? AND entrestamp > datetime('now', '-7 days')",
                 (username,)
             ).fetchone()[0] or 0
             
-            # Get alert count
+            # Get alert count (use alerts table, not safety_alerts)
             alert_count = cur.execute(
-                "SELECT COUNT(*) FROM safety_alerts WHERE username=? AND entry_timestamp > datetime('now', '-7 days')",
+                "SELECT COUNT(*) FROM alerts WHERE username=? AND created_at > datetime('now', '-7 days')",
                 (username,)
             ).fetchone()[0]
             
@@ -1886,10 +1896,17 @@ def get_patients():
                 (username,)
             ).fetchone()
             
+            # Get last login
+            last_login = cur.execute(
+                "SELECT last_login FROM users WHERE username=?",
+                (username,)
+            ).fetchone()
+            
             patient_list.append({
                 'username': username,
                 'avg_mood_7d': round(mood_avg, 1),
                 'alert_count_7d': alert_count,
+                'last_login': last_login[0] if last_login and last_login[0] else None,
                 'latest_assessment': {
                     'name': latest_scale[0],
                     'score': latest_scale[1],
@@ -1901,13 +1918,16 @@ def get_patients():
         conn.close()
         return jsonify({'patients': patient_list}), 200
     except Exception as e:
+        print(f"ERROR in get_patients: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/professional/patient/<username>', methods=['GET'])
 def get_patient_detail(username):
     """Get detailed patient data (for professional dashboard)"""
     try:
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         
         # Profile
@@ -1918,13 +1938,13 @@ def get_patient_detail(username):
         
         # Recent moods
         moods = cur.execute(
-            "SELECT mood_val, sleep_val, exercise_val, notes, entry_timestamp FROM mood_logs WHERE username=? ORDER BY entry_timestamp DESC LIMIT 30",
+            "SELECT mood_val, sleep_val, exercise_mins, notes, entrestamp FROM mood_logs WHERE username=? ORDER BY entrestamp DESC LIMIT 30",
             (username,)
         ).fetchall()
         
-        # Recent alerts
+        # Recent alerts (use alerts table with correct columns)
         alerts = cur.execute(
-            "SELECT alert_type, message, entry_timestamp FROM safety_alerts WHERE username=? ORDER BY entry_timestamp DESC LIMIT 10",
+            "SELECT alert_type, details, created_at FROM alerts WHERE username=? ORDER BY created_at DESC LIMIT 10",
             (username,)
         ).fetchall()
         
@@ -1970,7 +1990,7 @@ def generate_ai_summary():
             return jsonify({'error': 'Username required'}), 400
         
         # Fetch patient data
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         
         # Get profile
@@ -1981,13 +2001,13 @@ def generate_ai_summary():
         
         # Get recent moods (last 30 days)
         moods = cur.execute(
-            "SELECT mood_val, sleep_val, exercise_val, notes, entry_timestamp FROM mood_logs WHERE username=? ORDER BY entry_timestamp DESC LIMIT 30",
+            "SELECT mood_val, sleep_val, exercise_mins, notes, entrestamp FROM mood_logs WHERE username=? ORDER BY entrestamp DESC LIMIT 30",
             (username,)
         ).fetchall()
         
         # Get recent alerts (last 30 days)
         alerts = cur.execute(
-            "SELECT alert_type, message, entry_timestamp FROM safety_alerts WHERE username=? AND entry_timestamp > datetime('now', '-30 days') ORDER BY entry_timestamp DESC",
+            "SELECT alert_type, details, created_at FROM alerts WHERE username=? AND created_at > datetime('now', '-30 days') ORDER BY created_at DESC",
             (username,)
         ).fetchall()
         
@@ -2125,7 +2145,7 @@ def reset_all_users():
         if confirm != 'DELETE_ALL_USERS':
             return jsonify({'error': 'Must provide confirm="DELETE_ALL_USERS" to proceed'}), 400
         
-        conn = sqlite3.connect("therapist_app.db")
+        conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         
         # Delete all users and related data
