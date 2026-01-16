@@ -1482,6 +1482,7 @@
         let medications = [];
         let currentAssessment = null;
         let assessmentScores = [];
+        let tempLoginData = null; // Store login data for disclaimer flow
         
         const speciesEmojis = {Dog: '🐶', Cat: '🐱', Rabbit: '🐰', Fox: '🦊', Panda: '🐼', Penguin: '🐧'};
         
@@ -1582,6 +1583,7 @@
                     
                     // Check if user needs to accept disclaimer (first login)
                     if (!data.disclaimer_accepted) {
+                        tempLoginData = data; // Store for later
                         showDisclaimerModal();
                         return;
                     }
@@ -1611,20 +1613,10 @@
                 
                 document.getElementById('disclaimerModal').style.display = 'none';
                 
-                // Re-fetch user data and complete login
-                const response = await fetch('/api/auth/login', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        username: currentUser, 
-                        password: 'skip',  // We already authenticated
-                        pin: 'skip'
-                    })
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    completeLogin(data);
+                // Complete login with stored data (no re-authentication needed)
+                if (tempLoginData) {
+                    completeLogin(tempLoginData);
+                    tempLoginData = null; // Clear stored data
                 }
             } catch (error) {
                 console.error('Error accepting disclaimer:', error);
