@@ -450,18 +450,24 @@ def forgot_password():
         conn.close()
         
         # Send email
-        send_reset_email(email, username, reset_token)
-        
-        log_event(username, 'api', 'password_reset_requested', f'Reset requested for {email}')
-        
-        return jsonify({
-            'success': True,
-            'message': 'Password reset link sent to your email'
-        }), 200
+        try:
+            send_reset_email(email, username, reset_token)
+            log_event(username, 'api', 'password_reset_requested', f'Reset requested for {email}')
+            
+            return jsonify({
+                'success': True,
+                'message': 'Password reset link sent to your email'
+            }), 200
+        except Exception as email_error:
+            # Email failed but token is stored - provide helpful error
+            return jsonify({
+                'error': 'Failed to send email. Please contact support or try again later.',
+                'details': str(email_error) if DEBUG else None
+            }), 500
         
     except Exception as e:
         print(f"Password reset error: {e}")
-        return jsonify({'error': 'Failed to send reset email'}), 500
+        return jsonify({'error': 'Password reset failed', 'details': str(e) if DEBUG else None}), 500
 
 def send_reset_email(to_email, username, reset_token):
     """Send password reset email via SMTP"""
@@ -474,8 +480,9 @@ def send_reset_email(to_email, username, reset_token):
         from_email = os.getenv('FROM_EMAIL', smtp_user)
         
         if not smtp_user or not smtp_password:
-            print("SMTP credentials not configured")
-            return
+            error_msg = "SMTP credentials not configured. Set SMTP_USER and SMTP_PASSWORD environment variables."
+            print(error_msg)
+            raise Exception(error_msg)
         
         # Create message
         msg = MIMEMultipart('alternative')
@@ -484,7 +491,7 @@ def send_reset_email(to_email, username, reset_token):
         msg['To'] = to_email
         
         # Reset URL (use Railway URL or localhost)
-        base_url = os.getenv('APP_URL', 'https://web-production-64594.up.railway.app')
+        base_url = os.getenv('APP_URL', 'http://localhost:5000')
         reset_url = f"{base_url}/reset-password?token={reset_token}&username={username}"
         
         html = f"""
@@ -511,10 +518,12 @@ def send_reset_email(to_email, username, reset_token):
             server.send_message(msg)
         
         print(f"Reset email sent to {to_email}")
+        return True
         
     except Exception as e:
-        print(f"Email send error: {e}")
-        raise
+        error_msg = f"Email send error: {str(e)}"
+        print(error_msg)
+        raise Exception(error_msg)
 
 @app.route('/api/auth/clinician/register', methods=['POST'])
 def clinician_register():
