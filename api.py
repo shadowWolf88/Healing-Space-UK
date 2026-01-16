@@ -1075,6 +1075,83 @@ def get_therapy_greeting():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/therapy/initialize', methods=['POST'])
+def initialize_chat():
+    """Initialize chat for new users - creates first AI interaction and memory bank"""
+    try:
+        data = request.json
+        username = data.get('username')
+        
+        if not username:
+            return jsonify({'error': 'Username required'}), 400
+        
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        
+        # Check if chat already initialized (has any chat history)
+        existing_chat = cur.execute(
+            "SELECT COUNT(*) FROM chat_history WHERE session_id=?",
+            (f"{username}_session",)
+        ).fetchone()[0]
+        
+        if existing_chat > 0:
+            conn.close()
+            return jsonify({
+                'success': True,
+                'message': 'Chat already initialized',
+                'already_exists': True
+            }), 200
+        
+        # Get user profile info
+        user_info = cur.execute(
+            "SELECT full_name, dob, conditions FROM users WHERE username=?",
+            (username,)
+        ).fetchone()
+        
+        full_name = user_info[0] if user_info and user_info[0] else username
+        dob = user_info[1] if user_info and user_info[1] else "not provided"
+        conditions = user_info[2] if user_info and user_info[2] else "not yet shared"
+        
+        # Create initial welcome message from AI
+        ai = TherapistAI(username)
+        welcome_prompt = f"""This is the first time meeting {full_name}. Their medical conditions: {conditions}. 
+        Create a warm, professional welcome message (2-3 sentences) that:
+        1. Introduces yourself as their AI therapy companion
+        2. Explains you'll be tracking their progress and supporting their mental health journey
+        3. Asks them to share what brings them here today
+        Keep it warm, professional, and encouraging."""
+        
+        welcome_message = ai.get_response(welcome_prompt, [])
+        
+        # Save welcome message to chat history
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        cur.execute(
+            "INSERT INTO chat_history (session_id, sender, message, timestamp) VALUES (?,?,?,?)",
+            (f"{username}_session", 'ai', welcome_message, timestamp)
+        )
+        
+        # Initialize AI memory with profile data
+        initial_memory = f"Patient: {full_name}. Date of Birth: {dob}. Medical conditions: {conditions}. First session: {timestamp}."
+        cur.execute(
+            "INSERT OR REPLACE INTO ai_memory (username, memory_summary, last_updated) VALUES (?,?,?)",
+            (username, initial_memory, timestamp)
+        )
+        
+        conn.commit()
+        conn.close()
+        
+        log_event(username, 'system', 'chat_initialized', 'First-time chat and memory bank created')
+        
+        return jsonify({
+            'success': True,
+            'message': 'Chat initialized successfully',
+            'welcome_message': welcome_message,
+            'already_exists': False
+        }), 201
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/mood/log', methods=['POST'])
 def log_mood():
     """Log mood entry with full tracking (water, exercise, meds with strength)"""
@@ -1178,7 +1255,7 @@ def mood_history():
 
 @app.route('/api/gratitude/log', methods=['POST'])
 def log_gratitude():
-    """Log gratitude entry"""
+    """Log gratitude entry - automatically updates AI memory"""
     try:
         data = request.json
         username = data.get('username')
@@ -1194,7 +1271,10 @@ def log_gratitude():
         log_id = cur.lastrowid
         conn.close()
         
-        log_event(username, 'api', 'gratitude_logged', 'Gratitude entry added')
+        # AUTO-UPDATE AI MEMORY
+        update_ai_memory(username)
+        
+        log_event(username, 'api', 'gratitude_logged', 'Gratitude entry added, AI memory updated')
         
         return jsonify({
             'success': True,
@@ -1691,6 +1771,9 @@ def cbt_thought_record():
         record_id = cur.lastrowid
         conn.close()
         
+        # AUTO-UPDATE AI MEMORY
+        update_ai_memory(username)
+        
         return jsonify({'success': True, 'record_id': record_id}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1753,6 +1836,9 @@ def submit_phq9():
         conn.commit()
         conn.close()
         
+        # AUTO-UPDATE AI MEMORY
+        update_ai_memory(username)
+        
         return jsonify({'success': True, 'score': total, 'severity': severity}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1786,6 +1872,9 @@ def submit_gad7():
         )
         conn.commit()
         conn.close()
+        
+        # AUTO-UPDATE AI MEMORY
+        update_ai_memory(username)
         
         return jsonify({'success': True, 'score': total, 'severity': severity}), 201
     except Exception as e:
@@ -1849,6 +1938,9 @@ def create_community_post():
         )
         conn.commit()
         conn.close()
+        
+        # AUTO-UPDATE AI MEMORY
+        update_ai_memory(username)
         
         return jsonify({'success': True}), 201
     except Exception as e:
@@ -2033,6 +2125,9 @@ def save_safety_plan():
             )
         conn.commit()
         conn.close()
+        
+        # AUTO-UPDATE AI MEMORY
+        update_ai_memory(username)
         
         return jsonify({'success': True}), 201
     except Exception as e:
@@ -2605,7 +2700,7 @@ RECOMMENDATIONS:
 # ===== CLINICIAN NOTES & PDF EXPORT =====
 @app.route('/api/professional/notes', methods=['POST'])
 def create_clinician_note():
-    """Create a note about a patient"""
+    """Create a note about a patient - automatically updates AI memory"""
     try:
         data = request.json
         clinician_username = data.get('clinician_username')
@@ -2626,9 +2721,12 @@ def create_clinician_note():
         conn.commit()
         conn.close()
         
-        log_event(clinician_username, 'api', 'clinician_note_created', f'Note for {patient_username}')
+        # AUTO-UPDATE AI MEMORY when clinician adds note
+        update_ai_memory(patient_username)
         
-        return jsonify({'success': True, 'note_id': note_id}), 201
+        log_event(clinician_username, 'api', 'clinician_note_created', f'Note for {patient_username}, AI memory updated')
+        
+        return jsonify({'success': True, 'note_id': note_id, 'message': 'Note saved and AI memory updated'}), 201
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

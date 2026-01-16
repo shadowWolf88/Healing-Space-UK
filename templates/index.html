@@ -1839,13 +1839,40 @@
         // Initialize patient session with chat history and greeting
         async function initializePatientSession() {
             try {
+                // First, check if chat needs initialization (first-time user)
+                await initializeChatIfNeeded();
+                
                 // Load existing chat history
                 await loadChatHistory();
                 
-                // Then show personalized greeting
-                await showPersonalizedGreeting();
+                // Then show personalized greeting (only if not first time)
+                const history = await fetch(`/api/therapy/history?username=${currentUser}`).then(r => r.json());
+                if (history.history && history.history.length > 1) {
+                    // Has chat history beyond welcome message
+                    await showPersonalizedGreeting();
+                }
             } catch (error) {
                 console.error('Error initializing session:', error);
+            }
+        }
+        
+        // Initialize chat for first-time users
+        async function initializeChatIfNeeded() {
+            try {
+                const response = await fetch('/api/therapy/initialize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: currentUser })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && !data.already_exists) {
+                    // First-time user - chat initialized with welcome message
+                    console.log('Chat initialized for new user');
+                }
+            } catch (error) {
+                console.error('Error initializing chat:', error);
             }
         }
         
@@ -3611,9 +3638,32 @@
                     
                 case 'therapy':
                     html = `
+                        <div class="card" style="margin-bottom: 20px;">
+                            <h4>📝 Add Therapy / Appointment Note</h4>
+                            <textarea id="newClinicianNote" placeholder="Enter therapy session notes, appointment summaries, or clinical observations..." style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px; min-height: 120px; font-family: inherit; margin-bottom: 10px;"></textarea>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                                    <input type="checkbox" id="highlightNote" style="cursor: pointer;">
+                                    <span>⭐ Highlight as important</span>
+                                </label>
+                                <button class="btn" onclick="saveClinicianNote()" style="margin-left: auto;">💾 Save Note</button>
+                            </div>
+                        </div>
                         <div class="card">
-                            <h4>Therapy Session Notes</h4>
-                            <p style="color: #999; padding: 20px; text-align: center;">Feature coming soon - therapy session transcripts will appear here</p>
+                            <h4>Previous Therapy Notes & Appointments</h4>
+                            <div id="clinicianNotesContainer">
+                                ${data.clinician_notes && data.clinician_notes.length > 0 ? 
+                                    data.clinician_notes.map(note => `
+                                        <div class="note-item" style="padding: 15px; border-left: 4px solid ${note.highlighted ? '#ffc107' : '#e0e0e0'}; background: ${note.highlighted ? '#fff3cd' : '#f8f9fa'}; border-radius: 8px; margin-bottom: 15px; position: relative;">
+                                            ${note.highlighted ? '<span style="position: absolute; top: 10px; right: 10px; font-size: 20px;">⭐</span>' : ''}
+                                            <div style="color: #666; font-size: 13px; margin-bottom: 8px;">📅 ${new Date(note.timestamp).toLocaleString()}</div>
+                                            <div style="white-space: pre-wrap; line-height: 1.6;">${note.note}</div>
+                                            <button class="btn btn-secondary" onclick="deleteNote(${note.id})" style="margin-top: 10px; padding: 6px 12px; font-size: 13px;">🗑️ Delete</button>
+                                        </div>
+                                    `).join('') 
+                                    : '<p style="color: #999; padding: 20px; text-align: center;">No therapy notes yet. Add your first note above.</p>'
+                                }
+                            </div>
                         </div>
                     `;
                     break;
@@ -3655,6 +3705,71 @@
                 'Severe': '#dc3545'
             };
             return colors[severity] || '#999';
+        }
+        
+        async function saveClinicianNote() {
+            const noteText = document.getElementById('newClinicianNote').value.trim();
+            const isHighlighted = document.getElementById('highlightNote').checked;
+            
+            if (!noteText) {
+                alert('Please enter a note');
+                return;
+            }
+            
+            if (!currentPatientData || !currentPatientData.username) {
+                alert('No patient selected');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/professional/notes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        clinician_username: currentUser,
+                        patient_username: currentPatientData.username,
+                        note_text: noteText,
+                        is_highlighted: isHighlighted ? 1 : 0
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('✅ Note saved successfully! AI will reference this in patient conversations.');
+                    document.getElementById('newClinicianNote').value = '';
+                    document.getElementById('highlightNote').checked = false;
+                    // Reload patient data to show new note
+                    viewPatient(currentPatientData.username);
+                } else {
+                    alert('Error saving note: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error saving note:', error);
+                alert('Failed to save note');
+            }
+        }
+        
+        async function deleteNote(noteId) {
+            if (!confirm('Delete this note?')) return;
+            
+            try {
+                const response = await fetch(`/api/professional/notes/${noteId}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert('Note deleted');
+                    viewPatient(currentPatientData.username);
+                } else {
+                    alert('Error deleting note: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error deleting note:', error);
+                alert('Failed to delete note');
+            }
         }
         
         // Initialize
