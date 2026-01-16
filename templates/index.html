@@ -1583,14 +1583,7 @@
                     currentUser = username;
                     currentUserRole = data.role || 'user';
                     
-                    // Check if user needs to accept disclaimer (first login)
-                    if (!data.disclaimer_accepted) {
-                        tempLoginData = data; // Store for later
-                        showDisclaimerModal();
-                        return;
-                    }
-                    
-                    // Proceed with normal login
+                    // Proceed with login (disclaimer already accepted during registration)
                     completeLogin(data);
                 } else {
                     showAuthMessage(data.error || 'Login failed', 'error');
@@ -1607,17 +1600,15 @@
         
         async function acceptDisclaimer() {
             try {
-                await fetch('/api/auth/disclaimer/accept', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: currentUser })
-                });
-                
                 document.getElementById('disclaimerModal').style.display = 'none';
                 
-                // Complete login with stored data (no re-authentication needed)
+                // Complete the registration with stored data
                 if (tempLoginData) {
-                    completeLogin(tempLoginData);
+                    if (tempLoginData.type === 'patient') {
+                        await completePatientRegistration(tempLoginData);
+                    } else if (tempLoginData.type === 'clinician') {
+                        await completeClinicianRegistration(tempLoginData);
+                    }
                     tempLoginData = null; // Clear stored data
                 }
             } catch (error) {
@@ -1724,23 +1715,42 @@
                 return;
             }
             
+            // Store registration data and show disclaimer
+            currentUser = username;
+            tempLoginData = { 
+                type: 'patient',
+                username, 
+                password, 
+                pin, 
+                clinician_id 
+            };
+            showDisclaimerModal();
+        }
+        
+        async function completePatientRegistration(data) {
             try {
                 const response = await fetch('/api/auth/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password, pin, clinician_id })
+                    body: JSON.stringify({ 
+                        username: data.username, 
+                        password: data.password, 
+                        pin: data.pin, 
+                        clinician_id: data.clinician_id,
+                        disclaimer_accepted: true
+                    })
                 });
                 
-                const data = await response.json();
+                const result = await response.json();
                 
                 if (response.ok) {
                     showAuthMessage('Account created! Awaiting clinician approval.', 'success');
                     setTimeout(() => {
                         showPatientAuth();
-                        document.getElementById('loginUsername').value = username;
+                        document.getElementById('loginUsername').value = data.username;
                     }, 3000);
                 } else {
-                    showAuthMessage(data.error || 'Registration failed', 'error');
+                    showAuthMessage(result.error || 'Registration failed', 'error');
                 }
             } catch (error) {
                 showAuthMessage('Connection error. Please try again.', 'error');
@@ -1769,23 +1779,42 @@
                 return;
             }
             
+            // Store registration data and show disclaimer
+            currentUser = username;
+            tempLoginData = { 
+                type: 'clinician',
+                username, 
+                password, 
+                pin, 
+                full_name 
+            };
+            showDisclaimerModal();
+        }
+        
+        async function completeClinicianRegistration(data) {
             try {
                 const response = await fetch('/api/auth/clinician/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username, password, pin, full_name })
+                    body: JSON.stringify({ 
+                        username: data.username, 
+                        password: data.password, 
+                        pin: data.pin, 
+                        full_name: data.full_name,
+                        disclaimer_accepted: true
+                    })
                 });
                 
-                const data = await response.json();
+                const result = await response.json();
                 
                 if (response.ok) {
                     showAuthMessage('Clinician account created successfully! Please login.', 'success');
                     setTimeout(() => {
                         showClinicianAuth();
-                        document.getElementById('clinicianLoginUsername').value = username;
+                        document.getElementById('clinicianLoginUsername').value = data.username;
                     }, 2000);
                 } else {
-                    showAuthMessage(data.error || 'Registration failed', 'error');
+                    showAuthMessage(result.error || 'Registration failed', 'error');
                 }
             } catch (error) {
                 showAuthMessage('Connection error. Please try again.', 'error');
