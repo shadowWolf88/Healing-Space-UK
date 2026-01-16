@@ -143,6 +143,10 @@ def init_db():
                       (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, scale_name TEXT, score INTEGER, severity TEXT, entry_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS community_posts
                       (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, message TEXT, likes INTEGER DEFAULT 0, entry_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS community_likes
+                      (id INTEGER PRIMARY KEY AUTOINCREMENT, post_id INTEGER, username TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE(post_id, username))''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS community_replies
+                      (id INTEGER PRIMARY KEY AUTOINCREMENT, post_id INTEGER, username TEXT, message TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS audit_logs
                       (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, actor TEXT, action TEXT, details TEXT, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS alerts
@@ -1544,21 +1548,37 @@ def submit_gad7():
 def get_community_posts():
     """Get recent community posts"""
     try:
+        username = request.args.get('username', '')  # Optional - to check if user liked posts
+        
         conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         posts = cur.execute(
-            "SELECT username, message, likes, entry_timestamp FROM community_posts ORDER BY entry_timestamp DESC LIMIT 20"
+            "SELECT id, username, message, likes, entry_timestamp FROM community_posts ORDER BY entry_timestamp DESC LIMIT 20"
         ).fetchall()
-        conn.close()
         
-        return jsonify({'posts': [
-            {
-                'username': p[0],
-                'message': p[1],
-                'likes': p[2] or 0,
-                'timestamp': p[3]
-            } for p in posts
-        ]}), 200
+        post_list = []
+        for p in posts:
+            post_id = p[0]
+            # Check if current user liked this post
+            liked_by_user = False
+            if username:
+                liked = cur.execute(
+                    "SELECT 1 FROM community_likes WHERE post_id=? AND username=?",
+                    (post_id, username)
+                ).fetchone()
+                liked_by_user = liked is not None
+            
+            post_list.append({
+                'id': post_id,
+                'username': p[1],
+                'message': p[2],
+                'likes': p[3] or 0,
+                'timestamp': p[4],
+                'liked_by_user': liked_by_user
+            })
+        
+        conn.close()
+        return jsonify({'posts': post_list}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1583,6 +1603,126 @@ def create_community_post():
         conn.close()
         
         return jsonify({'success': True}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/community/post/<int:post_id>/like', methods=['POST'])
+def like_community_post(post_id):
+    """Like or unlike a community post"""
+    try:
+        data = request.json
+        username = data.get('username')
+        
+        if not username:
+            return jsonify({'error': 'Username required'}), 400
+        
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        
+        # Check if already liked
+        existing_like = cur.execute(
+            "SELECT 1 FROM community_likes WHERE post_id=? AND username=?",
+            (post_id, username)
+        ).fetchone()
+        
+        if existing_like:
+            # Unlike - remove like and decrement count
+            cur.execute("DELETE FROM community_likes WHERE post_id=? AND username=?", (post_id, username))
+            cur.execute("UPDATE community_posts SET likes = likes - 1 WHERE id=?", (post_id,))
+        else:
+            # Like - add like and increment count
+            cur.execute("INSERT INTO community_likes (post_id, username) VALUES (?,?)", (post_id, username))
+            cur.execute("UPDATE community_posts SET likes = likes + 1 WHERE id=?", (post_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/community/post/<int:post_id>', methods=['DELETE'])
+def delete_community_post(post_id):
+    """Delete a community post (only by author)"""
+    try:
+        data = request.json
+        username = data.get('username')
+        
+        if not username:
+            return jsonify({'error': 'Username required'}), 400
+        
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        
+        # Verify post belongs to user
+        post = cur.execute(
+            "SELECT username FROM community_posts WHERE id=?",
+            (post_id,)
+        ).fetchone()
+        
+        if not post:
+            conn.close()
+            return jsonify({'error': 'Post not found'}), 404
+        
+        if post[0] != username:
+            conn.close()
+            return jsonify({'error': 'You can only delete your own posts'}), 403
+        
+        # Delete post and related data
+        cur.execute("DELETE FROM community_posts WHERE id=?", (post_id,))
+        cur.execute("DELETE FROM community_likes WHERE post_id=?", (post_id,))
+        cur.execute("DELETE FROM community_replies WHERE post_id=?", (post_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/community/post/<int:post_id>/reply', methods=['POST'])
+def create_reply(post_id):
+    """Create a reply to a community post"""
+    try:
+        data = request.json
+        username = data.get('username')
+        message = data.get('message')
+        
+        if not username or not message:
+            return jsonify({'error': 'Username and message required'}), 400
+        
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO community_replies (post_id, username, message) VALUES (?,?,?)",
+            (post_id, username, message)
+        )
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/community/post/<int:post_id>/replies', methods=['GET'])
+def get_replies(post_id):
+    """Get replies for a community post"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        replies = cur.execute(
+            "SELECT username, message, timestamp FROM community_replies WHERE post_id=? ORDER BY timestamp ASC",
+            (post_id,)
+        ).fetchall()
+        conn.close()
+        
+        return jsonify({'replies': [
+            {
+                'username': r[0],
+                'message': r[1],
+                'timestamp': r[2]
+            } for r in replies
+        ]}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
