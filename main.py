@@ -122,7 +122,18 @@ def check_pin(pin: str, stored: str) -> bool:
 
 # NEW LIBRARIES FOR SECURITY AND EXPORT
 from cryptography.fernet import Fernet
-from fpdf import FPDF
+
+# PDF generation with reportlab (more reliable than fpdf)
+try:
+    from reportlab.lib.pagesizes import letter
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+    from reportlab.lib import colors
+    HAS_REPORTLAB = True
+except ImportError:
+    HAS_REPORTLAB = False
+    print("Warning: reportlab not installed. PDF export will be disabled.")
 
 # --- MODERN THEMING ---
 ctk.set_appearance_mode("dark")
@@ -370,6 +381,15 @@ def init_db():
     cursor.execute('''CREATE TABLE IF NOT EXISTS notifications
                       (id INTEGER PRIMARY KEY AUTOINCREMENT, recipient_username TEXT, message TEXT, 
                        notification_type TEXT, read INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    
+    # Clinician appointment calendar for face-to-face sessions
+    cursor.execute('''CREATE TABLE IF NOT EXISTS appointments
+                      (id INTEGER PRIMARY KEY AUTOINCREMENT, clinician_username TEXT, patient_username TEXT,
+                       appointment_date DATETIME, appointment_type TEXT DEFAULT 'Face-to-Face',
+                       notes TEXT, pdf_generated INTEGER DEFAULT 0, pdf_path TEXT,
+                       notification_sent INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                       FOREIGN KEY(clinician_username) REFERENCES users(username),
+                       FOREIGN KEY(patient_username) REFERENCES users(username))''')
 
     # --- DATABASE REPAIR BLOCK ---
     cursor.execute("PRAGMA table_info(users)")
@@ -584,10 +604,17 @@ class TherapistAI:
 
 # --- NEW: CLINICIAN DASHBOARD ---
 class ProfessionalDashboard:
-    def __init__(self, parent):
+    def __init__(self, parent, clinician_username):
+        self.parent = parent
+        self.clinician_username = clinician_username
         self.win = ctk.CTkToplevel(parent)
         self.win.title("Clinician Dashboard (Confidential)")
-        self.win.geometry("900x700")
+        self.win.geometry("1100x800")
+        
+        # Initialize appointment manager
+        from clinician_appointments import AppointmentManager, PDFReportGenerator
+        self.appointment_mgr = AppointmentManager(self.win, clinician_username)
+        self.pdf_gen = PDFReportGenerator(clinician_username)
         
         # Tabs
         self.tabview = ctk.CTkTabview(self.win)
@@ -596,8 +623,28 @@ class ProfessionalDashboard:
         self.t_overview = self.tabview.add("Patient Overview")
         self.t_scales = self.tabview.add("Clinical Scales")
         self.t_risk = self.tabview.add("Risk Monitoring")
+        self.t_appointments = self.tabview.add("📅 Appointments")
+        self.t_reports = self.tabview.add("📄 PDF Reports")
         
         self._load_data()
+        
+        # Setup appointment calendar
+        self.appointment_mgr.setup_appointment_tab(self.t_appointments)
+        
+        # Setup PDF reports tab
+        self._setup_pdf_reports_tab()
+        
+        # Check for appointment notifications
+        self.appointment_mgr.check_upcoming_appointments()
+        self.t_appointments = self.tabview.add("Appointment Calendar")
+        self.t_reports = self.tabview.add("PDF Reports")
+        
+        self._load_data()
+        self._setup_appointment_calendar()
+        self._setup_pdf_reports()
+        
+        # Start appointment checker for notifications
+        self._check_upcoming_appointments()
 
     def _load_data(self):
         conn = sqlite3.connect("therapist_app.db")
@@ -631,6 +678,116 @@ class ProfessionalDashboard:
             ctk.CTkLabel(f, text=f"Score: {s[2]} ({s[3]})", text_color=col, font=("Arial", 12, "bold")).pack(side="left", padx=10)
             ctk.CTkLabel(f, text=s[4], font=("Arial", 10)).pack(side="right", padx=10)
             
+        conn.close()
+    
+    def _setup_pdf_reports_tab(self):
+        """Setup PDF Reports tab for easy access"""
+        ctk.CTkLabel(self.t_reports, text="📄 Patient Progress Reports (PDF)", font=("Arial", 22, "bold")).pack(pady=10)
+        
+        # Patient selection for PDF generation
+        select_frame = ctk.CTkFrame(self.t_reports)
+        select_frame.pack(fill="x", padx=20, pady=10)
+        
+        ctk.CTkLabel(select_frame, text="Select Patient:", font=("Arial", 14)).pack(side="left", padx=10)
+        
+        conn = sqlite3.connect("therapist_app.db")
+        patients = conn.cursor().execute("SELECT username FROM users WHERE role='patient' OR role IS NULL").fetchall()
+        conn.close()
+        
+        patient_names = [p[0] for p in patients]
+        self.pdf_patient_dropdown = ctk.CTkComboBox(select_frame, values=patient_names if patient_names else ["No patients"], width=200)
+        self.pdf_patient_dropdown.pack(side="left", padx=10)
+        
+        ctk.CTkButton(select_frame, text="📥 Generate & Download PDF", command=self._generate_and_download_pdf,
+                     fg_color="#3498db", height=40).pack(side="left", padx=10)
+        
+        # Previously generated PDFs list
+        ctk.CTkLabel(self.t_reports, text="Generated Reports", font=("Arial", 16, "bold")).pack(pady=10)
+        
+        self.pdf_scroll = ctk.CTkScrollableFrame(self.t_reports, height=450)
+        self.pdf_scroll.pack(fill="both", expand=True, padx=20, pady=10)
+        
+        self._refresh_pdf_list()
+    
+    def _generate_and_download_pdf(self):
+        """Generate PDF for selected patient"""
+        patient = self.pdf_patient_dropdown.get()
+        if not patient or patient == "No patients":
+            messagebox.showerror("Error", "Please select a patient")
+            return
+        
+        self.pdf_gen.generate_patient_pdf(patient, prompt_save=True)
+        self._refresh_pdf_list()
+    
+    def _refresh_pdf_list(self):
+        """Refresh list of generated PDFs"""
+        import os
+        
+        # Clear existing
+        for widget in self.pdf_scroll.winfo_children():
+            widget.destroy()
+        
+        # List all PDFs in patient_data folder
+        if not os.path.exists("patient_data"):
+            ctk.CTkLabel(self.pdf_scroll, text="No PDFs generated yet", text_color="gray").pack(pady=20)
+            return
+        
+        pdf_found = False
+        for patient_folder in os.listdir("patient_data"):
+            folder_path = os.path.join("patient_data", patient_folder)
+            if os.path.isdir(folder_path):
+                pdfs = [f for f in os.listdir(folder_path) if f.endswith('.pdf')]
+                for pdf in pdfs:
+                    pdf_found = True
+                    pdf_path = os.path.join(folder_path, pdf)
+                    file_time = datetime.fromtimestamp(os.path.getmtime(pdf_path))
+                    file_size = os.path.getsize(pdf_path) / 1024  # KB
+                    
+                    frame = ctk.CTkFrame(self.pdf_scroll)
+                    frame.pack(fill="x", pady=3, padx=5)
+                    
+                    ctk.CTkLabel(frame, text=f"📄 {pdf}", font=("Arial", 11, "bold")).pack(anchor="w", padx=10, pady=2)
+                    ctk.CTkLabel(frame, text=f"Patient: {patient_folder} | Size: {file_size:.1f}KB | Created: {file_time.strftime('%Y-%m-%d %H:%M')}",
+                                font=("Arial", 9), text_color="gray").pack(anchor="w", padx=10)
+                    
+                    btn_frame = ctk.CTkFrame(frame)
+                    btn_frame.pack(fill="x", padx=10, pady=3)
+                    
+                    ctk.CTkButton(btn_frame, text="📂 Open Folder", width=100, height=25,
+                                 command=lambda p=folder_path: self._open_folder(p)).pack(side="left", padx=3)
+                    ctk.CTkButton(btn_frame, text="📥 Download", width=100, height=25,
+                                 command=lambda src=pdf_path, name=pdf: self._download_pdf(src, name)).pack(side="left", padx=3)
+        
+        if not pdf_found:
+            ctk.CTkLabel(self.pdf_scroll, text="No PDFs generated yet", text_color="gray").pack(pady=20)
+    
+    def _open_folder(self, folder_path):
+        """Open folder in file manager"""
+        import subprocess
+        import platform
+        
+        try:
+            if platform.system() == "Windows":
+                os.startfile(folder_path)
+            elif platform.system() == "Darwin":  # macOS
+                subprocess.Popen(["open", folder_path])
+            else:  # Linux
+                subprocess.Popen(["xdg-open", folder_path])
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not open folder: {str(e)}")
+    
+    def _download_pdf(self, source_path, filename):
+        """Copy PDF to user-selected location"""
+        import shutil
+        
+        save_path = filedialog.asksaveasfilename(
+            defaultextension=".pdf",
+            initialfile=filename,
+            filetypes=[("PDF files", "*.pdf")])
+        
+        if save_path:
+            shutil.copy2(source_path, save_path)
+            messagebox.showinfo("Success", f"PDF downloaded to:\n{save_path}")
         conn.close()
 
 # --- ENHANCED CLINICAL SCALES ---
@@ -965,13 +1122,15 @@ class App(ctk.CTk):
         conn.close()
         if row and row[1] == 'clinician' and verify_password(row[0], pw):
             log_event(uname, 'clinician', 'login', 'Clinician dashboard accessed')
-            ProfessionalDashboard(self)
+            from clinician_appointments import AppointmentManager, PDFReportGenerator
+            ProfessionalDashboard(self, uname)
             return
 
         # Fallback: admin password sourced from secrets manager (only allowed in DEBUG/local mode)
         admin_pw = secrets.get_secret("ADMIN_PASSWORD") or os.environ.get("ADMIN_PASSWORD")
         if DEBUG and admin_pw and pw == admin_pw:
-            ProfessionalDashboard(self)
+            from clinician_appointments import AppointmentManager, PDFReportGenerator
+            ProfessionalDashboard(self, "admin")
             return
 
         messagebox.showerror("Access Denied", "Incorrect credentials or not a clinician account")
@@ -1561,91 +1720,8 @@ class App(ctk.CTk):
             messagebox.showinfo("Reset Successful", "All mood history has been cleared.")
             window_to_close.destroy(); self.open_mood_tracker()
 
-    # --- UPDATED PDF EXPORT (Inside App class) ---
-    def export_data_pdf(self):
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", 'B', 16)
-        pdf.cell(200, 10, txt="Healing Space - Clinical Progress Report", ln=True, align='C')
-        
-        conn = sqlite3.connect("therapist_app.db")
-        # Include basic profile (decrypted) at top
-        cursor = conn.cursor()
-        profile = cursor.execute("SELECT full_name, dob, conditions FROM users WHERE username=?", (self.current_user,)).fetchone()
-        if profile:
-            try:
-                full_name = decrypt_text(profile[0])
-            except: full_name = "(Unable to decrypt)"
-            try:
-                dob = decrypt_text(profile[1])
-            except: dob = "(Unable to decrypt)"
-            try:
-                cond = decrypt_text(profile[2])
-            except: cond = "(Unable to decrypt)"
-            pdf.set_font("Arial", size=11)
-            pdf.multi_cell(0, 6, txt=f"User: {self.current_user} | Name: {full_name} | DOB: {dob}")
-            pdf.multi_cell(0, 6, txt=f"Relevant History: {cond}")
-            pdf.ln(3)
-
-        # 1. Clinical Assessments Section
-        pdf.set_font("Arial", 'B', 14)
-        pdf.cell(200, 10, txt="Clinical Assessments (PHQ-9 & GAD-7)", ln=True)
-        pdf.set_font("Arial", size=11)
-        scales = cursor.execute("SELECT scale_name, score, severity, entry_timestamp FROM clinical_scales WHERE username=? ORDER BY entry_timestamp DESC", (self.current_user,)).fetchall()
-        for s in scales:
-            line = f"[{s[3]}] {s[0]}: Score {s[1]} ({s[2]})"
-            pdf.multi_cell(0, 6, txt=line)
-
-        # 2. Mood & Health Summary
-        pdf.set_font("Arial", 'B', 14)
-        pdf.cell(200, 10, txt="Mood & Habit History", ln=True)
-        pdf.set_font("Arial", size=11)
-        moods = cursor.execute("SELECT mood_val, sleep_val, meds, notes, entry_timestamp FROM mood_logs WHERE username=? ORDER BY entry_timestamp DESC", (self.current_user,)).fetchall()
-        for m in moods:
-            notes = decrypt_text(m[3]) if m[3] else ""
-            line = f"Date: {m[4]} | Mood: {m[0]}/10 | Sleep: {m[1]}hrs | Meds: {m[2]}"
-            pdf.multi_cell(0, 6, txt=line)
-            if notes:
-                pdf.multi_cell(0, 6, txt=f"Notes: {notes}")
-
-        # 3. Gratitude Entries
-        pdf.set_font("Arial", 'B', 14)
-        pdf.cell(200, 10, txt="Gratitude Journal Entries", ln=True)
-        pdf.set_font("Arial", size=11)
-        grats = cursor.execute("SELECT entry, entry_timestamp FROM gratitude_logs WHERE username=? ORDER BY entry_timestamp DESC", (self.current_user,)).fetchall()
-        for g in grats:
-            try: text = decrypt_text(g[0])
-            except: text = "(Unable to decrypt)"
-            pdf.multi_cell(0, 6, txt=f"[{g[1]}] {text}")
-
-        # 4. CBT records
-        pdf.set_font("Arial", 'B', 14)
-        pdf.cell(0, 10, "CBT Records", ln=True)
-        pdf.set_font("Arial", size=11)
-        cbt = cursor.execute("SELECT situation, thought, evidence, entry_timestamp FROM cbt_records WHERE username=? ORDER BY entry_timestamp DESC", (self.current_user,)).fetchall()
-        for c in cbt:
-            sit = decrypt_text(c[0]) if c[0] else ""
-            thought = decrypt_text(c[1]) if c[1] else ""
-            evidence = decrypt_text(c[2]) if c[2] else ""
-            pdf.multi_cell(0, 6, txt=f"[{c[3]}] Situation: {sit}")
-            pdf.multi_cell(0, 6, txt=f"Thought: {thought}")
-            pdf.multi_cell(0, 6, txt=f"Evidence: {evidence}")
-            pdf.multi_cell(0, 6, txt='---')
-
-        # 5. AI Memory Summary (if present)
-        mem = cursor.execute("SELECT memory_summary, last_updated FROM ai_memory WHERE username=?", (self.current_user,)).fetchone()
-        if mem:
-            try: memtxt = decrypt_text(mem[0])
-            except: memtxt = "(Unable to decrypt)"
-            pdf.ln(3)
-            pdf.set_font("Arial", 'B', 14); pdf.cell(200, 8, txt="AI Memory Summary", ln=True)
-            pdf.set_font("Arial", size=11); pdf.multi_cell(0, 6, txt=memtxt)
-
-        conn.close()
-        path = filedialog.asksaveasfilename(defaultextension=".pdf")
-        if path:
-            pdf.output(path)
-            messagebox.showinfo("Success", "Clinical report exported successfully.")
+    # --- PDF EXPORT NOW HANDLED BY CLINICIAN DASHBOARD ---
+    # This function is deprecated - PDFs are generated by clinicians through the dashboard
 
     def export_data(self):
         """Export core user data to a single CSV file with clear sections."""

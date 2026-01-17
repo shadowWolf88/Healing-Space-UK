@@ -1,7 +1,7 @@
 customtkinter
 requests
 cryptography
-fpdf
+reportlab
 pyttsx3
 edge-tts
 pygame
