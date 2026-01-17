@@ -2550,14 +2550,33 @@ def get_insights():
         if not username:
             return jsonify({'error': 'Username required'}), 400
         
+        # Get optional date range parameters
+        from_date = request.args.get('from_date')
+        to_date = request.args.get('to_date')
+        
         conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         
-        # Get recent mood data for trends
-        moods = cur.execute(
-            "SELECT mood_val, sleep_val, entrestamp FROM mood_logs WHERE username=? ORDER BY entrestamp DESC LIMIT 7",
-            (username,)
-        ).fetchall()
+        # Build query with optional date filtering
+        mood_query = "SELECT mood_val, sleep_val, entrestamp FROM mood_logs WHERE username=?"
+        query_params = [username]
+        
+        if from_date:
+            mood_query += " AND date(entrestamp) >= date(?)"
+            query_params.append(from_date)
+        
+        if to_date:
+            mood_query += " AND date(entrestamp) <= date(?)"
+            query_params.append(to_date)
+        
+        mood_query += " ORDER BY entrestamp DESC"
+        
+        # If no date range specified, limit to last 7 entries
+        if not from_date and not to_date:
+            mood_query += " LIMIT 7"
+        
+        # Get mood data for trends
+        moods = cur.execute(mood_query, tuple(query_params)).fetchall()
         
         # Get recent gratitude entries
         gratitudes = cur.execute(
@@ -2592,7 +2611,15 @@ def get_insights():
         avg_mood = sum(m[0] for m in moods) / len(moods) if moods else 0
         avg_sleep = sum(m[1] for m in moods) / len(moods) if moods else 0
         
-        insight = f"Your average mood over the last 7 entries is {avg_mood:.1f}/10 (trend: {mood_trend}). "
+        date_range_text = ""
+        if from_date and to_date:
+            date_range_text = f" from {from_date} to {to_date}"
+        elif from_date:
+            date_range_text = f" from {from_date}"
+        elif to_date:
+            date_range_text = f" up to {to_date}"
+        
+        insight = f"Your average mood over {len(moods)} entries{date_range_text} is {avg_mood:.1f}/10 (trend: {mood_trend}). "
         insight += f"Average sleep: {avg_sleep:.1f} hours. "
         insight += f"You've completed {cbt} CBT thought records. "
         insight += f"You've logged {len(gratitudes)} gratitude entries recently. "

@@ -1459,6 +1459,25 @@
                 <h3>💡 Progress Insights & Export</h3>
                 <p style="color: #666; margin-bottom: 20px;">View AI-generated insights and export your data.</p>
                 
+                <div class="card" style="margin-bottom: 20px; background: #f8f9fa;">
+                    <h4>📅 Date Range</h4>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">From Date</label>
+                            <input type="date" id="insightsFromDate" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                        </div>
+                        <div style="flex: 1; min-width: 200px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">To Date</label>
+                            <input type="date" id="insightsToDate" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn" onclick="setInsightsRange(7)" style="padding: 10px 15px;">7 Days</button>
+                            <button class="btn" onclick="setInsightsRange(30)" style="padding: 10px 15px;">30 Days</button>
+                            <button class="btn" onclick="setInsightsRange(90)" style="padding: 10px 15px;">90 Days</button>
+                        </div>
+                    </div>
+                </div>
+                
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
                     <button class="btn" onclick="loadInsights()">Generate Insights</button>
                     <button class="btn" onclick="exportCSV()" style="background: #34495e;">📥 Export CSV</button>
@@ -1492,8 +1511,13 @@
                     </div>
                     
                     <div class="card" style="margin-top: 20px;">
-                        <h4>Mood Trend (Last 7 Entries)</h4>
+                        <h4>📊 Mood Trend</h4>
                         <canvas id="moodChart" width="600" height="200" style="max-width: 100%;"></canvas>
+                    </div>
+                    
+                    <div class="card" style="margin-top: 20px;">
+                        <h4>😴 Sleep Hours Trend</h4>
+                        <canvas id="sleepChart" width="600" height="200" style="max-width: 100%;"></canvas>
                     </div>
                 </div>
             </div>
@@ -1695,10 +1719,36 @@
                         </div>
                     </div>
                     
+                    <!-- Date Range Selector for Charts -->
+                    <div class="card" style="margin-bottom: 20px; background: #f8f9fa;">
+                        <h4>📅 Chart Date Range</h4>
+                        <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+                            <div style="flex: 1; min-width: 200px;">
+                                <label style="display: block; margin-bottom: 5px; font-weight: 600;">From Date</label>
+                                <input type="date" id="patientChartFromDate" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                            </div>
+                            <div style="flex: 1; min-width: 200px;">
+                                <label style="display: block; margin-bottom: 5px; font-weight: 600;">To Date</label>
+                                <input type="date" id="patientChartToDate" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                            </div>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn" onclick="setPatientChartRange(7)" style="padding: 10px 15px;">7 Days</button>
+                                <button class="btn" onclick="setPatientChartRange(30)" style="padding: 10px 15px;">30 Days</button>
+                                <button class="btn" onclick="setPatientChartRange(90)" style="padding: 10px 15px;">90 Days</button>
+                                <button class="btn" onclick="loadPatientCharts()" style="padding: 10px 15px; background: #667eea;">Refresh</button>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- Charts Section -->
                     <div class="card" style="margin-bottom: 20px;">
-                        <h4>📊 Mood Trends (Last 30 Days)</h4>
+                        <h4>📊 Mood Trend</h4>
                         <canvas id="moodChart" style="max-height: 300px;"></canvas>
+                    </div>
+                    
+                    <div class="card" style="margin-bottom: 20px;">
+                        <h4>😴 Sleep Hours Trend</h4>
+                        <canvas id="sleepChart" style="max-height: 300px;"></canvas>
                     </div>
                     
                     <!-- Patient Data Tabs -->
@@ -3378,9 +3428,27 @@
         }
         
         // Insights Functions
+        function setInsightsRange(days) {
+            const toDate = new Date();
+            const fromDate = new Date();
+            fromDate.setDate(toDate.getDate() - days);
+            
+            document.getElementById('insightsToDate').valueAsDate = toDate;
+            document.getElementById('insightsFromDate').valueAsDate = fromDate;
+            loadInsights();
+        }
+        
         async function loadInsights() {
             try {
-                const response = await fetch(`/api/insights?username=${encodeURIComponent(currentUser)}`);
+                let url = `/api/insights?username=${encodeURIComponent(currentUser)}`;
+                
+                // Add date range if specified
+                const fromDate = document.getElementById('insightsFromDate')?.value;
+                const toDate = document.getElementById('insightsToDate')?.value;
+                if (fromDate) url += `&from_date=${fromDate}`;
+                if (toDate) url += `&to_date=${toDate}`;
+                
+                const response = await fetch(url);
                 const data = await response.json();
                 
                 if (response.ok) {
@@ -3392,6 +3460,11 @@
                     // Draw mood chart
                     if (data.mood_data && data.mood_data.length > 0) {
                         drawMoodChart(data.mood_data);
+                    }
+                    
+                    // Draw sleep chart
+                    if (data.sleep_data && data.sleep_data.length > 0) {
+                        drawSleepChart(data.sleep_data);
                     }
                 } else {
                     alert('Error loading insights');
@@ -3467,6 +3540,80 @@
             ctx.textAlign = 'center';
             moodData.forEach((point, index) => {
                 const x = padding + index * ((width - 2 * padding) / (moodData.length - 1));
+                const date = new Date(point.timestamp);
+                const label = `${date.getMonth() + 1}/${date.getDate()}`;
+                ctx.fillText(label, x, height - padding + 20);
+            });
+        }
+        
+        function drawSleepChart(sleepData) {
+            const canvas = document.getElementById('sleepChart');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = 40;
+            const maxHours = 12; // Maximum sleep hours for scale
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Background
+            ctx.fillStyle = '#f5f5f5';
+            ctx.fillRect(0, 0, width, height);
+            
+            // Draw grid
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= maxHours; i++) {
+                const y = height - padding - (i * (height - 2 * padding) / maxHours);
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(width - padding, y);
+                ctx.stroke();
+                
+                // Y-axis labels
+                ctx.fillStyle = '#666';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'right';
+                ctx.fillText(i + 'h', padding - 10, y + 4);
+            }
+            
+            // Draw line
+            if (sleepData.length > 1) {
+                const stepX = (width - 2 * padding) / (sleepData.length - 1);
+                
+                ctx.strokeStyle = '#3498db';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                
+                sleepData.forEach((point, index) => {
+                    const x = padding + index * stepX;
+                    const y = height - padding - (point.value * (height - 2 * padding) / maxHours);
+                    
+                    if (index === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                    
+                    // Draw points
+                    ctx.fillStyle = '#3498db';
+                    ctx.beginPath();
+                    ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                    ctx.fill();
+                });
+                
+                ctx.stroke();
+            }
+            
+            // X-axis labels
+            ctx.fillStyle = '#666';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'center';
+            sleepData.forEach((point, index) => {
+                const x = padding + index * ((width - 2 * padding) / (sleepData.length - 1));
                 const date = new Date(point.timestamp);
                 const label = `${date.getMonth() + 1}/${date.getDate()}`;
                 ctx.fillText(label, x, height - padding + 20);
@@ -3619,6 +3766,13 @@
             document.getElementById('patientDetailName').textContent = username;
             currentPatientTab = 'profile';
             
+            // Initialize date range to last 30 days
+            const toDate = new Date();
+            const fromDate = new Date();
+            fromDate.setDate(toDate.getDate() - 30);
+            document.getElementById('patientChartToDate').valueAsDate = toDate;
+            document.getElementById('patientChartFromDate').valueAsDate = fromDate;
+            
             // Show loading
             document.getElementById('patientDetailContent').innerHTML = '<div style="text-align: center; padding: 40px;"><div class="loading" style="margin: 0 auto;"></div></div>';
             
@@ -3632,8 +3786,8 @@
                     // Generate AI summary
                     generateAISummary(username, data);
                     
-                    // Draw mood chart
-                    drawMoodChart(data.recent_moods);
+                    // Load charts with current date range
+                    loadPatientCharts();
                     
                     // Show profile tab by default
                     showPatientTab('profile');
@@ -3644,6 +3798,219 @@
                 document.getElementById('patientDetailContent').innerHTML = '<p style="color: #dc3545;">Connection error</p>';
                 console.error('Patient detail error:', error);
             }
+        }
+        
+        function setPatientChartRange(days) {
+            const toDate = new Date();
+            const fromDate = new Date();
+            fromDate.setDate(toDate.getDate() - days);
+            
+            document.getElementById('patientChartToDate').valueAsDate = toDate;
+            document.getElementById('patientChartFromDate').valueAsDate = fromDate;
+            loadPatientCharts();
+        }
+        
+        async function loadPatientCharts() {
+            if (!currentPatientData) return;
+            
+            const fromDate = document.getElementById('patientChartFromDate')?.value;
+            const toDate = document.getElementById('patientChartToDate')?.value;
+            
+            try {
+                let url = `/api/insights?username=${encodeURIComponent(currentPatientData.username)}`;
+                if (fromDate) url += `&from_date=${fromDate}`;
+                if (toDate) url += `&to_date=${toDate}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Draw mood chart
+                    if (data.mood_data && data.mood_data.length > 0) {
+                        drawPatientMoodChart(data.mood_data);
+                    }
+                    
+                    // Draw sleep chart
+                    if (data.sleep_data && data.sleep_data.length > 0) {
+                        drawPatientSleepChart(data.sleep_data);
+                    }
+                }
+            } catch (error) {
+                console.error('Chart loading error:', error);
+            }
+        }
+        
+        function drawPatientMoodChart(moods) {
+            const canvas = document.getElementById('moodChart');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = 40;
+            
+            if (!moods || moods.length === 0) {
+                ctx.clearRect(0, 0, width, height);
+                ctx.font = '16px Arial';
+                ctx.fillStyle = '#999';
+                ctx.textAlign = 'center';
+                ctx.fillText('No mood data available', width / 2, height / 2);
+                return;
+            }
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Background
+            ctx.fillStyle = '#f5f5f5';
+            ctx.fillRect(0, 0, width, height);
+            
+            // Draw grid
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 10; i++) {
+                const y = height - padding - (i * (height - 2 * padding) / 10);
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(width - padding, y);
+                ctx.stroke();
+                
+                // Y-axis labels
+                ctx.fillStyle = '#666';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'right';
+                ctx.fillText(i, padding - 10, y + 4);
+            }
+            
+            // Draw line
+            if (moods.length > 1) {
+                const stepX = (width - 2 * padding) / (moods.length - 1);
+                
+                ctx.strokeStyle = '#667eea';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                
+                moods.forEach((point, index) => {
+                    const moodValue = point.value !== undefined ? point.value : point.mood;
+                    const x = padding + index * stepX;
+                    const y = height - padding - (moodValue * (height - 2 * padding) / 10);
+                    
+                    if (index === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                    
+                    // Draw points
+                    ctx.fillStyle = '#667eea';
+                    ctx.beginPath();
+                    ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                    ctx.fill();
+                });
+                
+                ctx.stroke();
+            }
+            
+            // X-axis labels
+            ctx.fillStyle = '#666';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'center';
+            const labelStep = Math.max(1, Math.floor(moods.length / 10));
+            moods.forEach((point, index) => {
+                if (index % labelStep === 0 || index === moods.length - 1) {
+                    const x = padding + index * ((width - 2 * padding) / (moods.length - 1));
+                    const date = new Date(point.timestamp);
+                    const label = `${date.getMonth() + 1}/${date.getDate()}`;
+                    ctx.fillText(label, x, height - padding + 20);
+                }
+            });
+        }
+        
+        function drawPatientSleepChart(sleepData) {
+            const canvas = document.getElementById('sleepChart');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            const width = canvas.width;
+            const height = canvas.height;
+            const padding = 40;
+            const maxHours = 12;
+            
+            if (!sleepData || sleepData.length === 0) {
+                ctx.clearRect(0, 0, width, height);
+                ctx.font = '16px Arial';
+                ctx.fillStyle = '#999';
+                ctx.textAlign = 'center';
+                ctx.fillText('No sleep data available', width / 2, height / 2);
+                return;
+            }
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Background
+            ctx.fillStyle = '#f5f5f5';
+            ctx.fillRect(0, 0, width, height);
+            
+            // Draw grid
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= maxHours; i++) {
+                const y = height - padding - (i * (height - 2 * padding) / maxHours);
+                ctx.beginPath();
+                ctx.moveTo(padding, y);
+                ctx.lineTo(width - padding, y);
+                ctx.stroke();
+                
+                // Y-axis labels
+                ctx.fillStyle = '#666';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'right';
+                ctx.fillText(i + 'h', padding - 10, y + 4);
+            }
+            
+            // Draw line
+            if (sleepData.length > 1) {
+                const stepX = (width - 2 * padding) / (sleepData.length - 1);
+                
+                ctx.strokeStyle = '#3498db';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                
+                sleepData.forEach((point, index) => {
+                    const sleepValue = point.value !== undefined ? point.value : point.sleep;
+                    const x = padding + index * stepX;
+                    const y = height - padding - (sleepValue * (height - 2 * padding) / maxHours);
+                    
+                    if (index === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                    
+                    // Draw points
+                    ctx.fillStyle = '#3498db';
+                    ctx.beginPath();
+                    ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                    ctx.fill();
+                });
+                
+                ctx.stroke();
+            }
+            
+            // X-axis labels
+            ctx.fillStyle = '#666';
+            ctx.font = '10px Arial';
+            ctx.textAlign = 'center';
+            const labelStep = Math.max(1, Math.floor(sleepData.length / 10));
+            sleepData.forEach((point, index) => {
+                if (index % labelStep === 0 || index === sleepData.length - 1) {
+                    const x = padding + index * ((width - 2 * padding) / (sleepData.length - 1));
+                    const date = new Date(point.timestamp);
+                    const label = `${date.getMonth() + 1}/${date.getDate()}`;
+                    ctx.fillText(label, x, height - padding + 20);
+                }
+            });
         }
         
         async function generateAISummary(username, data) {
@@ -3688,74 +4055,6 @@
                 console.error('AI summary error:', error);
                 summaryDiv.innerHTML = '<p style="color: #999;">AI summary unavailable</p>';
             }
-        }
-        
-        function drawMoodChart(moods) {
-            const canvas = document.getElementById('moodChart');
-            const ctx = canvas.getContext('2d');
-            
-            if (!moods || moods.length === 0) {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.font = '16px Arial';
-                ctx.fillStyle = '#999';
-                ctx.textAlign = 'center';
-                ctx.fillText('No mood data available', canvas.width / 2, canvas.height / 2);
-                return;
-            }
-            
-            // Simple line chart
-            const width = canvas.width = canvas.offsetWidth;
-            const height = canvas.height = 300;
-            const padding = 40;
-            const dataPoints = moods.slice(0, 30).reverse();
-            
-            ctx.clearRect(0, 0, width, height);
-            
-            // Draw grid
-            ctx.strokeStyle = '#e0e0e0';
-            ctx.lineWidth = 1;
-            for (let i = 0; i <= 10; i++) {
-                const y = padding + (height - 2 * padding) * (1 - i / 10);
-                ctx.beginPath();
-                ctx.moveTo(padding, y);
-                ctx.lineTo(width - padding, y);
-                ctx.stroke();
-                
-                // Y-axis labels
-                ctx.fillStyle = '#666';
-                ctx.font = '12px Arial';
-                ctx.textAlign = 'right';
-                ctx.fillText(i.toString(), padding - 10, y + 4);
-            }
-            
-            // Draw line
-            ctx.strokeStyle = '#667eea';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            
-            dataPoints.forEach((point, index) => {
-                const x = padding + (width - 2 * padding) * (index / (dataPoints.length - 1 || 1));
-                const y = padding + (height - 2 * padding) * (1 - point.mood / 10);
-                
-                if (index === 0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
-                }
-                
-                // Draw points
-                ctx.fillStyle = '#667eea';
-                ctx.beginPath();
-                ctx.arc(x, y, 4, 0, 2 * Math.PI);
-                ctx.fill();
-            });
-            ctx.stroke();
-            
-            // X-axis label
-            ctx.fillStyle = '#666';
-            ctx.font = '14px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('Time (Days)', width / 2, height - 10);
         }
         
         function showPatientTab(tabName) {
