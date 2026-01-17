@@ -3417,6 +3417,180 @@ def get_training_stats():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ==================== APPOINTMENT CALENDAR ENDPOINTS ====================
+
+@app.route('/api/appointments', methods=['GET', 'POST'])
+def manage_appointments():
+    """Get or create appointments"""
+    try:
+        if request.method == 'GET':
+            # Get appointments for clinician
+            clinician_username = request.args.get('clinician')
+            if not clinician_username:
+                return jsonify({'error': 'Clinician username required'}), 400
+            
+            conn = sqlite3.connect(DB_PATH)
+            cur = conn.cursor()
+            appointments = cur.execute("""
+                SELECT id, patient_username, appointment_date, appointment_type, notes, 
+                       pdf_generated, notification_sent, created_at
+                FROM appointments 
+                WHERE clinician_username=? AND appointment_date >= datetime('now')
+                ORDER BY appointment_date ASC
+            """, (clinician_username,)).fetchall()
+            conn.close()
+            
+            results = []
+            for apt in appointments:
+                results.append({
+                    'id': apt[0],
+                    'patient_username': apt[1],
+                    'appointment_date': apt[2],
+                    'appointment_type': apt[3],
+                    'notes': apt[4],
+                    'pdf_generated': bool(apt[5]),
+                    'notification_sent': bool(apt[6]),
+                    'created_at': apt[7]
+                })
+            
+            return jsonify({'appointments': results}), 200
+            
+        elif request.method == 'POST':
+            # Create new appointment
+            data = request.json
+            clinician = data.get('clinician_username')
+            patient = data.get('patient_username')
+            appt_date = data.get('appointment_date')
+            notes = data.get('notes', '')
+            
+            if not all([clinician, patient, appt_date]):
+                return jsonify({'error': 'Missing required fields'}), 400
+            
+            conn = sqlite3.connect(DB_PATH)
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO appointments (clinician_username, patient_username, appointment_date, notes)
+                VALUES (?, ?, ?, ?)
+            """, (clinician, patient, appt_date, notes))
+            conn.commit()
+            appt_id = cur.lastrowid
+            conn.close()
+            
+            log_event(clinician, 'clinician', 'appointment_booked', f'Booked with {patient}')
+            
+            return jsonify({
+                'success': True,
+                'appointment_id': appt_id,
+                'message': 'Appointment created'
+            }), 201
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/appointments/<int:appointment_id>', methods=['DELETE'])
+def cancel_appointment(appointment_id):
+    """Cancel an appointment"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute("DELETE FROM appointments WHERE id=?", (appointment_id,))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'success': True, 'message': 'Appointment cancelled'}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/patient/profile', methods=['GET', 'PUT'])
+def patient_profile():
+    """Get or update patient profile (About Me)"""
+    try:
+        username = request.args.get('username') if request.method == 'GET' else request.json.get('username')
+        
+        if not username:
+            return jsonify({'error': 'Username required'}), 400
+        
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        
+        if request.method == 'GET':
+            # Get profile
+            profile = cur.execute("""
+                SELECT full_name, dob, email, phone, conditions, clinician_id
+                FROM users WHERE username=?
+            """, (username,)).fetchone()
+            
+            if not profile:
+                conn.close()
+                return jsonify({'error': 'User not found'}), 404
+            
+            # Get statistics
+            mood_count = cur.execute("SELECT COUNT(*) FROM mood_logs WHERE username=?", (username,)).fetchone()[0]
+            grat_count = cur.execute("SELECT COUNT(*) FROM gratitude_logs WHERE username=?", (username,)).fetchone()[0]
+            cbt_count = cur.execute("SELECT COUNT(*) FROM cbt_records WHERE username=?", (username,)).fetchone()[0]
+            session_count = cur.execute("SELECT COUNT(*) FROM sessions WHERE username=?", (username,)).fetchone()[0]
+            
+            # Get clinician info if assigned
+            clinician_info = None
+            if profile[5]:  # clinician_id exists
+                clinician = cur.execute("""
+                    SELECT full_name, email FROM users WHERE username=? AND role='clinician'
+                """, (profile[5],)).fetchone()
+                if clinician:
+                    from main import decrypt_text
+                    try:
+                        clinician_info = {
+                            'name': decrypt_text(clinician[0]) if clinician[0] else profile[5],
+                            'email': decrypt_text(clinician[1]) if clinician[1] else None
+                        }
+                    except:
+                        clinician_info = {'name': profile[5], 'email': None}
+            
+            conn.close()
+            
+            from main import decrypt_text
+            return jsonify({
+                'username': username,
+                'full_name': decrypt_text(profile[0]) if profile[0] else '',
+                'dob': decrypt_text(profile[1]) if profile[1] else '',
+                'email': decrypt_text(profile[2]) if profile[2] else '',
+                'phone': decrypt_text(profile[3]) if profile[3] else '',
+                'conditions': decrypt_text(profile[4]) if profile[4] else '',
+                'clinician': clinician_info,
+                'stats': {
+                    'mood_logs': mood_count,
+                    'gratitude_entries': grat_count,
+                    'cbt_records': cbt_count,
+                    'therapy_sessions': session_count
+                }
+            }), 200
+            
+        elif request.method == 'PUT':
+            # Update profile
+            data = request.json
+            from main import encrypt_text
+            
+            cur.execute("""
+                UPDATE users SET full_name=?, dob=?, email=?, phone=?, conditions=?
+                WHERE username=?
+            """, (
+                encrypt_text(data.get('full_name', '')),
+                encrypt_text(data.get('dob', '')),
+                encrypt_text(data.get('email', '')),
+                encrypt_text(data.get('phone', '')),
+                encrypt_text(data.get('conditions', '')),
+                username
+            ))
+            conn.commit()
+            conn.close()
+            
+            log_event(username, 'user', 'profile_updated', 'Updated via API')
+            
+            return jsonify({'success': True, 'message': 'Profile updated'}), 200
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.errorhandler(404)
 def not_found(e):
     return jsonify({'error': 'Endpoint not found'}), 404
