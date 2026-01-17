@@ -2388,66 +2388,104 @@ def export_csv():
 
 @app.route('/api/export/pdf', methods=['GET'])
 def export_pdf():
-    """Export user data as PDF report"""
+    """Export user data as PDF report (patient personal wellness format)"""
     try:
         username = request.args.get('username')
         if not username:
             return jsonify({'error': 'Username required'}), 400
         
         try:
-            from fpdf import FPDF
+            from reportlab.lib.pagesizes import letter
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib.units import inch
+            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+            from reportlab.lib import colors
+            from reportlab.lib.enums import TA_CENTER, TA_LEFT
         except ImportError:
-            return jsonify({'error': 'PDF library not available'}), 500
+            return jsonify({'error': 'PDF library not available. Please install reportlab.'}), 500
+        
+        import io
+        from datetime import datetime
         
         conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", 'B', 16)
-        pdf.cell(200, 10, txt=f"Mental Health Report - {username}", ln=True, align='C')
-        pdf.ln(5)
+        # Create PDF in memory
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.5*inch, bottomMargin=0.5*inch)
         
-        # Profile
-        prof = cur.execute("SELECT full_name, dob, conditions FROM users WHERE username=?", (username,)).fetchone()
-        if prof:
-            pdf.set_font("Arial", 'B', 14)
-            pdf.cell(200, 8, txt="Profile", ln=True)
-            pdf.set_font("Arial", size=11)
-            pdf.multi_cell(0, 6, txt=f"Name: {prof[0]}\nDOB: {prof[1]}\nConditions: {prof[2]}")
-            pdf.ln(3)
+        story = []
+        styles = getSampleStyleSheet()
         
-        # Mood logs
-        pdf.set_font("Arial", 'B', 14)
-        pdf.cell(200, 8, txt="Mood Logs", ln=True)
-        pdf.set_font("Arial", size=11)
-        moods = cur.execute("SELECT entry_timestamp, mood_val, sleep_val, meds FROM mood_logs WHERE username=? ORDER BY entry_timestamp DESC LIMIT 10", (username,)).fetchall()
-        for m in moods:
-            pdf.multi_cell(0, 6, txt=f"[{m[0]}] Mood: {m[1]}/10, Sleep: {m[2]}h, Meds: {m[3] or 'None'}")
-        pdf.ln(3)
+        # Title
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            textColor=colors.HexColor('#667eea'),
+            spaceAfter=12,
+            alignment=TA_CENTER
+        )
+        story.append(Paragraph(f"Personal Wellness Report", title_style))
+        story.append(Paragraph(f"<i>{username}</i>", styles['Normal']))
+        story.append(Paragraph(f"Generated: {datetime.now().strftime('%B %d, %Y')}", styles['Normal']))
+        story.append(Spacer(1, 0.3*inch))
         
-        # Clinical scales
-        pdf.set_font("Arial", 'B', 14)
-        pdf.cell(200, 8, txt="Clinical Assessments", ln=True)
-        pdf.set_font("Arial", size=11)
-        scales = cur.execute("SELECT entry_timestamp, scale_name, score, severity FROM clinical_scales WHERE username=? ORDER BY entry_timestamp DESC", (username,)).fetchall()
-        for s in scales:
-            pdf.multi_cell(0, 6, txt=f"[{s[0]}] {s[1]}: Score {s[2]} ({s[3]})")
+        # Mood Summary
+        moods = cur.execute(
+            "SELECT entry_timestamp, mood_val, sleep_val, meds, exercise_mins FROM mood_logs WHERE username=? ORDER BY entry_timestamp DESC LIMIT 15",
+            (username,)
+        ).fetchall()
+        
+        if moods:
+            story.append(Paragraph("<b>Recent Mood & Wellness Tracking</b>", styles['Heading2']))
+            mood_data = [['Date', 'Mood', 'Sleep (hrs)', 'Exercise (mins)', 'Medications']]
+            for m in moods:
+                date_str = m[0][:10] if m[0] else 'N/A'
+                mood_data.append([
+                    date_str,
+                    f"{m[1]}/10" if m[1] else 'N/A',
+                    f"{m[2]}" if m[2] else 'N/A',
+                    f"{m[4]}" if m[4] else '0',
+                    m[3] if m[3] else 'None'
+                ])
+            
+            table = Table(mood_data, colWidths=[1.2*inch, 0.8*inch, 1*inch, 1.2*inch, 2*inch])
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('GRID', (0, 0), (-1, -1), 1, colors.grey)
+            ]))
+            story.append(table)
+            story.append(Spacer(1, 0.2*inch))
+        
+        # Gratitude entries
+        gratitudes = cur.execute(
+            "SELECT entry_timestamp, entry_text FROM gratitude_journal WHERE username=? ORDER BY entry_timestamp DESC LIMIT 10",
+            (username,)
+        ).fetchall()
+        
+        if gratitudes:
+            story.append(Paragraph("<b>Gratitude Journal Highlights</b>", styles['Heading2']))
+            for g in gratitudes:
+                date_str = g[0][:10] if g[0] else 'N/A'
+                story.append(Paragraph(f"<i>{date_str}:</i> {g[1]}", styles['Normal']))
+            story.append(Spacer(1, 0.2*inch))
         
         conn.close()
         
-        import tempfile
-        import os
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
-        pdf.output(temp_file.name)
+        # Build PDF
+        doc.build(story)
         
-        with open(temp_file.name, 'rb') as f:
-            pdf_data = f.read()
-        
-        os.unlink(temp_file.name)
+        pdf_data = buffer.getvalue()
+        buffer.close()
         
         response = make_response(pdf_data)
-        response.headers["Content-Disposition"] = f"attachment; filename={username}_report.pdf"
+        response.headers["Content-Disposition"] = f"attachment; filename={username}_wellness_report.pdf"
         response.headers["Content-Type"] = "application/pdf"
         return response
     except Exception as e:
