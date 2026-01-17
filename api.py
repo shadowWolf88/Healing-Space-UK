@@ -941,8 +941,35 @@ def update_ai_memory(username):
     except Exception as e:
         print(f"AI memory update error: {e}")
 
+def send_notification(username, message, notification_type='info'):
+    """Helper function to send notification to user"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (?,?,?)",
+            (username, message, notification_type)
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Notification error: {e}")
+        return False
+
 def reward_pet(action, activity_type=None):
-    """Helper function to reward pet for user activities"""
+    """Helper function to reward pet for user activities
+    
+    Pet Attribute Effects:
+    - Base boost: +3 to ALL attributes (hunger, happiness, energy, hygiene)
+    - Mood logging: +10 happiness, +5 energy (total: +13 happiness, +8 energy, +3 hunger/hygiene)
+    - Gratitude: +10 happiness, +5 energy (total: +13 happiness, +8 energy, +3 hunger/hygiene)
+    - CBT exercises: +15 coins, +20 XP (vs base 5 coins, 15 XP)
+    - Assessments: +20 coins, +30 XP (vs base 5 coins, 15 XP)
+    - Therapy: +10 hunger, +10 happiness, +10 energy, +5 hygiene, +30 XP
+    
+    Attributes deplete over time at 0.5 per hour (gentle decay).
+    """
     try:
         conn = sqlite3.connect("pet_game.db")
         cur = conn.cursor()
@@ -1748,7 +1775,7 @@ def pet_adventure():
 
 @app.route('/api/pet/check-return', methods=['POST'])
 def pet_check_return():
-    """Check if pet returned from adventure"""
+    """Check if pet returned from adventure and give rewards"""
     try:
         conn = sqlite3.connect("pet_game.db")
         cur = conn.cursor()
@@ -1804,13 +1831,14 @@ def pet_apply_decay():
         last_updated = pet[12]
         hours_passed = (now - last_updated) / 3600
         
-        # Gentle decay (10x slower than normal Tamagotchi)
+        # Very gentle decay (user doesn't feel like they're neglecting pet)
+        # 0.3 per hour = ~7 points per day, not overwhelming
         if hours_passed > 1.0:
-            decay = int(hours_passed * 0.5)
+            decay = int(hours_passed * 0.3)
             
-            new_hunger = max(10, pet[4] - decay)
-            new_energy = max(10, pet[6] - decay)
-            new_hygiene = max(10, pet[7] - int(decay / 2))
+            new_hunger = max(20, pet[4] - decay)
+            new_energy = max(20, pet[6] - decay)
+            new_hygiene = max(20, pet[7] - int(decay / 3))
             
             cur.execute(
                 "UPDATE pet SET hunger=?, energy=?, hygiene=?, last_updated=? WHERE id=?",
@@ -1885,7 +1913,7 @@ def get_cbt_records():
 # ===== CLINICAL SCALES ENDPOINTS =====
 @app.route('/api/clinical/phq9', methods=['POST'])
 def submit_phq9():
-    """Submit PHQ-9 depression assessment"""
+    """Submit PHQ-9 depression assessment (once per fortnight)"""
     try:
         data = request.json
         username = data.get('username')
@@ -1893,6 +1921,25 @@ def submit_phq9():
         
         if not username or not scores or len(scores) != 9:
             return jsonify({'error': 'Username and 9 scores required'}), 400
+        
+        # Check if user already submitted PHQ-9 in last 14 days
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        last_assessment = cur.execute(
+            """SELECT entry_timestamp FROM clinical_scales 
+               WHERE username=? AND scale_name='PHQ-9' 
+               ORDER BY entry_timestamp DESC LIMIT 1""",
+            (username,)
+        ).fetchone()
+        
+        if last_assessment:
+            last_date = datetime.fromisoformat(last_assessment[0])
+            days_since = (datetime.now() - last_date).days
+            if days_since < 14:
+                conn.close()
+                return jsonify({
+                    'error': f'PHQ-9 can only be submitted once per fortnight. Please wait {14 - days_since} more days.'
+                }), 400
         
         total = sum(scores)
         if total <= 4:
@@ -1906,14 +1953,33 @@ def submit_phq9():
         else:
             severity = "Severe"
         
-        conn = sqlite3.connect(DB_PATH)
-        cur = conn.cursor()
         cur.execute(
             "INSERT INTO clinical_scales (username, scale_name, score, severity) VALUES (?,?,?,?)",
             (username, 'PHQ-9', total, severity)
         )
+        
+        # Get clinician for notification
+        clinician = cur.execute(
+            "SELECT clinician_id FROM users WHERE username=?",
+            (username,)
+        ).fetchone()
+        
         conn.commit()
         conn.close()
+        
+        # Send notifications
+        send_notification(
+            username,
+            f"PHQ-9 assessment completed. Score: {total} ({severity}). Next assessment available in 14 days.",
+            'assessment'
+        )
+        
+        if clinician and clinician[0]:
+            send_notification(
+                clinician[0],
+                f"Patient {username} completed PHQ-9 assessment. Score: {total} ({severity}).",
+                'patient_assessment'
+            )
         
         # AUTO-UPDATE AI MEMORY
         update_ai_memory(username)
@@ -1927,7 +1993,7 @@ def submit_phq9():
 
 @app.route('/api/clinical/gad7', methods=['POST'])
 def submit_gad7():
-    """Submit GAD-7 anxiety assessment"""
+    """Submit GAD-7 anxiety assessment (once per fortnight)"""
     try:
         data = request.json
         username = data.get('username')
@@ -1935,6 +2001,25 @@ def submit_gad7():
         
         if not username or not scores or len(scores) != 7:
             return jsonify({'error': 'Username and 7 scores required'}), 400
+        
+        # Check if user already submitted GAD-7 in last 14 days
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        last_assessment = cur.execute(
+            """SELECT entry_timestamp FROM clinical_scales 
+               WHERE username=? AND scale_name='GAD-7' 
+               ORDER BY entry_timestamp DESC LIMIT 1""",
+            (username,)
+        ).fetchone()
+        
+        if last_assessment:
+            last_date = datetime.fromisoformat(last_assessment[0])
+            days_since = (datetime.now() - last_date).days
+            if days_since < 14:
+                conn.close()
+                return jsonify({
+                    'error': f'GAD-7 can only be submitted once per fortnight. Please wait {14 - days_since} more days.'
+                }), 400
         
         total = sum(scores)
         if total <= 4:
@@ -1946,14 +2031,33 @@ def submit_gad7():
         else:
             severity = "Severe"
         
-        conn = sqlite3.connect(DB_PATH)
-        cur = conn.cursor()
         cur.execute(
             "INSERT INTO clinical_scales (username, scale_name, score, severity) VALUES (?,?,?,?)",
             (username, 'GAD-7', total, severity)
         )
+        
+        # Get clinician for notification
+        clinician = cur.execute(
+            "SELECT clinician_id FROM users WHERE username=?",
+            (username,)
+        ).fetchone()
+        
         conn.commit()
         conn.close()
+        
+        # Send notifications
+        send_notification(
+            username,
+            f"GAD-7 assessment completed. Score: {total} ({severity}). Next assessment available in 14 days.",
+            'assessment'
+        )
+        
+        if clinician and clinician[0]:
+            send_notification(
+                clinician[0],
+                f"Patient {username} completed GAD-7 assessment. Score: {total} ({severity}).",
+                'patient_assessment'
+            )
         
         # AUTO-UPDATE AI MEMORY
         update_ai_memory(username)
