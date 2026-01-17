@@ -1381,11 +1381,12 @@
                         </div>
                         
                         <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 20px;">
-                            <button class="btn" onclick="openShop()" style="background: #e67e22;">🛍️ Shop</button>
-                            <button class="btn" onclick="openDeclutter()" style="background: #9b59b6;">🧹 Declutter</button>
-                            <button class="btn" onclick="startAdventure()" style="background: #27ae60;">🌲 Walk (30m)</button>
-                            <button class="btn" onclick="refreshPet()" style="background: #34495e;">🔄 Refresh</button>
+                            <button class="btn" onclick="openShop()" style="background: #e67e22; position: relative; z-index: 1;">🛍️ Shop</button>
+                            <button class="btn" onclick="openDeclutter()" style="background: #9b59b6; position: relative; z-index: 1;">🧹 Declutter</button>
+                            <button id="walkBtn" class="btn" onclick="startAdventure()" style="background: #27ae60; position: relative; z-index: 1;">🌲 Walk (30m)</button>
+                            <button class="btn" onclick="refreshPet()" style="background: #34495e; position: relative; z-index: 1;">🔄 Refresh</button>
                         </div>
+                        <div id="walkCountdown" style="text-align: center; margin-top: 10px; font-weight: bold; color: #27ae60; display: none;"></div>
                     </div>
                     <p style="color: #666; text-align: center; margin-top: 20px; font-size: 14px;">
                         💡 Earn coins and XP by completing self-care actions! Your pet grows as you grow.
@@ -1394,7 +1395,7 @@
             </div>
             
             <!-- Shop Modal -->
-            <div id="shopModal" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000;">
+            <div id="shopModal" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 10000;">
                 <div style="background: white; padding: 30px; border-radius: 20px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;">
                     <h3>🛍️ Wellness Shop</h3>
                     <div style="text-align: center; margin-bottom: 20px; font-size: 18px; font-weight: bold;">
@@ -1406,7 +1407,7 @@
             </div>
             
             <!-- Declutter Modal -->
-            <div id="declutterModal" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000;">
+            <div id="declutterModal" class="hidden" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 10000;">
                 <div style="background: white; padding: 30px; border-radius: 20px; max-width: 500px; width: 90%;">
                     <h3>🧹 Declutter The Mind</h3>
                     <p style="color: #666; margin-bottom: 20px;">Throw away 3 worries to clean the room:</p>
@@ -3047,6 +3048,14 @@
             document.getElementById('happinessBar').style.width = pet.happiness + '%';
             document.getElementById('energyBar').style.width = pet.energy + '%';
             document.getElementById('hygieneBar').style.width = pet.hygiene + '%';
+            
+            // Check if pet is on an adventure and resume countdown
+            if (pet.adventure_end && pet.adventure_end > 0) {
+                const now = Date.now() / 1000;
+                if (pet.adventure_end > now) {
+                    startWalkCountdown(pet.adventure_end);
+                }
+            }
         }
         
         async function rewardPet(action, activity_type = null) {
@@ -3092,6 +3101,8 @@
             }
         }
         
+        let walkCountdownInterval = null;
+        
         async function checkPetReturn() {
             try {
                 const response = await fetch('/api/pet/check-return', {
@@ -3102,7 +3113,7 @@
                 if (response.ok) {
                     const data = await response.json();
                     if (data.returned) {
-                        alert(data.message);
+                        alert('🎉 ' + data.message + ' Earned: 🪙 ' + data.coins_earned + ' coins!');
                         loadPetStatus();
                     }
                 }
@@ -3213,8 +3224,29 @@
             }
         }
         
+        let walkCountdownInterval = null;
+        
+        let walkCountdownInterval = null;
+        
         async function startAdventure() {
-            const confirm = window.confirm("Send your pet on a 30-minute walk? (You won't be able to interact during this time)");
+            // Check current status first
+            try {
+                const statusResponse = await fetch(`/api/pet/status?username=${encodeURIComponent(currentUser)}`);
+                const statusData = await statusResponse.json();
+                
+                if (statusData.exists && statusData.pet.adventure_end) {
+                    const remaining = statusData.pet.adventure_end - (Date.now() / 1000);
+                    if (remaining > 0) {
+                        const minutes = Math.ceil(remaining / 60);
+                        alert(`Your pet is still on a walk! Please wait ${minutes} more minute(s).`);
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.error('Status check error:', error);
+            }
+            
+            const confirm = window.confirm("Send your pet on a 30-minute walk? Your pet will earn rewards when they return!");
             
             if (!confirm) return;
             
@@ -3227,15 +3259,132 @@
                 const data = await response.json();
                 
                 if (response.ok && data.success) {
-                    alert(data.message);
+                    alert(data.message + ' They will return with rewards in 30 minutes! 🎁');
+                    startWalkCountdown(data.return_time);
                     loadPetStatus();
-                    // Check for return after 30 minutes
-                    setTimeout(() => checkPetReturn(), 31 * 60 * 1000);
                 } else {
                     alert(data.error || 'Adventure failed');
                 }
             } catch (error) {
                 console.error('Adventure error:', error);
+            }
+        }
+        
+        function startWalkCountdown(returnTime) {
+            const walkBtn = document.getElementById('walkBtn');
+            const countdownDiv = document.getElementById('walkCountdown');
+            
+            walkBtn.disabled = true;
+            walkBtn.style.opacity = '0.5';
+            walkBtn.style.cursor = 'not-allowed';
+            countdownDiv.style.display = 'block';
+            
+            if (walkCountdownInterval) clearInterval(walkCountdownInterval);
+            
+            walkCountdownInterval = setInterval(() => {
+                const now = Date.now() / 1000;
+                const remaining = returnTime - now;
+                
+                if (remaining <= 0) {
+                    clearInterval(walkCountdownInterval);
+                    walkBtn.disabled = false;
+                    walkBtn.style.opacity = '1';
+                    walkBtn.style.cursor = 'pointer';
+                    countdownDiv.style.display = 'none';
+                    checkPetReturn();
+                } else {
+                    const minutes = Math.floor(remaining / 60);
+                    const seconds = Math.floor(remaining % 60);
+                    countdownDiv.textContent = `🌲 Pet returns in: ${minutes}m ${seconds}s`;
+                }
+            }, 1000);
+        }
+            // Check current status first
+            try {
+                const statusResponse = await fetch('/api/pet/status');
+                const statusData = await statusResponse.json();
+                
+                if (statusData.pet && statusData.pet.adventure_end) {
+                    const remaining = statusData.pet.adventure_end - (Date.now() / 1000);
+                    if (remaining > 0) {
+                        const minutes = Math.ceil(remaining / 60);
+                        alert(`Your pet is still on a walk! Please wait ${minutes} more minute(s).`);
+                        return;
+                    }
+                }
+            } catch (error) {
+                console.error('Status check error:', error);
+            }
+            
+            const confirm = window.confirm("Send your pet on a 30-minute walk? Your pet will earn rewards when they return!");
+            
+            if (!confirm) return;
+            
+            try {
+                const response = await fetch('/api/pet/adventure', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    alert(data.message + ' They will return with rewards in 30 minutes! 🎁');
+                    startWalkCountdown(data.return_time);
+                    loadPetStatus();
+                } else {
+                    alert(data.error || 'Adventure failed');
+                }
+            } catch (error) {
+                console.error('Adventure error:', error);
+            }
+        }
+        
+        function startWalkCountdown(returnTime) {
+            const walkBtn = document.getElementById('walkBtn');
+            const countdownDiv = document.getElementById('walkCountdown');
+            
+            walkBtn.disabled = true;
+            walkBtn.style.opacity = '0.5';
+            walkBtn.style.cursor = 'not-allowed';
+            countdownDiv.style.display = 'block';
+            
+            if (walkCountdownInterval) clearInterval(walkCountdownInterval);
+            
+            walkCountdownInterval = setInterval(() => {
+                const now = Date.now() / 1000;
+                const remaining = returnTime - now;
+                
+                if (remaining <= 0) {
+                    clearInterval(walkCountdownInterval);
+                    walkBtn.disabled = false;
+                    walkBtn.style.opacity = '1';
+                    walkBtn.style.cursor = 'pointer';
+                    countdownDiv.style.display = 'none';
+                    checkPetReturn();
+                } else {
+                    const minutes = Math.floor(remaining / 60);
+                    const seconds = Math.floor(remaining % 60);
+                    countdownDiv.textContent = `🌲 Pet returns in: ${minutes}m ${seconds}s`;
+                }
+            }, 1000);
+        }
+        
+        async function checkPetReturn() {
+            try {
+                const response = await fetch('/api/pet/check-return', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.returned) {
+                    alert('🎉 ' + data.message + ' Earned: 🪙 ' + data.coins_earned + ' coins!');
+                    loadPetStatus();
+                }
+            } catch (error) {
+                console.error('Check return error:', error);
             }
         }
         
