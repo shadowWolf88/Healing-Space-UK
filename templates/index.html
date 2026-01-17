@@ -901,20 +901,56 @@
                     <small style="color: #666; display: block; margin-top: 5px;">This helps your clinician provide better care</small>
                 </div>
                 <div class="form-group">
+                    <label>Country *</label>
+                    <input type="text" id="regCountry" placeholder="United Kingdom" required>
+                </div>
+                <div class="form-group">
+                    <label>Area / Region *</label>
+                    <input type="text" id="regArea" placeholder="London, Manchester, etc." required>
+                </div>
+                <div class="form-group">
+                    <label>Postcode (optional)</label>
+                    <input type="text" id="regPostcode" placeholder="SW1A 1AA">
+                </div>
+                <div class="form-group">
+                    <label>NHS Number (optional)</label>
+                    <input type="text" id="regNHS" placeholder="123 456 7890" maxlength="12">
+                </div>
+                <div class="form-group">
                     <label>Username *</label>
                     <input type="text" id="regUsername" placeholder="Choose username" required>
                 </div>
                 <div class="form-group">
                     <label>Password *</label>
-                    <input type="password" id="regPassword" placeholder="Min 8 chars, must include: number, letter, special char" oninput="checkPasswordStrength(this.value)" required>
+                    <div style="position: relative;">
+                        <input type="password" id="regPassword" placeholder="Min 8 chars, must include: number, letter, special char" oninput="checkPasswordStrength(this.value)" required style="width: 100%; padding-right: 45px;">
+                        <button type="button" onclick="togglePasswordVisibility('regPassword', 'regPasswordToggle')" id="regPasswordToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;">👁️</button>
+                    </div>
                     <div id="passwordStrengthBar" style="height: 5px; background: #e0e0e0; border-radius: 3px; margin-top: 5px; overflow: hidden;">
                         <div id="passwordStrengthFill" style="height: 100%; width: 0%; background: #dc3545; transition: all 0.3s;"></div>
                     </div>
                     <small id="passwordStrengthText" style="color: #999; display: block; margin-top: 3px;">Password strength: Weak</small>
                 </div>
                 <div class="form-group">
+                    <label>Confirm Password *</label>
+                    <div style="position: relative;">
+                        <input type="password" id="regConfirmPassword" placeholder="Re-enter password" required style="width: 100%; padding-right: 45px;">
+                        <button type="button" onclick="togglePasswordVisibility('regConfirmPassword', 'regConfirmPasswordToggle')" id="regConfirmPasswordToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;">👁️</button>
+                    </div>
+                </div>
+                <div class="form-group">
                     <label>PIN (4 digits) *</label>
-                    <input type="password" id="regPin" placeholder="Choose 4-digit PIN" maxlength="4" required>
+                    <div style="position: relative;">
+                        <input type="password" id="regPin" placeholder="Choose 4-digit PIN" maxlength="4" required style="width: 100%; padding-right: 45px;">
+                        <button type="button" onclick="togglePasswordVisibility('regPin', 'regPinToggle')" id="regPinToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;">👁️</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Confirm PIN *</label>
+                    <div style="position: relative;">
+                        <input type="password" id="regConfirmPin" placeholder="Re-enter 4-digit PIN" maxlength="4" required style="width: 100%; padding-right: 45px;">
+                        <button type="button" onclick="togglePasswordVisibility('regConfirmPin', 'regConfirmPinToggle')" id="regConfirmPinToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;">👁️</button>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Email Address *</label>
@@ -939,28 +975,62 @@
             <div id="clinicianRegisterForm" class="hidden">
                 <h3 style="text-align: center; margin-bottom: 20px;">Create Clinician Account</h3>
                 <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" id="clinicianUsername" placeholder="Choose username">
+                    <label>Username *</label>
+                    <input type="text" id="clinicianUsername" placeholder="Choose username" required>
                 </div>
                 <div class="form-group">
-                    <label>Full Name</label>
-                    <input type="text" id="clinicianFullName" placeholder="Dr. Jane Smith">
+                    <label>Full Name *</label>
+                    <input type="text" id="clinicianFullName" placeholder="Dr. Jane Smith" required>
                 </div>
                 <div class="form-group">
-                    <label>Email Address</label>
+                    <label>Professional ID Number *</label>
+                    <input type="text" id="clinicianProfessionalId" placeholder="License/Registration Number" required>
+                    <small style="color: #666; display: block; margin-top: 5px;">e.g., Medical License, GMC number, NMC PIN, etc.</small>
+                </div>
+                <div class="form-group">
+                    <label>Country *</label>
+                    <input type="text" id="clinicianCountry" placeholder="United Kingdom" required>
+                </div>
+                <div class="form-group">
+                    <label>Area / Region *</label>
+                    <input type="text" id="clinicianArea" placeholder="London, Manchester, etc." required>
+                    <small style="color: #666; display: block; margin-top: 5px;">Patients can filter by location to find you</small>
+                </div>
+                <div class="form-group">
+                    <label>Email Address *</label>
                     <input type="email" id="clinicianEmail" placeholder="doctor@clinic.com" required>
                 </div>
                 <div class="form-group">
-                    <label>Phone Number</label>
+                    <label>Phone Number *</label>
                     <input type="tel" id="clinicianPhone" placeholder="+1234567890" required>
                 </div>
                 <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="clinicianPassword" placeholder="Choose password (min 8 chars)">
+                    <label>Password *</label>
+                    <div style="position: relative;">
+                        <input type="password" id="clinicianPassword" placeholder="Choose password (min 8 chars)" required style="width: 100%; padding-right: 45px;">
+                        <button type="button" onclick="togglePasswordVisibility('clinicianPassword', 'clinicianPasswordToggle')" id="clinicianPasswordToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;">👁️</button>
+                    </div>
                 </div>
                 <div class="form-group">
-                    <label>PIN (4 digits) - 2FA</label>
-                    <input type="password" id="clinicianPin" placeholder="Choose 4-digit PIN" maxlength="4">
+                    <label>Confirm Password *</label>
+                    <div style="position: relative;">
+                        <input type="password" id="clinicianConfirmPassword" placeholder="Re-enter password" required style="width: 100%; padding-right: 45px;">
+                        <button type="button" onclick="togglePasswordVisibility('clinicianConfirmPassword', 'clinicianConfirmPasswordToggle')" id="clinicianConfirmPasswordToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;">👁️</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>PIN (4 digits) - 2FA *</label>
+                    <div style="position: relative;">
+                        <input type="password" id="clinicianPin" placeholder="Choose 4-digit PIN" maxlength="4" required style="width: 100%; padding-right: 45px;">
+                        <button type="button" onclick="togglePasswordVisibility('clinicianPin', 'clinicianPinToggle')" id="clinicianPinToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;">👁️</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Confirm PIN *</label>
+                    <div style="position: relative;">
+                        <input type="password" id="clinicianConfirmPin" placeholder="Re-enter 4-digit PIN" maxlength="4" required style="width: 100%; padding-right: 45px;">
+                        <button type="button" onclick="togglePasswordVisibility('clinicianConfirmPin', 'clinicianConfirmPinToggle')" id="clinicianConfirmPinToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;">👁️</button>
+                    </div>
                 </div>
                 <button class="btn" onclick="registerClinician()">Create Clinician Account</button>
                 <button class="btn btn-secondary" onclick="showClinicianAuth()">Back to Login</button>
@@ -1828,6 +1898,15 @@
             // Set max date to today for DOB field
             document.getElementById('regDOB').max = new Date().toISOString().split('T')[0];
             loadCliniciansForRegistration();
+            
+            // Add event listeners to filter clinicians by location
+            const countryInput = document.getElementById('regCountry');
+            const areaInput = document.getElementById('regArea');
+            
+            if (countryInput && areaInput) {
+                countryInput.addEventListener('blur', loadCliniciansForRegistration);
+                areaInput.addEventListener('blur', loadCliniciansForRegistration);
+            }
         }
         
         function showClinicianRegister() {
@@ -2184,9 +2263,15 @@
             const fullName = document.getElementById('regFullName').value.trim();
             const dob = document.getElementById('regDOB').value;
             const conditions = document.getElementById('regConditions').value.trim();
+            const country = document.getElementById('regCountry').value.trim();
+            const area = document.getElementById('regArea').value.trim();
+            const postcode = document.getElementById('regPostcode').value.trim();
+            const nhs_number = document.getElementById('regNHS').value.trim();
             const username = document.getElementById('regUsername').value.trim();
             const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('regConfirmPassword').value;
             const pin = document.getElementById('regPin').value;
+            const confirmPin = document.getElementById('regConfirmPin').value;
             const email = document.getElementById('regEmail').value.trim();
             const phone = document.getElementById('regPhone').value.trim();
             const clinician_id = document.getElementById('regClinician').value;
@@ -2206,8 +2291,23 @@
                 return;
             }
             
+            if (!country || !area) {
+                showAuthMessage('Please enter your country and area', 'error');
+                return;
+            }
+            
             if (!username || !password || !pin || !email || !phone) {
                 showAuthMessage('Please fill in all required fields', 'error');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showAuthMessage('Passwords do not match', 'error');
+                return;
+            }
+            
+            if (pin !== confirmPin) {
+                showAuthMessage('PINs do not match', 'error');
                 return;
             }
             
@@ -2254,7 +2354,11 @@
                 full_name: fullName,
                 dob: dob,
                 conditions: conditions,
-                clinician_id 
+                clinician_id,
+                country,
+                area,
+                postcode,
+                nhs_number
             };
             showDisclaimerModal();
         }
@@ -2274,6 +2378,10 @@
                         dob: data.dob,
                         conditions: data.conditions,
                         clinician_id: data.clinician_id,
+                        country: data.country,
+                        area: data.area,
+                        postcode: data.postcode,
+                        nhs_number: data.nhs_number,
                         disclaimer_accepted: true
                     })
                 });
@@ -2298,13 +2406,38 @@
         async function registerClinician() {
             const username = document.getElementById('clinicianUsername').value.trim();
             const password = document.getElementById('clinicianPassword').value;
+            const confirmPassword = document.getElementById('clinicianConfirmPassword').value;
             const pin = document.getElementById('clinicianPin').value;
+            const confirmPin = document.getElementById('clinicianConfirmPin').value;
             const full_name = document.getElementById('clinicianFullName').value.trim();
             const email = document.getElementById('clinicianEmail').value.trim();
             const phone = document.getElementById('clinicianPhone').value.trim();
+            const professional_id = document.getElementById('clinicianProfessionalId').value.trim();
+            const country = document.getElementById('clinicianCountry').value.trim();
+            const area = document.getElementById('clinicianArea').value.trim();
             
-            if (!username || !password || !pin || !email || !phone) {
+            if (!username || !password || !pin || !email || !phone || !full_name) {
                 showAuthMessage('Please fill in all required fields', 'error');
+                return;
+            }
+            
+            if (!professional_id) {
+                showAuthMessage('Please enter your professional ID number', 'error');
+                return;
+            }
+            
+            if (!country || !area) {
+                showAuthMessage('Please enter your country and area', 'error');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showAuthMessage('Passwords do not match', 'error');
+                return;
+            }
+            
+            if (pin !== confirmPin) {
+                showAuthMessage('PINs do not match', 'error');
                 return;
             }
             
@@ -2327,7 +2460,10 @@
                 pin,
                 full_name,
                 email,
-                phone
+                phone,
+                professional_id,
+                country,
+                area
             };
             showDisclaimerModal();
         }
@@ -2344,6 +2480,9 @@
                         full_name: data.full_name,
                         email: data.email,
                         phone: data.phone,
+                        professional_id: data.professional_id,
+                        country: data.country,
+                        area: data.area,
                         disclaimer_accepted: true
                     })
                 });
@@ -2367,17 +2506,27 @@
         
         async function loadCliniciansForRegistration() {
             try {
-                const response = await fetch('/api/clinicians/list');
+                // Get country and area filters if provided
+                const country = document.getElementById('regCountry')?.value.trim() || '';
+                const area = document.getElementById('regArea')?.value.trim() || '';
+                
+                let url = '/api/clinicians/list';
+                const params = new URLSearchParams();
+                if (country) params.append('country', country);
+                if (area) params.append('area', area);
+                if (params.toString()) url += '?' + params.toString();
+                
+                const response = await fetch(url);
                 const data = await response.json();
                 
                 const select = document.getElementById('regClinician');
                 if (response.ok && data.clinicians && data.clinicians.length > 0) {
                     select.innerHTML = '<option value="">-- Select your clinician --</option>' +
                         data.clinicians.map(c => 
-                            `<option value="${c.username}">${c.full_name || c.username}</option>`
+                            `<option value="${c.username}">${c.full_name || c.username}${c.area ? ' (' + c.area + ')' : ''}</option>`
                         ).join('');
                 } else {
-                    select.innerHTML = '<option value="">No clinicians available yet</option>';
+                    select.innerHTML = '<option value="">No clinicians found in your area</option>';
                 }
             } catch (error) {
                 console.error('Error loading clinicians:', error);

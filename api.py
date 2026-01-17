@@ -2,7 +2,7 @@
 Flask API wrapper for Healing Space Therapy App
 Provides REST API endpoints while keeping desktop app intact
 """
-from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import Flask, request, jsonify, render_template, send_from_directory, make_response
 from flask_cors import CORS
 import sqlite3
 import os
@@ -237,6 +237,31 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # Column already exists
     
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN country TEXT")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN area TEXT")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN postcode TEXT")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN nhs_number TEXT")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    
+    try:
+        cursor.execute("ALTER TABLE users ADD COLUMN professional_id TEXT")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    
     conn.commit()
     conn.close()
 
@@ -371,9 +396,16 @@ def register():
         dob = data.get('dob')
         conditions = data.get('conditions')
         clinician_id = data.get('clinician_id')  # Required for patients
+        country = data.get('country', '')
+        area = data.get('area', '')
+        postcode = data.get('postcode', '')
+        nhs_number = data.get('nhs_number', '')
         
         if not username or not password or not pin or not email or not phone:
             return jsonify({'error': 'All fields are required'}), 400
+        
+        if not country or not area:
+            return jsonify({'error': 'Country and area are required'}), 400
         
         if not full_name:
             return jsonify({'error': 'Full name is required'}), 400
@@ -430,8 +462,8 @@ def register():
         hashed_pin = hash_pin(pin)
         
         # Create user with full profile information
-        cur.execute("INSERT INTO users (username, password, pin, email, phone, full_name, dob, conditions, last_login, role) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                   (username, hashed_password, hashed_pin, email, phone, full_name, dob, conditions, datetime.now(), 'user'))
+        cur.execute("INSERT INTO users (username, password, pin, email, phone, full_name, dob, conditions, last_login, role, country, area, postcode, nhs_number) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                   (username, hashed_password, hashed_pin, email, phone, full_name, dob, conditions, datetime.now(), 'user', country, area, postcode, nhs_number))
         
         # Create pending approval request
         cur.execute("INSERT INTO patient_approvals (patient_username, clinician_username, status) VALUES (?,?,?)",
@@ -653,9 +685,18 @@ def clinician_register():
         full_name = data.get('full_name', '')
         email = data.get('email')
         phone = data.get('phone')
+        country = data.get('country', '')
+        area = data.get('area', '')
+        professional_id = data.get('professional_id', '')
         
         if not username or not password or not pin or not email or not phone:
             return jsonify({'error': 'All fields are required'}), 400
+        
+        if not country or not area:
+            return jsonify({'error': 'Country and area are required'}), 400
+        
+        if not professional_id:
+            return jsonify({'error': 'Professional ID number is required'}), 400
         
         # Validate password complexity
         if len(password) < 8:
@@ -693,8 +734,8 @@ def clinician_register():
         
         # Insert new clinician
         cur.execute(
-            "INSERT INTO users (username, password, pin, role, full_name, email, phone, last_login) VALUES (?,?,?,?,?,?,?,?)",
-            (username, hashed_password, hashed_pin, 'clinician', full_name, email, phone, datetime.now())
+            "INSERT INTO users (username, password, pin, role, full_name, email, phone, last_login, country, area, professional_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            (username, hashed_password, hashed_pin, 'clinician', full_name, email, phone, datetime.now(), country, area, professional_id)
         )
         conn.commit()
         conn.close()
@@ -727,18 +768,38 @@ def accept_disclaimer():
 
 @app.route('/api/clinicians/list', methods=['GET'])
 def get_clinicians():
-    """Get list of all clinicians for patient signup"""
+    """Get list of all clinicians for patient signup (with optional filtering)"""
     try:
+        country = request.args.get('country', '')
+        area = request.args.get('area', '')
+        
         conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
-        clinicians = cur.execute(
-            "SELECT username, full_name FROM users WHERE role='clinician' ORDER BY username"
-        ).fetchall()
+        
+        query = "SELECT username, full_name, country, area FROM users WHERE role='clinician'"
+        params = []
+        
+        if country:
+            query += " AND LOWER(country) LIKE LOWER(?)"
+            params.append(f"%{country}%")
+        
+        if area:
+            query += " AND LOWER(area) LIKE LOWER(?)"
+            params.append(f"%{area}%")
+        
+        query += " ORDER BY username"
+        
+        clinicians = cur.execute(query, params).fetchall()
         conn.close()
         
         return jsonify({
             'clinicians': [
-                {'username': c[0], 'full_name': c[1] or c[0]}
+                {
+                    'username': c[0], 
+                    'full_name': c[1] or c[0],
+                    'country': c[2] or '',
+                    'area': c[3] or ''
+                }
                 for c in clinicians
             ]
         }), 200
@@ -2403,7 +2464,7 @@ def export_csv():
         # Mood logs
         writer.writerow(["MOOD_LOGS"])
         writer.writerow(["timestamp", "mood_val", "sleep_val", "meds", "notes", "sentiment", "exercise_mins", "outside_mins", "water_pints"])
-        for r in cur.execute("SELECT entry_timestamp, mood_val, sleep_val, meds, notes, sentiment, exercise_mins, outside_mins, water_pints FROM mood_logs WHERE username=? ORDER BY entry_timestamp DESC", (username,)).fetchall():
+        for r in cur.execute("SELECT entrestamp, mood_val, sleep_val, meds, notes, sentiment, exercise_mins, outside_mins, water_pints FROM mood_logs WHERE username=? ORDER BY entrestamp DESC", (username,)).fetchall():
             writer.writerow([r[0], r[1], r[2], r[3], r[4] or "", r[5], r[6], r[7], r[8]])
         writer.writerow([])
         
@@ -2483,7 +2544,7 @@ def export_pdf():
         
         # Mood Summary
         moods = cur.execute(
-            "SELECT entry_timestamp, mood_val, sleep_val, meds, exercise_mins FROM mood_logs WHERE username=? ORDER BY entry_timestamp DESC LIMIT 15",
+            "SELECT entrestamp, mood_val, sleep_val, meds, exercise_mins FROM mood_logs WHERE username=? ORDER BY entrestamp DESC LIMIT 15",
             (username,)
         ).fetchall()
         
@@ -2515,7 +2576,7 @@ def export_pdf():
         
         # Gratitude entries
         gratitudes = cur.execute(
-            "SELECT entry_timestamp, entry_text FROM gratitude_journal WHERE username=? ORDER BY entry_timestamp DESC LIMIT 10",
+            "SELECT entry_timestamp, entry FROM gratitude_logs WHERE username=? ORDER BY entry_timestamp DESC LIMIT 10",
             (username,)
         ).fetchall()
         
