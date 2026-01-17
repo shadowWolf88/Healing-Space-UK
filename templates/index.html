@@ -746,6 +746,34 @@
             color: #666;
         }
         
+        /* Password Toggle */
+        .password-field-wrapper {
+            position: relative;
+        }
+        
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            color: #999;
+            padding: 5px;
+            z-index: 10;
+            user-select: none;
+        }
+        
+        .password-toggle:hover {
+            color: #667eea;
+        }
+        
+        .password-field-wrapper input {
+            padding-right: 45px;
+        }
+        
         @media (max-width: 768px) {
             .app-content {
                 flex-direction: column;
@@ -805,7 +833,12 @@
                 </div>
                 <div class="form-group">
                     <label>Password</label>
-                    <input type="password" id="loginPassword" placeholder="Enter password">
+                    <div class="password-field-wrapper">
+                        <input type="password" id="loginPassword" placeholder="Enter password">
+                        <button type="button" class="password-toggle" onclick="togglePassword('loginPassword', this)" title="Show/Hide password">
+                            👁️
+                        </button>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>PIN (4 digits) - 2FA</label>
@@ -830,7 +863,12 @@
                 </div>
                 <div class="form-group">
                     <label>Password</label>
-                    <input type="password" id="clinicianLoginPassword" placeholder="Enter password">
+                    <div class="password-field-wrapper">
+                        <input type="password" id="clinicianLoginPassword" placeholder="Enter password">
+                        <button type="button" class="password-toggle" onclick="togglePassword('clinicianLoginPassword', this)" title="Show/Hide password">
+                            👁️
+                        </button>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>PIN (4 digits) - 2FA</label>
@@ -3969,6 +4007,20 @@
                     localStorage.removeItem('healingSpaceSession');
                     sessionStorage.removeItem('healingSpaceSession');
                 }
+            }
+        }
+        
+        // Toggle password visibility
+        function togglePassword(inputId, button) {
+            const input = document.getElementById(inputId);
+            if (input.type === 'password') {
+                input.type = 'text';
+                button.textContent = '🙈';
+                button.title = 'Hide password';
+            } else {
+                input.type = 'password';
+                button.textContent = '👁️';
+                button.title = 'Show password';
             }
         }
         
