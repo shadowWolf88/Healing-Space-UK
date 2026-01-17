@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 import sys
 import secrets
 import smtplib
+import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -943,7 +944,6 @@ def update_ai_memory(username):
 def reward_pet(action, activity_type=None):
     """Helper function to reward pet for user activities"""
     try:
-        import time
         conn = sqlite3.connect("pet_game.db")
         cur = conn.cursor()
         pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
