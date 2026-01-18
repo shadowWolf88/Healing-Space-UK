@@ -5244,7 +5244,12 @@
             listDiv.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="loading" style="margin: 0 auto;"></div></div>';
             
             try {
-                const response = await fetch(`/api/appointments?clinician=${encodeURIComponent(currentUser)}`);
+                const response = await fetch(`/api/appointments?clinician=${encodeURIComponent(currentUser)}&_t=${Date.now()}`, {
+                    cache: 'no-store',
+                    headers: {
+                        'Cache-Control': 'no-cache'
+                    }
+                });
                 const data = await response.json();
                 
                 if (response.ok && data.appointments) {
