@@ -388,6 +388,11 @@ def index():
     """Serve simple web interface"""
     return render_template('index.html')
 
+@app.route('/diagnostic')
+def diagnostic():
+    """Diagnostic page to test JavaScript loading"""
+    return render_template('diagnostic.html')
+
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint for Railway"""
