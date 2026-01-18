@@ -5249,48 +5249,106 @@
                 
                 if (response.ok && data.appointments) {
                     if (data.appointments.length === 0) {
-                        listDiv.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No upcoming appointments scheduled.</p>';
+                        listDiv.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No appointments scheduled.</p>';
                         return;
                     }
                     
-                    const html = data.appointments.map(apt => {
+                    // Separate appointments by status
+                    const now = new Date();
+                    const pending = data.appointments.filter(apt => apt.patient_response === 'pending' && new Date(apt.appointment_date) > now);
+                    const confirmed = data.appointments.filter(apt => apt.patient_response === 'accepted' && new Date(apt.appointment_date) > now);
+                    const declined = data.appointments.filter(apt => apt.patient_response === 'declined' && new Date(apt.appointment_date) > now);
+                    const past = data.appointments.filter(apt => new Date(apt.appointment_date) <= now);
+                    
+                    const renderAppointment = (apt) => {
                         const date = new Date(apt.appointment_date);
                         const dateStr = date.toLocaleDateString();
                         const timeStr = date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-                        const daysUntil = Math.ceil((date - new Date()) / (1000 * 60 * 60 * 24));
+                        const daysUntil = Math.ceil((date - now) / (1000 * 60 * 60 * 24));
+                        const isPast = date <= now;
                         
-                        // Patient response status
                         const responseColor = apt.patient_response === 'accepted' ? '#28a745' : 
                                              apt.patient_response === 'declined' ? '#dc3545' : '#ffc107';
                         const responseIcon = apt.patient_response === 'accepted' ? '✓' : 
                                             apt.patient_response === 'declined' ? '✗' : '⏳';
                         const responseText = apt.patient_response === 'accepted' ? 'Accepted' :
-                                            apt.patient_response === 'declined' ? 'Declined' : 'Pending';
+                                            apt.patient_response === 'declined' ? 'Declined' : 'Pending Response';
                         const ackStatus = apt.patient_acknowledged ? '✓ Read' : '○ Unread';
                         
                         return `
-                            <div style="border: 2px solid ${daysUntil <= 2 ? '#ffc107' : '#e0e0e0'}; border-radius: 8px; padding: 15px; margin-bottom: 10px; background: ${daysUntil <= 2 ? '#fff3cd' : 'white'};">
+                            <div style="border: 2px solid ${isPast ? '#ccc' : daysUntil <= 2 ? '#ffc107' : '#e0e0e0'}; border-radius: 8px; padding: 15px; margin-bottom: 10px; background: ${isPast ? '#f5f5f5' : daysUntil <= 2 ? '#fff3cd' : 'white'}; ${isPast ? 'opacity: 0.7;' : ''}">
                                 <div style="display: flex; justify-content: space-between; align-items: start;">
                                     <div style="flex: 1;">
                                         <div style="font-size: 18px; font-weight: bold; color: #333;">${apt.patient_username}</div>
                                         <div style="color: #667eea; margin-top: 5px;">📅 ${dateStr} at ${timeStr}</div>
                                         ${apt.notes ? `<div style="color: #666; margin-top: 8px; font-size: 14px;">${apt.notes}</div>` : ''}
-                                        ${daysUntil <= 2 ? `<div style="color: #dc7e14; font-weight: bold; margin-top: 8px;">⚠️ ${daysUntil === 0 ? 'Today!' : daysUntil === 1 ? 'Tomorrow' : `In ${daysUntil} days`}</div>` : ''}
-                                        <div style="margin-top: 10px; display: flex; gap: 10px;">
+                                        ${!isPast && daysUntil <= 2 ? `<div style="color: #dc7e14; font-weight: bold; margin-top: 8px;">⚠️ ${daysUntil === 0 ? 'Today!' : daysUntil === 1 ? 'Tomorrow' : `In ${daysUntil} days`}</div>` : ''}
+                                        ${isPast ? `<div style="color: #999; font-weight: bold; margin-top: 8px;">📍 Past Appointment</div>` : ''}
+                                        <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
                                             <span style="background: ${responseColor}; color: white; padding: 4px 10px; border-radius: 15px; font-size: 12px; font-weight: bold;">
-                                                ${responseIcon} Patient: ${responseText}
+                                                ${responseIcon} ${responseText}
                                             </span>
                                             <span style="background: ${apt.patient_acknowledged ? '#28a745' : '#999'}; color: white; padding: 4px 10px; border-radius: 15px; font-size: 12px;">
                                                 ${ackStatus}
                                             </span>
                                         </div>
-                                        ${apt.patient_response_date ? `<div style="color: #999; font-size: 12px; margin-top: 5px;">Response: ${new Date(apt.patient_response_date).toLocaleString()}</div>` : ''}
+                                        ${apt.patient_response_date ? `<div style="color: #999; font-size: 12px; margin-top: 5px;">Responded: ${new Date(apt.patient_response_date).toLocaleString()}</div>` : ''}
                                     </div>
                                     <button onclick="cancelAppointment(${apt.id})" style="background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 14px;">Cancel</button>
                                 </div>
                             </div>
                         `;
-                    }).join('');
+                    };
+                    
+                    let html = '';
+                    
+                    // Pending Appointments Section
+                    if (pending.length > 0) {
+                        html += `
+                            <div style="margin-bottom: 30px;">
+                                <h4 style="color: #ffc107; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 3px solid #ffc107;">
+                                    ⏳ Pending Patient Response (${pending.length})
+                                </h4>
+                                ${pending.map(renderAppointment).join('')}
+                            </div>
+                        `;
+                    }
+                    
+                    // Confirmed Appointments Section
+                    if (confirmed.length > 0) {
+                        html += `
+                            <div style="margin-bottom: 30px;">
+                                <h4 style="color: #28a745; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 3px solid #28a745;">
+                                    ✓ Confirmed Appointments (${confirmed.length})
+                                </h4>
+                                ${confirmed.map(renderAppointment).join('')}
+                            </div>
+                        `;
+                    }
+                    
+                    // Declined Appointments Section
+                    if (declined.length > 0) {
+                        html += `
+                            <div style="margin-bottom: 30px;">
+                                <h4 style="color: #dc3545; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 3px solid #dc3545;">
+                                    ✗ Declined by Patient (${declined.length})
+                                </h4>
+                                ${declined.map(renderAppointment).join('')}
+                            </div>
+                        `;
+                    }
+                    
+                    // Past Appointments Section
+                    if (past.length > 0) {
+                        html += `
+                            <div style="margin-bottom: 30px;">
+                                <h4 style="color: #999; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 3px solid #ccc;">
+                                    📍 Past Appointments (${past.length})
+                                </h4>
+                                ${past.map(renderAppointment).join('')}
+                            </div>
+                        `;
+                    }
                     
                     listDiv.innerHTML = html;
                 } else {
