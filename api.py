@@ -322,13 +322,40 @@ class SafetyMonitor:
             return False
 
 class TherapistAI:
-    """AI therapy interface"""
+    """AI therapy interface - supports Groq API or local trained model"""
     def __init__(self, username=None):
         self.username = username
         self.headers = {"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"}
+        self.use_local_model = os.environ.get('USE_LOCAL_AI', '0') == '1'
+        self.local_trainer = None
 
     def get_response(self, user_message, chat_history=None):
-        """Get AI response for therapy chat with full context"""
+        """Get AI response - uses local model if enabled, otherwise Groq"""
+        if self.use_local_model:
+            return self._get_local_response(user_message, chat_history)
+        else:
+            return self._get_groq_response(user_message, chat_history)
+    
+    def _get_local_response(self, user_message, chat_history=None):
+        """Generate response using locally trained model"""
+        try:
+            from ai_trainer import BackgroundAITrainer
+            
+            if self.local_trainer is None:
+                self.local_trainer = BackgroundAITrainer()
+            
+            response = self.local_trainer.generate_response(
+                user_message,
+                chat_history
+            )
+            
+            return response
+        except Exception as e:
+            print(f"❌ Local model error: {e}, falling back to Groq")
+            return self._get_groq_response(user_message, chat_history)
+    
+    def _get_groq_response(self, user_message, chat_history=None):
+        """Get AI response for therapy chat with full context (Groq API)"""
         try:
             # Get user context from AI memory
             conn = sqlite3.connect(DB_PATH)
@@ -1310,6 +1337,33 @@ def therapy_chat():
         conn.commit()
         conn.close()
         
+        # Collect for training if user has consented
+        try:
+            if training_manager.has_user_consented(username):
+                # Get user's mood context
+                conn = sqlite3.connect(DB_PATH)
+                cur = conn.cursor()
+                recent_mood = cur.execute(
+                    "SELECT mood_val FROM mood_logs WHERE username=? ORDER BY entrestamp DESC LIMIT 1",
+                    (username,)
+                ).fetchone()
+                conn.close()
+                
+                mood_context = recent_mood[0] if recent_mood else None
+                
+                # Collect conversation for training
+                training_manager.collect_therapy_session(
+                    username,
+                    [
+                        {'role': 'user', 'content': message},
+                        {'role': 'ai', 'content': response}
+                    ],
+                    mood_context=mood_context
+                )
+        except Exception as e:
+            # Don't break the chat if training collection fails
+            print(f"Training data collection error: {e}")
+        
         log_event(username, 'api', 'therapy_chat', 'Chat message sent')
         
         return jsonify({
@@ -1994,6 +2048,68 @@ def pet_status():
                 'stage': pet[10], 'hat': pet[13] if len(pet) > 13 else 'None'
             }
         }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/ai/training-status', methods=['GET'])
+def get_ai_training_status():
+    """Get status of background AI training"""
+    try:
+        # Import here to avoid breaking app if transformers not installed
+        try:
+            from ai_trainer import BackgroundAITrainer
+            trainer = BackgroundAITrainer()
+            status = trainer.get_training_status()
+            return jsonify(status), 200
+        except ImportError:
+            return jsonify({
+                'trained': False,
+                'message': 'Training system not available (transformers library not installed)'
+            }), 200
+        except Exception as e:
+            return jsonify({
+                'trained': False,
+                'message': f'Error: {str(e)}'
+            }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/ai/trigger-training', methods=['POST'])
+def trigger_background_training():
+    """Manually trigger background training (admin only)"""
+    try:
+        data = request.json
+        username = data.get('username')
+        
+        # Verify admin/clinician (you can adjust this check)
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        user = cur.execute(
+            "SELECT role FROM users WHERE username=?",
+            (username,)
+        ).fetchone()
+        conn.close()
+        
+        if not user or user[0] != 'clinician':
+            return jsonify({'error': 'Unauthorized - clinician access required'}), 403
+        
+        # Start training in background thread
+        import threading
+        from ai_trainer import train_background_model
+        
+        def train_async():
+            print("🚀 Starting background training...")
+            success = train_background_model(epochs=3)
+            print(f"✅ Training completed: {success}")
+        
+        thread = threading.Thread(target=train_async, daemon=True)
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Background training started. Check status in a few minutes.'
+        }), 200
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
