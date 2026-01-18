@@ -2317,6 +2317,7 @@
                 switchTab('professional', document.getElementById('professionalTabBtn'));
                 loadPendingApprovals();
                 loadPatients(); // Auto-load patients
+                loadAppointments(); // Auto-load appointments for clinician
             } else {
                 // PATIENT: Hide professional tab, SHOW all patient tabs
                 document.getElementById('professionalTabBtn').style.display = 'none';
