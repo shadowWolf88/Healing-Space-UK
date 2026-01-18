@@ -1,84 +1,169 @@
-Purpose
-- Help AI coding agents become productive quickly in this repository.
+# Healing Space - AI Agent Guide
 
-Overview
-- Desktop-first Python app (Tkinter + CustomTkinter) with local SQLite storage and optional cloud integrations.
-- Key runtime entry: [main.py](main.py) — UI + auth, DB setup (`init_db()`), SafetyMonitor, encryption and AI client glue.
-- **App architecture**: Single `App(ctk.CTk)` class handles auth flow, UI tabs (therapy, mood logs, CBT tools, progress insights), and session management. `TherapistAI` class manages LLM interactions with persistent memory context.
-- Gamification module: [pet_game.py](pet_game.py) uses a separate `pet_game.db` and contains in-file schema migrations.
-- Secrets: [secrets_manager.py](secrets_manager.py) prefers HashiCorp Vault (`hvac`) and falls back to environment variables.
-- Export: [fhir_export.py](fhir_export.py) builds and HMAC-signs FHIR bundles using `ENCRYPTION_KEY`.
-- Transfer: [secure_transfer.py](secure_transfer.py) wraps SFTP (paramiko optional).
-- Auditing: [audit.py](audit.py) provides a best-effort `log_event()` that writes to `audit_logs`.
-- **Backups**: Auto-created in `backups/` dir with timestamp pattern `therapist_app_YYYYMMDD_HHMMSS.db.bak`.
+## Purpose
+Help AI coding agents understand this mental health therapy application's architecture and become immediately productive.
 
-What to know before editing
-- The code tolerates missing optional dependencies (argon2, bcrypt, paramiko, hvac, cryptography). Keep fallbacks rather than force-installing in code.
-- **Password hashing hierarchy**: Argon2 (preferred) > bcrypt > PBKDF2 fallback. See `hash_password()` and `verify_password()` in [main.py](main.py). Legacy SHA256 hashes are auto-migrated on login.
-- **PIN hashing**: Uses bcrypt or PBKDF2 with `PIN_SALT`. See `hash_pin()` and `check_pin()` functions.
-- Secrets and keys: prefer `SecretsManager.get_secret()` or `require_secret()` for production secrets. Tests and local runs often set `DEBUG=1` to permit env fallbacks.
-- Encryption: code uses `cryptography.Fernet`. `ENCRYPTION_KEY` must be a valid Fernet key for signing/export in production.
-- DB files: `therapist_app.db` (primary), `pet_game.db` (pet state). Migrations are inline (see `init_db()` and `PetGame._check_and_update_schema`). When adding schema changes, update both migration code and tests.
-- **UI Monkeypatching**: `main.py` wraps `ctk.CTkToplevel` to force topmost/transient behavior and bind Escape key. It also patches `messagebox` functions to auto-use root as parent. Avoid bypassing these wrappers.
+## Architecture Overview
 
-Developer workflows & quick commands
-- Run app locally (dev):
-  - export DEBUG=1 PIN_SALT=dev_salt
-  - (optional) export ENCRYPTION_KEY=$(python - <<'PY'
-from cryptography.fernet import Fernet
-print(Fernet.generate_key().decode())
-PY)
-  - python3 main.py
-- Run tests:
-  - pip install -r requirements.txt
-  - pytest -q
-  - Tests use `DEBUG` env var and dynamic temp DBs (see `tests/test_app.py`).
-- Lint/format: this repo does not include a formatter config — preserve existing style when possible.
+**Dual-mode application**: Flask web API + legacy desktop GUI
+- **Production runtime**: [api.py](api.py) — Flask REST API with 65+ endpoints, serves [templates/index.html](templates/index.html)
+- **Legacy desktop**: [legacy_desktop/main.py](legacy_desktop/main.py) — Tkinter GUI (desktop-only, not deployed to Railway)
+- **Deployment**: Railway via [Procfile](Procfile) runs `gunicorn api:app`
 
-Conventions & patterns (repo-specific)
-- Secrets: Use `SecretsManager(debug=DEBUG)` and `secrets.get_secret('NAME')`. Avoid directly reading os.environ unless explicit fallback is intended.
-- Runtime flags: `DEBUG` controls permissive behavior (temporary keys, skipping required secret checks). Tests rely on setting `DEBUG=1`.
-- Optional libs: check feature flags like `HAS_PARAMIKO`, `HAS_VAULT`, `HAS_ARGON2`, `HAS_BCRYPT` before using the library.
-- Encryption helpers are centralized in top-level modules: `encrypt_text()` / `decrypt_text()` in `main.py` and `_decrypt()` in `fhir_export.py`; reuse those helpers for consistent behavior.
-- Audit: call `log_event(username, actor, action, details)` for any data export or sensitive action; it's best-effort and must never raise.
-- UI: `customtkinter` is monkeypatched (CTkToplevel wrapper) in `main.py`; take care when creating modal dialogs and Toplevel windows.
-- SFTP helper: `secure_transfer.sftp_upload(local, remote, host, ...)` raises `RuntimeError` if `paramiko` isn't installed — tests assert this behavior.
-- **AI Memory**: `TherapistAI.get_memory()` loads user context from `ai_memory` table plus decrypted profile fields and recent alerts. Use `update_memory()` after therapy sessions to persist context.
+### Database Architecture (3 SQLite databases)
+1. **therapist_app.db** (20 tables) — primary app data: users, chat_history, mood_logs, clinical_scales, appointments, patient_approvals, notifications, community_posts, alerts, audit_logs
+2. **pet_game.db** — gamification state: pet stats, inventory, adventures
+3. **ai_training_data.db** — GDPR-compliant anonymized dataset: data_consent, training_chats, training_patterns, anonymized_conversations
 
-Integration points to watch
-- External secrets: HashiCorp Vault via `hvac` if env vars `VAULT_ADDR` & `VAULT_TOKEN` present (see `SecretsManager`).
-- AI/LLM: `main.py` loads `GROQ_API_KEY` and calls an external API via `API_URL`; follow its header pattern (`Authorization: Bearer ...`).
-- FHIR: `export_patient_fhir()` signs bundles with HMAC using `ENCRYPTION_KEY`. Don't change the signing format without updating consumers.
-- SFTP/Webhooks: `SFTP_*` env vars and `ALERT_WEBHOOK_URL` are optional runtime integrations used for exports/alerts.
+**Critical**: DB path logic in [api.py](api.py#L48-53) checks `/app/data` (Railway volume) before falling back to local paths. Railway filesystem is ephemeral — use volumes or PostgreSQL for persistence.
 
-Tests & expectations
-- Tests live in `tests/test_app.py`. They expect:
-  - `DEBUG=1` to avoid production-only checks.
-  - `PIN_SALT` and `ENCRYPTION_KEY` to be set (tests set placeholders).
-  - DB initialization via `main.init_db()` to create required tables and migration behavior.
+### Key System Classes
+- **SafetyMonitor** ([api.py](api.py#L284)): Crisis keyword detection, alert creation in `alerts` table
+- **TherapistAI** ([api.py](api.py#L311)): Groq LLM wrapper, loads context from `ai_memory` + clinician notes, persists conversation history
+- **TrainingDataManager** ([training_data_manager.py](training_data_manager.py)): GDPR consent tracking, anonymization pipeline, user hash generation
 
-How to safely modify this repo
-- When adding DB fields: add migration logic to `init_db()` and mirror any pet-related changes to `pet_game.py` schema helper.
-- When introducing new secrets: prefer using `SecretsManager.require_secret()` if it's mandatory, or `get_secret()` with a clear fallback and warnings.
-- Preserve the permissive fallback behavior of optional dependencies; failing fast in production is acceptable but keep tests/dev smooth with `DEBUG`.
-- Update `audit.log_event()` calls whenever introducing data exports, record access, or safety escalations.
+## Security & Auth Patterns
 
-Where to look next (key files)
-- [main.py](main.py) — runtime, DB migrations, encryption, UI patches
-- [secrets_manager.py](secrets_manager.py) — Vault vs env fallback
-- [fhir_export.py](fhir_export.py) — FHIR bundle creation & signing
-- [secure_transfer.py](secure_transfer.py) — SFTP helper (paramiko)
-- [pet_game.py](pet_game.py) — local game DB + UI logic
-- [tests/test_app.py](tests/test_app.py) — canonical tests and examples of env setup
-- [DEPLOYMENT.md](DEPLOYMENT.md) — GitHub and Railway deployment guide
-- [README.md](README.md) — project overview and quick start
+### Password Hashing Hierarchy
+Argon2 (preferred) → bcrypt → PBKDF2 fallback. Functions: `hash_password()` / `verify_password()` in both [api.py](api.py#L64-96) and [legacy_desktop/main.py](legacy_desktop/main.py).
+- Legacy SHA256 hashes auto-migrate on login (tests verify in [tests/test_app.py](tests/test_app.py#L40-56))
+- PIN hashing: bcrypt or PBKDF2 with `PIN_SALT` env var (see `hash_pin()` / `check_pin()`)
 
-Deployment & distribution
-- This is a **desktop GUI app** (Tkinter/CustomTkinter), not a web service
-- Railway deployment requires either: (1) web conversion, (2) headless API mode, or (3) skip Railway and use PyInstaller for desktop distribution
-- See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed Railway setup, environment variables, and database persistence strategies
-- For desktop distribution: use PyInstaller and GitHub Releases instead of Railway
-- Database persistence on Railway requires volumes or PostgreSQL migration (SQLite is ephemeral on Railway's filesystem)
+### Encryption & Secrets
+- Fernet encryption: `encrypt_text()` / `decrypt_text()` functions in [api.py](api.py#L132-155)
+- SecretsManager ([secrets_manager.py](secrets_manager.py)): HashiCorp Vault (`hvac`) → env vars fallback
+- Required secrets: `GROQ_API_KEY`, `ENCRYPTION_KEY` (Fernet key), `PIN_SALT`
+- FHIR exports ([fhir_export.py](fhir_export.py)): HMAC-signed bundles using `ENCRYPTION_KEY`
 
-If something is unclear
-- Ask for which area you'd like deeper examples (DB migration, secret flow, FHIR signing, or deployment). I'll iterate on this file.
+### Optional Dependencies Pattern
+Code gracefully handles missing packages: `HAS_ARGON2`, `HAS_BCRYPT`, `HAS_PARAMIKO`, `HAS_VAULT` feature flags. Example: `secure_transfer.sftp_upload()` raises `RuntimeError` if paramiko missing (tested in [tests/test_app.py](tests/test_app.py#L98)).
+
+## Critical Developer Workflows
+
+### Local Development
+```bash
+export DEBUG=1 PIN_SALT=dev_salt
+export ENCRYPTION_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+export GROQ_API_KEY=your_key
+
+# Web API (production mode)
+python3 api.py  # http://localhost:5000
+
+# Desktop app (legacy)
+python3 legacy_desktop/main.py
+```
+
+### Testing
+```bash
+pip install -r requirements.txt
+export DEBUG=1 PIN_SALT=testsalt
+export ENCRYPTION_KEY=$(python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+pytest -v tests/
+```
+Tests use isolated tmp dirs (see [tests/test_app.py](tests/test_app.py#L1-25)) and require `DEBUG=1` to bypass production checks.
+
+### Database Migrations
+**Inline migrations**: `init_db()` in [api.py](api.py#L158-280) uses `ALTER TABLE ADD COLUMN` wrapped in try/except. When adding schema:
+1. Add column with try/except in `init_db()`
+2. Update corresponding code in [legacy_desktop/main.py](legacy_desktop/main.py) `init_db()` if feature shared
+3. Update tests to verify table creation
+4. **Never drop columns** — app must handle old data gracefully
+
+Auto-backups: `backups/therapist_app_YYYYMMDD_HHMMSS.db.bak` created on launch.
+
+## API Architecture Patterns
+
+### Endpoint Structure (65 endpoints in [api.py](api.py))
+- Auth: `/api/auth/register`, `/api/auth/login` (2FA PIN), `/api/auth/forgot-password`
+- Therapy: `/api/therapy/chat`, `/api/therapy/history`, `/api/therapy/initialize`
+- Clinical: `/api/scales/submit`, `/api/clinicians/list`, `/api/approvals/*`
+- Data: `/api/mood/log`, `/api/gratitude/log`, `/api/cbt/record`
+- Exports: `/api/export/fhir`, `/api/training-data/*` (GDPR endpoints)
+- Pet: `/api/pet/create`, `/api/pet/status`, `/api/pet/feed`
+
+### Request/Response Pattern
+```python
+@app.route('/api/endpoint', methods=['POST'])
+def handler():
+    data = request.json
+    username = data.get('username')
+    if not username:
+        return jsonify({'error': 'Missing field'}), 400
+    # DB operations with try/except
+    return jsonify({'success': True, 'data': result}), 200
+```
+
+## Project-Specific Conventions
+
+### Audit Logging
+Call `log_event(username, actor, action, details)` ([audit.py](audit.py)) for:
+- Data exports (FHIR, CSV)
+- Crisis alerts
+- Password changes
+- GDPR deletions
+Never raise exceptions from `log_event()` — it's best-effort logging.
+
+### GDPR Training Data Flow
+1. User opts in via UI → `TrainingDataManager.give_consent(username)`
+2. Therapy chats auto-collected → `collect_therapy_session(username, messages)`
+3. Anonymization: PII stripped, SHA256 user hashing, no reversible identifiers
+4. Export: [export_training_data.py](export_training_data.py) generates CSV/JSON
+5. Deletion: Right to erasure via `delete_training_data(username)`
+
+### Crisis Detection & Alerts
+`SafetyMonitor.is_high_risk(text)` checks keywords → `send_crisis_alert(username)` → inserts to `alerts` table → optional webhook to `ALERT_WEBHOOK_URL`.
+
+## Integration Points
+
+- **AI/LLM**: Groq API via `TherapistAI` class, requires `GROQ_API_KEY`
+- **Email**: SMTP via `send_reset_email()` for password recovery (optional)
+- **SFTP**: `secure_transfer.sftp_upload()` with `SFTP_*` env vars (requires paramiko)
+- **Webhooks**: Crisis alerts POST to `ALERT_WEBHOOK_URL` if set
+- **Vault**: Optional HashiCorp Vault for secrets (requires `hvac` + `VAULT_ADDR`/`VAULT_TOKEN`)
+
+## Testing Expectations
+
+- Tests import `main` (desktop) module via `importlib` to avoid tkinter on Railway
+- `DEBUG=1` required to skip production secret validation
+- Fixtures use `tmp_path` for isolated DB files
+- Tests verify: DB migrations, password hashing, legacy SHA256 migration, alert persistence, FHIR signing, SFTP error handling
+
+## Where to Start (Key Files)
+
+**Web API (production)**:
+- [api.py](api.py) — Flask routes, DB init, auth, TherapistAI, SafetyMonitor
+- [templates/index.html](templates/index.html) — Single-page web app
+- [Procfile](Procfile) — Railway deployment config
+
+**Shared modules**:
+- [secrets_manager.py](secrets_manager.py) — Vault/env secret loading
+- [fhir_export.py](fhir_export.py) — FHIR bundle generation + HMAC signing
+- [training_data_manager.py](training_data_manager.py) — GDPR consent & anonymization
+- [audit.py](audit.py) — Best-effort logging to `audit_logs` table
+
+**Desktop (legacy)**:
+- [legacy_desktop/main.py](legacy_desktop/main.py) — Tkinter GUI (not for Railway)
+- [legacy_desktop/pet_game.py](legacy_desktop/pet_game.py) — Pet UI + schema migrations
+
+**Documentation**:
+- [documentation/00_INDEX.md](documentation/00_INDEX.md) — Complete doc index
+- [FEATURE_STATUS.md](FEATURE_STATUS.md) — 65 endpoints, feature checklist
+- [documentation/DEPLOYMENT.md](documentation/DEPLOYMENT.md) — Railway setup, volumes, PostgreSQL migration
+
+## Safe Modification Guidelines
+
+1. **Adding API endpoints**: Follow existing pattern with try/except, return jsonify errors, validate inputs
+2. **DB schema changes**: Use `ALTER TABLE ADD COLUMN` in try/except, never drop columns, update both api.py and legacy_desktop/main.py
+3. **New secrets**: Use `SecretsManager.get_secret()` with fallback warnings, document in README
+4. **Optional features**: Add `HAS_*` feature flags, raise clear errors with install instructions
+5. **Crisis keywords**: Update `SafetyMonitor.risk_keywords`, test with mock data
+6. **GDPR changes**: Update TrainingDataManager, ensure audit trail via `log_event()`
+
+## Common Gotchas
+
+- **Railway DB persistence**: SQLite resets on deploy unless using `/app/data` volume or PostgreSQL
+- **Desktop imports**: Never import [legacy_desktop/main.py](legacy_desktop/main.py) in [api.py](api.py) — tkinter not available on Railway
+- **Encryption key format**: Must be valid 44-char Fernet key, not arbitrary string
+- **DEBUG mode**: Production must set `DEBUG=0`, otherwise uses temporary keys
+- **Test isolation**: Always use `tmp_path` fixture, set env vars before imports
+- **Pet DB**: Separate `pet_game.db` file, has its own schema migrations
