@@ -1261,47 +1261,72 @@ def therapy_chat():
             return jsonify({'error': 'Username and message required'}), 400
         
         # Update AI memory before chat
-        update_ai_memory(username)
+        try:
+            update_ai_memory(username)
+        except Exception as mem_error:
+            print(f"AI memory update error (non-critical): {mem_error}")
         
         # Get or create active chat session
         conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         
-        active_session = cur.execute(
-            "SELECT id FROM chat_sessions WHERE username=? AND is_active=1",
-            (username,)
-        ).fetchone()
-        
-        if not active_session:
-            # Create default session
-            cur.execute(
-                "INSERT INTO chat_sessions (username, session_name, is_active) VALUES (?, 'Main Chat', 1)",
+        try:
+            active_session = cur.execute(
+                "SELECT id FROM chat_sessions WHERE username=? AND is_active=1",
                 (username,)
-            )
-            conn.commit()
-            chat_session_id = cur.lastrowid
-        else:
-            chat_session_id = active_session[0]
+            ).fetchone()
+            
+            if not active_session:
+                # Create default session
+                cur.execute(
+                    "INSERT INTO chat_sessions (username, session_name, is_active) VALUES (?, 'Main Chat', 1)",
+                    (username,)
+                )
+                conn.commit()
+                chat_session_id = cur.lastrowid
+            else:
+                chat_session_id = active_session[0]
+        except Exception as session_error:
+            conn.close()
+            print(f"Session error: {session_error}")
+            return jsonify({'error': f'Session error: {str(session_error)}'}), 500
         
         # Use TherapistAI class
-        ai = TherapistAI(username)
+        try:
+            ai = TherapistAI(username)
+        except Exception as ai_error:
+            conn.close()
+            print(f"AI initialization error: {ai_error}")
+            return jsonify({'error': f'AI initialization failed: {str(ai_error)}'}), 500
         
         # Get conversation history from current session
-        history = cur.execute(
-            "SELECT sender, message FROM chat_history WHERE chat_session_id=? ORDER BY timestamp DESC LIMIT 10",
-            (chat_session_id,)
-        ).fetchall()
+        try:
+            history = cur.execute(
+                "SELECT sender, message FROM chat_history WHERE chat_session_id=? ORDER BY timestamp DESC LIMIT 10",
+                (chat_session_id,)
+            ).fetchall()
+        except Exception as hist_error:
+            print(f"History fetch error: {hist_error}")
+            history = []
         
         # Get AI memory to include in context
-        memory = cur.execute(
-            "SELECT memory_summary FROM ai_memory WHERE username=?",
-            (username,)
-        ).fetchone()
+        try:
+            memory = cur.execute(
+                "SELECT memory_summary FROM ai_memory WHERE username=?",
+                (username,)
+            ).fetchone()
+        except Exception as mem_error:
+            print(f"Memory fetch error: {mem_error}")
+            memory = None
         
         conn.close()
         
         # Get AI response using existing logic
-        response = ai.get_response(message, history[::-1])
+        try:
+            response = ai.get_response(message, history[::-1])
+        except Exception as resp_error:
+            print(f"AI response error: {resp_error}")
+            return jsonify({'error': f'AI response failed: {str(resp_error)}'}), 500
         
         # Save to chat history with session tracking
         conn = sqlite3.connect(DB_PATH)

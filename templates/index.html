@@ -3233,7 +3233,9 @@
                     // Reward pet for therapy session
                     await rewardPet('therapy');
                 } else {
-                    addMessage('Sorry, I encountered an error. Please try again.', 'ai');
+                    const errorMsg = data.error || 'Sorry, I encountered an error. Please try again.';
+                    console.error('Chat API error:', data);
+                    addMessage(`Error: ${errorMsg}`, 'ai');
                 }
             } catch (error) {
                 document.getElementById('msg-' + loadingId)?.remove();
