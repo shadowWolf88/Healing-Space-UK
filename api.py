@@ -443,6 +443,11 @@ def index():
     """Serve simple web interface"""
     return render_template('index.html')
 
+@app.route('/admin/wipe')
+def admin_wipe_page():
+    """Serve admin database wipe page"""
+    return render_template('admin-wipe.html')
+
 @app.route('/diagnostic')
 def diagnostic():
     """Diagnostic page to test JavaScript loading"""
@@ -457,6 +462,69 @@ def health_check():
         'version': '1.0.0',
         'timestamp': datetime.now().isoformat()
     })
+
+@app.route('/api/admin/wipe-database', methods=['POST'])
+def admin_wipe_database():
+    """ADMIN ONLY: Wipe all user data from database - requires secret key"""
+    try:
+        data = request.json
+        admin_key = data.get('admin_key')
+        
+        # Check admin key (set via environment variable)
+        required_key = os.getenv('ADMIN_WIPE_KEY', 'change-this-secret-key-in-production')
+        
+        if not admin_key or admin_key != required_key:
+            return jsonify({'error': 'Unauthorized - invalid admin key'}), 403
+        
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        
+        print("🗑️  ADMIN: Wiping all user data from database...")
+        
+        tables_to_clear = [
+            'users',
+            'patient_approvals',
+            'chat_history',
+            'chat_sessions',
+            'mood_logs',
+            'alerts',
+            'notifications',
+            'clinical_scales',
+            'clinician_notes',
+            'cbt_records',
+            'ai_memory',
+            'appointments',
+            'audit_logs',
+            'verification_codes'
+        ]
+        
+        results = {}
+        for table in tables_to_clear:
+            try:
+                cur.execute(f"DELETE FROM {table}")
+                count = cur.rowcount
+                results[table] = f"{count} rows deleted"
+                print(f"  ✓ Cleared {table}: {count} rows")
+            except Exception as e:
+                results[table] = f"Error: {str(e)}"
+                print(f"  ⚠️  {table}: {e}")
+        
+        conn.commit()
+        conn.close()
+        
+        log_event('ADMIN', 'api', 'database_wiped', 'All user data cleared')
+        
+        print("✅ ADMIN: Database wipe complete")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Database wiped successfully',
+            'results': results
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ ADMIN: Database wipe error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/auth/send-verification', methods=['POST'])
 def send_verification():
