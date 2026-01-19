@@ -882,6 +882,13 @@ def login():
             (username,)
         ).fetchone()[0]
         
+        # Update last_login timestamp
+        cur.execute(
+            "UPDATE users SET last_login=datetime('now') WHERE username=?",
+            (username,)
+        )
+        conn.commit()
+        
         # Check approval status for patients
         approval_status = 'approved'
         if role == 'user':
@@ -4931,12 +4938,16 @@ def get_analytics_dashboard():
             }), 200
         
         # Total and active patients (logged in last 7 days)
-        # Check mood_logs and chat_history for recent activity
+        # Check last_login, mood_logs and chat_history for recent activity
         placeholders = ','.join(['?'] * len(patient_usernames))
         
-        # Get active patients from mood logs or chat activity
+        # Get active patients from last_login, mood logs or chat activity
         active = cur.execute(f"""
             SELECT COUNT(DISTINCT username) FROM (
+                SELECT username FROM users
+                WHERE username IN ({placeholders})
+                AND datetime(last_login) > datetime('now', '-7 days')
+                UNION
                 SELECT username FROM mood_logs 
                 WHERE username IN ({placeholders}) 
                 AND datetime(entrestamp) > datetime('now', '-7 days')
@@ -4945,7 +4956,7 @@ def get_analytics_dashboard():
                 WHERE sender IN ({placeholders}) 
                 AND datetime(timestamp) > datetime('now', '-7 days')
             )
-        """, patient_usernames + patient_usernames).fetchone()[0]
+        """, patient_usernames + patient_usernames + patient_usernames).fetchone()[0]
         
         # High risk count (from alerts table - using status column)
         high_risk = cur.execute(f"""
@@ -5039,6 +5050,86 @@ def get_analytics_dashboard():
                 } for row in engagement
             ],
             'assessment_summary': assessment_summary
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/analytics/active-patients', methods=['GET'])
+def get_active_patients():
+    """Get list of active patients with last activity timestamps"""
+    try:
+        clinician = request.args.get('clinician')
+        if not clinician:
+            return jsonify({'error': 'Clinician username required'}), 400
+        
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        
+        # Get clinician's approved patients
+        patients = cur.execute("""
+            SELECT u.username, u.full_name FROM users u
+            JOIN patient_approvals pa ON u.username = pa.patient_username
+            WHERE pa.clinician_username=? AND pa.status='approved'
+        """, (clinician,)).fetchall()
+        
+        active_patients = []
+        
+        for patient in patients:
+            username = patient[0]
+            full_name = patient[1]
+            
+            # Get most recent activity from multiple sources
+            last_login = cur.execute(
+                "SELECT last_login FROM users WHERE username=?",
+                (username,)
+            ).fetchone()[0]
+            
+            last_mood = cur.execute(
+                "SELECT MAX(entrestamp) FROM mood_logs WHERE username=?",
+                (username,)
+            ).fetchone()[0]
+            
+            last_chat = cur.execute(
+                "SELECT MAX(timestamp) FROM chat_history WHERE sender=?",
+                (username,)
+            ).fetchone()[0]
+            
+            # Get the most recent activity
+            activities = [
+                ('login', last_login),
+                ('mood_log', last_mood),
+                ('chat', last_chat)
+            ]
+            
+            # Filter out None and get most recent
+            recent_activities = [(act_type, ts) for act_type, ts in activities if ts]
+            if recent_activities:
+                recent_activities.sort(key=lambda x: x[1], reverse=True)
+                last_activity_type = recent_activities[0][0]
+                last_activity_time = recent_activities[0][1]
+                
+                # Check if active in last 7 days
+                seven_days_ago = cur.execute(
+                    "SELECT datetime('now', '-7 days')"
+                ).fetchone()[0]
+                
+                if last_activity_time > seven_days_ago:
+                    active_patients.append({
+                        'username': username,
+                        'full_name': full_name,
+                        'last_activity': last_activity_time,
+                        'activity_type': last_activity_type
+                    })
+        
+        # Sort by most recent activity
+        active_patients.sort(key=lambda x: x['last_activity'], reverse=True)
+        
+        conn.close()
+        
+        return jsonify({
+            'active_patients': active_patients,
+            'total_active': len(active_patients)
         }), 200
         
     except Exception as e:
