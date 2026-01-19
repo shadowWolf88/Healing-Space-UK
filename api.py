@@ -443,10 +443,84 @@ def index():
     """Serve simple web interface"""
     return render_template('index.html')
 
-@app.route('/admin/wipe')
+@app.route('/api/admin/wipe')
 def admin_wipe_page():
     """Serve admin database wipe page"""
     return render_template('admin-wipe.html')
+
+@app.route('/api/debug/analytics/<clinician>', methods=['GET'])
+def debug_analytics(clinician):
+    """Debug endpoint to see what analytics data would be returned"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        
+        debug_info = {
+            'clinician': clinician,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        # Check if clinician exists
+        clinician_exists = cur.execute(
+            "SELECT username, role FROM users WHERE username=?",
+            (clinician,)
+        ).fetchone()
+        debug_info['clinician_exists'] = bool(clinician_exists)
+        if clinician_exists:
+            debug_info['clinician_role'] = clinician_exists[1]
+        
+        # Get approved patients
+        patients = cur.execute("""
+            SELECT u.username, u.role FROM users u
+            JOIN patient_approvals pa ON u.username = pa.patient_username
+            WHERE pa.clinician_username=? AND pa.status='approved'
+        """, (clinician,)).fetchall()
+        
+        debug_info['total_patients'] = len(patients)
+        debug_info['patients'] = [{'username': p[0], 'role': p[1]} for p in patients]
+        
+        # Get all approvals for this clinician
+        all_approvals = cur.execute(
+            "SELECT patient_username, status, request_date FROM patient_approvals WHERE clinician_username=?",
+            (clinician,)
+        ).fetchall()
+        debug_info['all_approvals'] = [
+            {'patient': a[0], 'status': a[1], 'date': a[2]} for a in all_approvals
+        ]
+        
+        # If we have patients, get activity
+        if patients:
+            patient_usernames = [p[0] for p in patients]
+            placeholders = ','.join(['?'] * len(patient_usernames))
+            
+            # Active patients
+            active = cur.execute(f"""
+                SELECT COUNT(DISTINCT username) FROM (
+                    SELECT username FROM mood_logs 
+                    WHERE username IN ({placeholders}) 
+                    AND datetime(entrestamp) > datetime('now', '-7 days')
+                    UNION
+                    SELECT sender as username FROM chat_history 
+                    WHERE sender IN ({placeholders}) 
+                    AND datetime(timestamp) > datetime('now', '-7 days')
+                )
+            """, patient_usernames + patient_usernames).fetchone()[0]
+            debug_info['active_patients'] = active
+            
+            # High risk
+            high_risk = cur.execute(f"""
+                SELECT COUNT(DISTINCT username) FROM alerts 
+                WHERE username IN ({placeholders}) 
+                AND (status IS NULL OR status != 'resolved')
+            """, patient_usernames).fetchone()[0]
+            debug_info['high_risk_count'] = high_risk
+        
+        conn.close()
+        
+        return jsonify(debug_info), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e), 'traceback': __import__('traceback').format_exc()}), 500
 
 @app.route('/diagnostic')
 def diagnostic():
