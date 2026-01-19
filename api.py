@@ -5144,10 +5144,10 @@ def get_patient_analytics(username):
         
         # Mood trend (last 90 days)
         mood_trend = cur.execute("""
-            SELECT DATE(timestamp) as date, mood_score, notes
+            SELECT DATE(entrestamp) as date, mood_val, notes
             FROM mood_logs
             WHERE username=?
-            AND datetime(timestamp) > datetime('now', '-90 days')
+            AND datetime(entrestamp) > datetime('now', '-90 days')
             ORDER BY date
         """, (username,)).fetchall()
         
