@@ -4984,9 +4984,9 @@ def get_analytics_dashboard():
         for username in patient_usernames:
             # Latest PHQ-9
             phq9 = cur.execute("""
-                SELECT total_score FROM clinical_scales
-                WHERE username=? AND scale_type='PHQ-9'
-                ORDER BY timestamp DESC LIMIT 1
+                SELECT score FROM clinical_scales
+                WHERE username=? AND scale_name='PHQ-9'
+                ORDER BY entry_timestamp DESC LIMIT 1
             """, (username,)).fetchone()
             
             if phq9:
@@ -5002,9 +5002,9 @@ def get_analytics_dashboard():
             
             # Latest GAD-7
             gad7 = cur.execute("""
-                SELECT total_score FROM clinical_scales
-                WHERE username=? AND scale_type='GAD-7'
-                ORDER BY timestamp DESC LIMIT 1
+                SELECT score FROM clinical_scales
+                WHERE username=? AND scale_name='GAD-7'
+                ORDER BY entry_timestamp DESC LIMIT 1
             """, (username,)).fetchone()
             
             if gad7:
@@ -5062,10 +5062,10 @@ def get_patient_analytics(username):
         
         # Assessment scores over time
         assessments = cur.execute("""
-            SELECT scale_type, total_score, timestamp
+            SELECT scale_name, score, entry_timestamp
             FROM clinical_scales
             WHERE username=?
-            ORDER BY timestamp DESC
+            ORDER BY entry_timestamp DESC
             LIMIT 20
         """, (username,)).fetchall()
         
@@ -5147,15 +5147,15 @@ def generate_clinical_report():
         
         # Get latest assessments
         phq9 = cur.execute("""
-            SELECT total_score, timestamp FROM clinical_scales
-            WHERE username=? AND scale_type='PHQ-9'
-            ORDER BY timestamp DESC LIMIT 1
+            SELECT score, entry_timestamp FROM clinical_scales
+            WHERE username=? AND scale_name='PHQ-9'
+            ORDER BY entry_timestamp DESC LIMIT 1
         """, (username,)).fetchone()
         
         gad7 = cur.execute("""
-            SELECT total_score, timestamp FROM clinical_scales
-            WHERE username=? AND scale_type='GAD-7'
-            ORDER BY timestamp DESC LIMIT 1
+            SELECT score, entry_timestamp FROM clinical_scales
+            WHERE username=? AND scale_name='GAD-7'
+            ORDER BY entry_timestamp DESC LIMIT 1
         """, (username,)).fetchone()
         
         # Get clinician notes
@@ -5301,7 +5301,7 @@ def search_patients():
             SELECT DISTINCT u.username, u.full_name, u.email, u.created_at,
                    (SELECT COUNT(*) FROM alerts WHERE username=u.username AND resolved=0) as alert_count,
                    (SELECT MAX(timestamp) FROM sessions WHERE username=u.username) as last_active,
-                   (SELECT total_score FROM clinical_scales WHERE username=u.username AND scale_type='PHQ-9' ORDER BY timestamp DESC LIMIT 1) as phq9_score
+                   (SELECT score FROM clinical_scales WHERE username=u.username AND scale_name='PHQ-9' ORDER BY entry_timestamp DESC LIMIT 1) as phq9_score
             FROM users u
             WHERE u.clinician_id=? AND u.role='patient'
         """
