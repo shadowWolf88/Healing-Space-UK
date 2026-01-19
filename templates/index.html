@@ -1946,54 +1946,71 @@
                 <h3>👨‍⚕️ Clinical Dashboard</h3>
                 <p style="color: #666; margin-bottom: 20px;">Monitor and manage your patients' mental health progress.</p>
                 
-                <!-- Analytics Dashboard Section -->
-                <div class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                    <h4 style="color: white; margin-bottom: 20px;">📊 Analytics Overview</h4>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                        <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 12px; text-align: center;">
-                            <div style="font-size: 36px; font-weight: bold;" id="totalPatientsCount">-</div>
-                            <div style="opacity: 0.9;">Total Patients</div>
-                        </div>
-                        <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 12px; text-align: center;">
-                            <div style="font-size: 36px; font-weight: bold;" id="activePatientsCount">-</div>
-                            <div style="opacity: 0.9;">Active (7 days)</div>
-                        </div>
-                        <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 12px; text-align: center;">
-                            <div style="font-size: 36px; font-weight: bold; color: #ffeb3b;" id="highRiskCount">-</div>
-                            <div style="opacity: 0.9;">🚨 High Risk</div>
-                        </div>
-                    </div>
-                    <div style="background: white; padding: 20px; border-radius: 12px;">
-                        <h5 style="color: #333; margin-bottom: 15px;">Mood Trends (30 Days)</h5>
-                        <canvas id="moodTrendChart" height="80"></canvas>
-                    </div>
+                <!-- Sub-Navigation for Clinical Dashboard -->
+                <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; overflow-x: auto; flex-wrap: wrap;">
+                    <button class="clinical-subtab-btn" onclick="switchClinicalTab('overview', this)" id="overviewSubtabBtn" style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; white-space: nowrap;">
+                        📊 Overview
+                    </button>
+                    <button class="clinical-subtab-btn" onclick="switchClinicalTab('patients', this)" style="background: transparent; color: #667eea; border: 2px solid #667eea; padding: 10px 20px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; white-space: nowrap;">
+                        👥 Patients
+                    </button>
+                    <button class="clinical-subtab-btn" onclick="switchClinicalTab('appointments', this)" style="background: transparent; color: #667eea; border: 2px solid #667eea; padding: 10px 20px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; white-space: nowrap;">
+                        📅 Appointments
+                    </button>
+                    <button class="clinical-subtab-btn" onclick="switchClinicalTab('approvals', this)" style="background: transparent; color: #667eea; border: 2px solid #667eea; padding: 10px 20px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; white-space: nowrap;">
+                        ⏳ Approvals
+                    </button>
                 </div>
                 
-                <!-- Assessment Summary Cards -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                <!-- Overview Subtab -->
+                <div id="clinicalOverviewTab" class="clinical-subtab-content">
+                    <!-- Analytics Dashboard Section -->
+                    <div class="card" style="margin-bottom: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                        <h4 style="color: white; margin-bottom: 20px;">📊 Analytics Overview</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                            <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 12px; text-align: center;">
+                                <div style="font-size: 36px; font-weight: bold;" id="totalPatientsCount">-</div>
+                                <div style="opacity: 0.9;">Total Patients</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 12px; text-align: center;">
+                                <div style="font-size: 36px; font-weight: bold;" id="activePatientsCount">-</div>
+                                <div style="opacity: 0.9;">Active (7 days)</div>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 12px; text-align: center;">
+                                <div style="font-size: 36px; font-weight: bold; color: #ffeb3b;" id="highRiskCount">-</div>
+                                <div style="opacity: 0.9;">🚨 High Risk</div>
+                            </div>
+                        </div>
+                        <div style="background: white; padding: 20px; border-radius: 12px;">
+                            <h5 style="color: #333; margin-bottom: 15px;">Mood Trends (30 Days)</h5>
+                            <canvas id="moodTrendChart" height="80"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Assessment Summary Cards -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                        <div class="card">
+                            <h5 style="margin-bottom: 15px;">PHQ-9 Depression Scores</h5>
+                            <canvas id="phq9Chart" height="150"></canvas>
+                        </div>
+                        <div class="card">
+                            <h5 style="margin-bottom: 15px;">GAD-7 Anxiety Scores</h5>
+                            <canvas id="gad7Chart" height="150"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Quick Stats -->
                     <div class="card">
-                        <h5 style="margin-bottom: 15px;">PHQ-9 Depression Scores</h5>
-                        <canvas id="phq9Chart" height="150"></canvas>
-                    </div>
-                    <div class="card">
-                        <h5 style="margin-bottom: 15px;">GAD-7 Anxiety Scores</h5>
-                        <canvas id="gad7Chart" height="150"></canvas>
+                        <h4>📈 Quick Statistics</h4>
+                        <p style="color: #666; margin-top: 10px;">Your analytics dashboard provides real-time insights into your patient cohort's mental health trends.</p>
                     </div>
                 </div>
                 
-                <!-- Pending Approvals Section -->
-                <div class="card" style="margin-bottom: 20px; background: #fff3cd; border-left: 4px solid #ffc107;">
-                    <h4>⏳ Pending Patient Requests</h4>
-                    <div id="pendingApprovals">
-                        <p style="color: #999; text-align: center;">Loading...</p>
-                    </div>
-                </div>
-                
-                <!-- Patient List Section with Search -->
-                <div id="patientListSection">
+                <!-- Patients Subtab -->
+                <div id="clinicalPatientsTab" class="clinical-subtab-content" style="display: none;">
                     <div class="card">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
-                            <h4>📋 My Patients</h4>
+                            <h4>👥 My Patients</h4>
                             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                                 <input type="text" id="patientSearchInput" placeholder="🔍 Search patients..." style="padding: 8px 12px; border: 2px solid #e0e0e0; border-radius: 8px; min-width: 200px;">
                                 <select id="patientFilterSelect" style="padding: 8px 12px; border: 2px solid #e0e0e0; border-radius: 8px;">
@@ -2009,11 +2026,13 @@
                             <p style="text-align: center; color: #999; padding: 40px;">Loading patient list...</p>
                         </div>
                     </div>
-                    
-                    <!-- Appointments Calendar Section -->
-                    <div class="card" style="margin-top: 20px;">
+                </div>
+                
+                <!-- Appointments Subtab -->
+                <div id="clinicalAppointmentsTab" class="clinical-subtab-content" style="display: none;">
+                    <div class="card">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                            <h4>📅 Upcoming Appointments</h4>
+                            <h4>📅 Appointments Calendar</h4>
                             <button class="btn" onclick="loadAppointments()">🔄 Refresh</button>
                         </div>
                         <div id="clinicianAppointmentsList">
@@ -2044,6 +2063,21 @@
                             <button class="btn btn-secondary" onclick="cancelNewAppointment()">Cancel</button>
                         </div>
                     </div>
+                </div>
+                
+                <!-- Approvals Subtab -->
+                <div id="clinicalApprovalsTab" class="clinical-subtab-content" style="display: none;">
+                    <div class="card" style="background: #fff3cd; border-left: 4px solid #ffc107;">
+                        <h4>⏳ Pending Patient Requests</h4>
+                        <p style="color: #856404; margin-top: 10px;">Review and approve new patient registration requests.</p>
+                        <div id="pendingApprovals" style="margin-top: 20px;">
+                            <p style="color: #999; text-align: center;">Loading...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Patient List Section - Hidden by default, kept for compatibility -->
+                <div id="patientListSection" style="display: none;">
                 </div>
                 
                 <!-- Patient Detail Section -->
@@ -2369,10 +2403,7 @@
                 // Auto-switch to professional tab and show it
                 document.getElementById('professionalTab').style.display = 'block';
                 switchTab('professional', document.getElementById('professionalTabBtn'));
-                loadPendingApprovals();
-                loadPatients(); // Auto-load patients
-                loadAppointments(); // Auto-load appointments for clinician
-                loadAnalyticsDashboard(); // Auto-load analytics dashboard
+                // Default to overview subtab - other data loads on subtab switch
             } else {
                 // PATIENT: Hide professional tab, SHOW all patient tabs
                 document.getElementById('professionalTabBtn').style.display = 'none';
@@ -3068,10 +3099,46 @@
                 loadPatientAppointments();
             }
             
-            // Load pending approvals when switching to professional tab
+            // Load professional tab and default to overview
             if (tabName === 'professional' && currentUserRole === 'clinician') {
-                loadPendingApprovals();
+                // Default to overview subtab
+                switchClinicalTab('overview', document.getElementById('overviewSubtabBtn'));
+            }
+        }
+        
+        // Clinical Dashboard Subtab Switching
+        function switchClinicalTab(subtabName, buttonEl) {
+            // Hide all clinical subtabs
+            document.querySelectorAll('.clinical-subtab-content').forEach(tab => {
+                tab.style.display = 'none';
+            });
+            
+            // Reset all clinical subtab buttons
+            document.querySelectorAll('.clinical-subtab-btn').forEach(btn => {
+                btn.style.background = 'transparent';
+                btn.style.color = '#667eea';
+                btn.style.border = '2px solid #667eea';
+            });
+            
+            // Show selected subtab
+            document.getElementById('clinical' + subtabName.charAt(0).toUpperCase() + subtabName.slice(1) + 'Tab').style.display = 'block';
+            
+            // Highlight selected button
+            if (buttonEl) {
+                buttonEl.style.background = '#667eea';
+                buttonEl.style.color = 'white';
+                buttonEl.style.border = 'none';
+            }
+            
+            // Load data for specific subtabs
+            if (subtabName === 'overview') {
+                loadAnalyticsDashboard();
+            } else if (subtabName === 'patients') {
+                loadPatients();
+            } else if (subtabName === 'appointments') {
                 loadAppointments();
+            } else if (subtabName === 'approvals') {
+                loadPendingApprovals();
             }
         }
         
