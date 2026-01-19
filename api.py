@@ -218,6 +218,14 @@ def init_db():
                        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                        FOREIGN KEY (chat_session_id) REFERENCES chat_sessions(id))''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)''')
+    cursor.execute('''CREATE TABLE IF NOT EXISTS verification_codes
+                      (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                       identifier TEXT,
+                       code TEXT,
+                       method TEXT,
+                       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                       expires_at DATETIME,
+                       verified INTEGER DEFAULT 0)''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS appointments
                       (id INTEGER PRIMARY KEY AUTOINCREMENT, 
                        clinician_username TEXT, 
@@ -450,9 +458,102 @@ def health_check():
         'timestamp': datetime.now().isoformat()
     })
 
+@app.route('/api/auth/send-verification', methods=['POST'])
+def send_verification():
+    """Send 2FA verification code during signup"""
+    try:
+        data = request.json
+        identifier = data.get('identifier')  # email or phone
+        method = data.get('method', 'email')  # 'email' or 'sms'
+        
+        if not identifier:
+            return jsonify({'error': 'Email or phone number required'}), 400
+        
+        if method not in ['email', 'sms']:
+            return jsonify({'error': 'Method must be email or sms'}), 400
+        
+        # Generate 6-digit code
+        code = ''.join([str(secrets.randbelow(10)) for _ in range(6)])
+        
+        # Store code in database with 10 minute expiration
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        
+        # Clear old codes for this identifier
+        cur.execute("DELETE FROM verification_codes WHERE identifier=? AND verified=0", (identifier,))
+        
+        # Insert new code
+        expires_at = datetime.now() + timedelta(minutes=10)
+        cur.execute(
+            "INSERT INTO verification_codes (identifier, code, method, expires_at) VALUES (?, ?, ?, ?)",
+            (identifier, code, method, expires_at)
+        )
+        conn.commit()
+        conn.close()
+        
+        # Send code
+        success = send_verification_code(identifier, code, method)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'message': f'Verification code sent to {identifier} via {method}'
+            }), 200
+        else:
+            return jsonify({
+                'error': f'Failed to send verification code via {method}. Please try another method.'
+            }), 500
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/auth/verify-code', methods=['POST'])
+def verify_code():
+    """Verify 2FA code"""
+    try:
+        data = request.json
+        identifier = data.get('identifier')
+        code = data.get('code')
+        
+        if not identifier or not code:
+            return jsonify({'error': 'Identifier and code required'}), 400
+        
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        
+        # Find valid code
+        result = cur.execute(
+            "SELECT id, expires_at FROM verification_codes WHERE identifier=? AND code=? AND verified=0",
+            (identifier, code)
+        ).fetchone()
+        
+        if not result:
+            conn.close()
+            return jsonify({'error': 'Invalid verification code'}), 400
+        
+        code_id, expires_at = result
+        
+        # Check expiration
+        if datetime.now() > datetime.fromisoformat(expires_at):
+            conn.close()
+            return jsonify({'error': 'Verification code expired. Please request a new one.'}), 400
+        
+        # Mark as verified
+        cur.execute("UPDATE verification_codes SET verified=1 WHERE id=?", (code_id,))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Code verified successfully'
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/auth/register', methods=['POST'])
 def register():
-    """Register new user"""
+    """Register new user - requires 2FA verification"""
     try:
         data = request.json
         username = data.get('username')
@@ -462,6 +563,29 @@ def register():
         phone = data.get('phone')
         full_name = data.get('full_name')
         dob = data.get('dob')
+        verified_identifier = data.get('verified_identifier')  # The email or phone that was verified
+        
+        if not username or not password or not pin or not email or not phone:
+            return jsonify({'error': 'All fields are required'}), 400
+        
+        # Check if email or phone was verified (if 2FA is enabled)
+        if os.getenv('REQUIRE_2FA_SIGNUP', '0') == '1':
+            if not verified_identifier:
+                return jsonify({'error': 'Please verify your email or phone number first'}), 400
+            
+            conn = sqlite3.connect(DB_PATH)
+            cur = conn.cursor()
+            
+            # Check if verification exists and is valid
+            verified = cur.execute(
+                "SELECT id FROM verification_codes WHERE identifier=? AND verified=1 AND datetime(expires_at) > datetime('now')",
+                (verified_identifier,)
+            ).fetchone()
+            
+            conn.close()
+            
+            if not verified:
+                return jsonify({'error': 'Verification expired or invalid. Please verify again.'}), 400
         conditions = data.get('conditions')
         clinician_id = data.get('clinician_id')  # Required for patients
         country = data.get('country', '')
@@ -768,6 +892,96 @@ def send_reset_email(to_email, username, reset_token):
         msg.attach(MIMEText(html, 'html'))
         
         # Send email
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(smtp_user, smtp_password)
+        server.send_message(msg)
+        server.quit()
+        
+        print(f"✅ Password reset email sent to {to_email}")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error sending password reset email: {e}")
+        return False
+
+def send_verification_code(identifier, code, method='email'):
+    """Send 2FA verification code via email or SMS"""
+    try:
+        if method == 'email':
+            # Get SMTP credentials
+            smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
+            smtp_port = int(os.getenv('SMTP_PORT', '587'))
+            smtp_user = os.getenv('SMTP_USER')
+            smtp_password = os.getenv('SMTP_PASSWORD')
+            from_email = os.getenv('FROM_EMAIL', smtp_user)
+            
+            if not smtp_user or not smtp_password:
+                print("⚠️  SMTP not configured - skipping email verification")
+                return False
+            
+            msg = MIMEMultipart('alternative')
+            msg['Subject'] = 'Healing Space - Verification Code'
+            msg['From'] = from_email
+            msg['To'] = identifier
+            
+            html = f"""
+            <html>
+              <body>
+                <h2>Welcome to Healing Space!</h2>
+                <p>Your verification code is:</p>
+                <h1 style="color: #667eea; font-size: 32px; letter-spacing: 5px;">{code}</h1>
+                <p>This code expires in 10 minutes.</p>
+                <p>If you didn't request this, please ignore this email.</p>
+                <br>
+                <p>Best regards,<br>Healing Space Team</p>
+              </body>
+            </html>
+            """
+            
+            msg.attach(MIMEText(html, 'html'))
+            
+            server = smtplib.SMTP(smtp_server, smtp_port)
+            server.starttls()
+            server.login(smtp_user, smtp_password)
+            server.send_message(msg)
+            server.quit()
+            
+            print(f"✅ Verification code sent to {identifier}")
+            return True
+            
+        elif method == 'sms':
+            # SMS via Twilio (requires TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER)
+            try:
+                from twilio.rest import Client
+                
+                account_sid = os.getenv('TWILIO_ACCOUNT_SID')
+                auth_token = os.getenv('TWILIO_AUTH_TOKEN')
+                from_phone = os.getenv('TWILIO_PHONE_NUMBER')
+                
+                if not account_sid or not auth_token or not from_phone:
+                    print("⚠️  Twilio not configured - skipping SMS verification")
+                    return False
+                
+                client = Client(account_sid, auth_token)
+                message = client.messages.create(
+                    body=f"Your Healing Space verification code is: {code}. Valid for 10 minutes.",
+                    from_=from_phone,
+                    to=identifier
+                )
+                
+                print(f"✅ SMS verification code sent to {identifier}")
+                return True
+                
+            except ImportError:
+                print("⚠️  Twilio library not installed. Run: pip install twilio")
+                return False
+        
+        return False
+        
+    except Exception as e:
+        print(f"❌ Error sending verification code: {e}")
+        return False
         with smtplib.SMTP(smtp_server, smtp_port) as server:
             server.starttls()
             server.login(smtp_user, smtp_password)
