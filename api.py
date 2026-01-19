@@ -276,6 +276,12 @@ def init_db():
     except sqlite3.OperationalError:
         pass  # Column already exists
     
+    # Add chat_session_id column to chat_history if it doesn't exist
+    try:
+        cursor.execute("ALTER TABLE chat_history ADD COLUMN chat_session_id INTEGER")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    
     # Add appointment response tracking columns
     try:
         cursor.execute("ALTER TABLE appointments ADD COLUMN patient_acknowledged INTEGER DEFAULT 0")
@@ -1649,25 +1655,32 @@ def create_chat_session():
         conn = sqlite3.connect(DB_PATH)
         cur = conn.cursor()
         
-        # Deactivate all other sessions
-        cur.execute("UPDATE chat_sessions SET is_active=0 WHERE username=?", (username,))
-        
-        # Create new session
-        cur.execute(
-            "INSERT INTO chat_sessions (username, session_name, is_active) VALUES (?, ?, 1)",
-            (username, session_name)
-        )
-        session_id = cur.lastrowid
-        conn.commit()
-        conn.close()
-        
-        return jsonify({
-            'success': True,
-            'session_id': session_id,
-            'session_name': session_name
-        }), 200
+        try:
+            # Deactivate all other sessions
+            cur.execute("UPDATE chat_sessions SET is_active=0 WHERE username=?", (username,))
+            
+            # Create new session
+            cur.execute(
+                "INSERT INTO chat_sessions (username, session_name, is_active) VALUES (?, ?, 1)",
+                (username, session_name)
+            )
+            session_id = cur.lastrowid
+            conn.commit()
+            
+            return jsonify({
+                'success': True,
+                'session_id': session_id,
+                'session_name': session_name
+            }), 200
+        except Exception as db_error:
+            conn.rollback()
+            raise db_error
+        finally:
+            conn.close()
+            
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"Create chat session error: {e}")
+        return jsonify({'error': f'Failed to create chat session: {str(e)}'}), 500
 
 @app.route('/api/therapy/sessions/<int:session_id>', methods=['PUT'])
 def update_chat_session(session_id):
