@@ -831,19 +831,32 @@ def forgot_password():
         
         # Send email
         try:
-            send_reset_email(email, username, reset_token)
-            log_event(username, 'api', 'password_reset_requested', f'Reset requested for {email}')
+            email_sent = send_reset_email(email, username, reset_token)
             
+            if email_sent:
+                log_event(username, 'api', 'password_reset_requested', f'Reset requested for {email}')
+                return jsonify({
+                    'success': True,
+                    'message': 'Password reset link sent to your email'
+                }), 200
+            else:
+                # Email sending failed but token is stored
+                log_event(username, 'api', 'password_reset_requested', f'Token created but email failed for {email}')
+                return jsonify({
+                    'success': True,
+                    'message': 'Reset token created. Email service unavailable - please contact support with your username.',
+                    'token': reset_token if DEBUG else None
+                }), 200
+                
+        except Exception as email_error:
+            # Email failed but token is stored - still allow reset via support
+            print(f"Email error: {email_error}")
+            log_event(username, 'api', 'password_reset_email_failed', str(email_error))
             return jsonify({
                 'success': True,
-                'message': 'Password reset link sent to your email'
+                'message': 'Reset initiated. Please contact support if you don\'t receive an email.',
+                'error_details': str(email_error) if DEBUG else None
             }), 200
-        except Exception as email_error:
-            # Email failed but token is stored - provide helpful error
-            return jsonify({
-                'error': 'Failed to send email. Please contact support or try again later.',
-                'details': str(email_error) if DEBUG else None
-            }), 500
         
     except Exception as e:
         print(f"Password reset error: {e}")
