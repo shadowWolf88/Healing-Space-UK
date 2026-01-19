@@ -2089,60 +2089,112 @@
                         <p style="margin: 5px 0 0 0; opacity: 0.9;">Patient Overview</p>
                     </div>
                     
-                    <!-- AI Summary Card -->
-                    <div class="card" style="margin-bottom: 20px; border-left: 4px solid #667eea;">
-                        <h4>🤖 AI Clinical Summary</h4>
-                        <div id="aiSummary">
-                            <div style="text-align: center; padding: 20px;">
-                                <div class="loading" style="margin: 0 auto;"></div>
-                                <p style="color: #666; margin-top: 10px;">Generating AI summary...</p>
+                    <!-- Patient Detail Sub-Navigation -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; overflow-x: auto; flex-wrap: wrap;">
+                        <button class="patient-subtab-btn" onclick="switchPatientTab('summary', this)" id="summaryPatientSubtabBtn" style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; white-space: nowrap;">
+                            🤖 Summary
+                        </button>
+                        <button class="patient-subtab-btn" onclick="switchPatientTab('charts', this)" style="background: transparent; color: #667eea; border: 2px solid #667eea; padding: 10px 20px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; white-space: nowrap;">
+                            📊 Charts
+                        </button>
+                        <button class="patient-subtab-btn" onclick="switchPatientTab('profile', this)" style="background: transparent; color: #667eea; border: 2px solid #667eea; padding: 10px 20px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; white-space: nowrap;">
+                            👤 Profile
+                        </button>
+                        <button class="patient-subtab-btn" onclick="switchPatientTab('moods', this)" style="background: transparent; color: #667eea; border: 2px solid #667eea; padding: 10px 20px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; white-space: nowrap;">
+                            😊 Mood Logs
+                        </button>
+                        <button class="patient-subtab-btn" onclick="switchPatientTab('assessments', this)" style="background: transparent; color: #667eea; border: 2px solid #667eea; padding: 10px 20px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; white-space: nowrap;">
+                            📋 Assessments
+                        </button>
+                        <button class="patient-subtab-btn" onclick="switchPatientTab('therapy', this)" style="background: transparent; color: #667eea; border: 2px solid #667eea; padding: 10px 20px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; white-space: nowrap;">
+                            💬 Therapy
+                        </button>
+                        <button class="patient-subtab-btn" onclick="switchPatientTab('alerts', this)" style="background: transparent; color: #667eea; border: 2px solid #667eea; padding: 10px 20px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; white-space: nowrap;">
+                            🚨 Alerts
+                        </button>
+                    </div>
+                    
+                    <!-- Summary Subtab -->
+                    <div id="patientSummaryTab" class="patient-subtab-content">
+                        <div class="card" style="border-left: 4px solid #667eea;">
+                            <h4>🤖 AI Clinical Summary</h4>
+                            <div id="aiSummary">
+                                <div style="text-align: center; padding: 20px;">
+                                    <div class="loading" style="margin: 0 auto;"></div>
+                                    <p style="color: #666; margin-top: 10px;">Generating AI summary...</p>
+                                </div>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Date Range Selector for Charts -->
-                    <div class="card" style="margin-bottom: 20px; background: #f8f9fa;">
-                        <h4>📅 Chart Date Range</h4>
-                        <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
-                            <div style="flex: 1; min-width: 200px;">
-                                <label style="display: block; margin-bottom: 5px; font-weight: 600;">From Date</label>
-                                <input type="date" id="patientChartFromDate" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                    <!-- Charts Subtab -->
+                    <div id="patientChartsTab" class="patient-subtab-content" style="display: none;">
+                        <!-- Date Range Selector for Charts -->
+                        <div class="card" style="margin-bottom: 20px; background: #f8f9fa;">
+                            <h4>📅 Chart Date Range</h4>
+                            <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center;">
+                                <div style="flex: 1; min-width: 200px;">
+                                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">From Date</label>
+                                    <input type="date" id="patientChartFromDate" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                                </div>
+                                <div style="flex: 1; min-width: 200px;">
+                                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">To Date</label>
+                                    <input type="date" id="patientChartToDate" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                                </div>
+                                <div style="display: flex; gap: 10px;">
+                                    <button class="btn" onclick="setPatientChartRange(7)" style="padding: 10px 15px;">7 Days</button>
+                                    <button class="btn" onclick="setPatientChartRange(30)" style="padding: 10px 15px;">30 Days</button>
+                                    <button class="btn" onclick="setPatientChartRange(90)" style="padding: 10px 15px;">90 Days</button>
+                                    <button class="btn" onclick="loadPatientCharts()" style="padding: 10px 15px; background: #667eea;">Refresh</button>
+                                </div>
                             </div>
-                            <div style="flex: 1; min-width: 200px;">
-                                <label style="display: block; margin-bottom: 5px; font-weight: 600;">To Date</label>
-                                <input type="date" id="patientChartToDate" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px;">
-                            </div>
-                            <div style="display: flex; gap: 10px;">
-                                <button class="btn" onclick="setPatientChartRange(7)" style="padding: 10px 15px;">7 Days</button>
-                                <button class="btn" onclick="setPatientChartRange(30)" style="padding: 10px 15px;">30 Days</button>
-                                <button class="btn" onclick="setPatientChartRange(90)" style="padding: 10px 15px;">90 Days</button>
-                                <button class="btn" onclick="loadPatientCharts()" style="padding: 10px 15px; background: #667eea;">Refresh</button>
-                            </div>
+                        </div>
+                        
+                        <!-- Charts Section -->
+                        <div class="card" style="margin-bottom: 20px;">
+                            <h4>📊 Mood Trend</h4>
+                            <canvas id="moodChart" style="max-height: 300px;"></canvas>
+                        </div>
+                        
+                        <div class="card" style="margin-bottom: 20px;">
+                            <h4>😴 Sleep Hours Trend</h4>
+                            <canvas id="sleepChart" style="max-height: 300px;"></canvas>
                         </div>
                     </div>
                     
-                    <!-- Charts Section -->
-                    <div class="card" style="margin-bottom: 20px;">
-                        <h4>📊 Mood Trend</h4>
-                        <canvas id="moodChart" style="max-height: 300px;"></canvas>
+                    <!-- Profile Subtab -->
+                    <div id="patientProfileTab" class="patient-subtab-content" style="display: none;">
+                        <div id="patientDetailContent">
+                            <!-- Content will be loaded here -->
+                        </div>
                     </div>
                     
-                    <div class="card" style="margin-bottom: 20px;">
-                        <h4>😴 Sleep Hours Trend</h4>
-                        <canvas id="sleepChart" style="max-height: 300px;"></canvas>
+                    <!-- Moods Subtab -->
+                    <div id="patientMoodsTab" class="patient-subtab-content" style="display: none;">
+                        <div id="patientMoodsContent">
+                            <!-- Content will be loaded here -->
+                        </div>
                     </div>
                     
-                    <!-- Patient Data Tabs -->
-                    <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
-                        <button class="btn" onclick="showPatientTab('profile')" id="profileTabBtn" style="background: #667eea;">Profile</button>
-                        <button class="btn btn-secondary" onclick="showPatientTab('moods')" id="moodsTabBtn">Mood Logs</button>
-                        <button class="btn btn-secondary" onclick="showPatientTab('assessments')" id="assessmentsTabBtn">Assessments</button>
-                        <button class="btn btn-secondary" onclick="showPatientTab('therapy')" id="therapyTabBtn">Therapy Notes</button>
-                        <button class="btn btn-secondary" onclick="showPatientTab('alerts')" id="alertsTabBtn">Alerts</button>
+                    <!-- Assessments Subtab -->
+                    <div id="patientAssessmentsTab" class="patient-subtab-content" style="display: none;">
+                        <div id="patientAssessmentsContent">
+                            <!-- Content will be loaded here -->
+                        </div>
                     </div>
                     
-                    <div id="patientDetailContent">
-                        <!-- Content will be loaded here -->
+                    <!-- Therapy Subtab -->
+                    <div id="patientTherapyTab" class="patient-subtab-content" style="display: none;">
+                        <div id="patientTherapyContent">
+                            <!-- Content will be loaded here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Alerts Subtab -->
+                    <div id="patientAlertsTab" class="patient-subtab-content" style="display: none;">
+                        <div id="patientAlertsContent">
+                            <!-- Content will be loaded here -->
+                        </div>
                     </div>
                 </div>
             </div>
@@ -4837,8 +4889,8 @@
             document.getElementById('patientChartToDate').valueAsDate = toDate;
             document.getElementById('patientChartFromDate').valueAsDate = fromDate;
             
-            // Show loading
-            document.getElementById('patientDetailContent').innerHTML = '<div style="text-align: center; padding: 40px;"><div class="loading" style="margin: 0 auto;"></div></div>';
+            // Default to summary tab
+            switchPatientTab('summary', document.getElementById('summaryPatientSubtabBtn'));
             
             try {
                 const response = await fetch(`/api/professional/patient/${encodeURIComponent(username)}`);
@@ -4849,17 +4901,11 @@
                     
                     // Generate AI summary
                     generateAISummary(username, data);
-                    
-                    // Load charts with current date range
-                    loadPatientCharts();
-                    
-                    // Show profile tab by default
-                    showPatientTab('profile');
                 } else {
-                    document.getElementById('patientDetailContent').innerHTML = '<p style="color: #dc3545;">Error loading patient data</p>';
+                    document.getElementById('aiSummary').innerHTML = '<p style="color: #dc3545;">Error loading patient data</p>';
                 }
             } catch (error) {
-                document.getElementById('patientDetailContent').innerHTML = '<p style="color: #dc3545;">Connection error</p>';
+                document.getElementById('aiSummary').innerHTML = '<p style="color: #dc3545;">Connection error</p>';
                 console.error('Patient detail error:', error);
             }
         }
@@ -5121,31 +5167,79 @@
             }
         }
         
-        function showPatientTab(tabName) {
-            // Update button styles
-            ['profile', 'moods', 'assessments', 'therapy', 'alerts'].forEach(tab => {
-                const btn = document.getElementById(tab + 'TabBtn');
-                if (btn) {
-                    if (tab === tabName) {
-                        btn.style.background = '#667eea';
-                        btn.style.color = 'white';
-                        btn.classList.remove('btn-secondary');
-                        btn.classList.add('btn');
-                    } else {
-                        btn.style.background = '';
-                        btn.style.color = '';
-                        btn.classList.remove('btn');
-                        btn.classList.add('btn-secondary');
-                    }
-                }
+        // Patient Detail Subtab Switching
+        function switchPatientTab(subtabName, buttonEl) {
+            // Hide all patient subtabs
+            document.querySelectorAll('.patient-subtab-content').forEach(tab => {
+                tab.style.display = 'none';
             });
             
+            // Reset all patient subtab buttons
+            document.querySelectorAll('.patient-subtab-btn').forEach(btn => {
+                btn.style.background = 'transparent';
+                btn.style.color = '#667eea';
+                btn.style.border = '2px solid #667eea';
+            });
+            
+            // Show selected subtab
+            const tabId = 'patient' + subtabName.charAt(0).toUpperCase() + subtabName.slice(1) + 'Tab';
+            document.getElementById(tabId).style.display = 'block';
+            
+            // Highlight selected button
+            if (buttonEl) {
+                buttonEl.style.background = '#667eea';
+                buttonEl.style.color = 'white';
+                buttonEl.style.border = 'none';
+            }
+            
+            // Load data for specific subtabs
+            if (subtabName === 'charts') {
+                loadPatientCharts();
+            } else if (subtabName === 'profile') {
+                showPatientTab('profile');
+            } else if (subtabName === 'moods') {
+                showPatientTab('moods');
+            } else if (subtabName === 'assessments') {
+                showPatientTab('assessments');
+            } else if (subtabName === 'therapy') {
+                showPatientTab('therapy');
+            } else if (subtabName === 'alerts') {
+                showPatientTab('alerts');
+            }
+        }
+        
+        function showPatientTab(tabName) {
             currentPatientTab = tabName;
             const data = currentPatientData;
-            const contentDiv = document.getElementById('patientDetailContent');
             
             if (!data) {
-                contentDiv.innerHTML = '<p>No data available</p>';
+                return;
+            }
+            
+            // Determine which content div to use based on tab name
+            let contentDiv;
+            switch (tabName) {
+                case 'profile':
+                    contentDiv = document.getElementById('patientDetailContent');
+                    break;
+                case 'moods':
+                    contentDiv = document.getElementById('patientMoodsContent');
+                    break;
+                case 'assessments':
+                    contentDiv = document.getElementById('patientAssessmentsContent');
+                    break;
+                case 'therapy':
+                    contentDiv = document.getElementById('patientTherapyContent');
+                    break;
+                case 'alerts':
+                    contentDiv = document.getElementById('patientAlertsContent');
+                    break;
+                default:
+                    contentDiv = document.getElementById('patientDetailContent');
+            }
+            
+            if (!contentDiv) {
+                console.error('Content div not found for tab:', tabName);
                 return;
             }
             
