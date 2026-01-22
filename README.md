@@ -129,6 +129,14 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions on:
 - Database persistence strategies
 - Desktop distribution with PyInstaller
 
+### Automated local deploys (push → Railway)
+
+This repository includes optional local automation so that commits can be pushed to GitHub and trigger Railway deployments automatically.
+
+- Install hooks: `scripts/setup-git-hooks.sh` copies `.githooks/post-commit` into your local `.git/hooks/`.
+- The post-commit hook will `git push origin <branch>` and, if the Railway CLI and env vars are configured, run `railway up --project $RAILWAY_PROJECT --detach`.
+- See documentation: [documentation/DEPLOY_AUTOMATION.md](documentation/DEPLOY_AUTOMATION.md)
+
 **Note**: This is a desktop GUI application. For cloud deployment, consider converting to a web app or distributing executables via GitHub Releases.
 
 ## Configuration

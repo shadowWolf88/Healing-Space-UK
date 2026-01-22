@@ -305,6 +305,22 @@ def init_db():
         cursor.execute("ALTER TABLE appointments ADD COLUMN patient_response_date DATETIME")
     except sqlite3.OperationalError:
         pass  # Column already exists
+
+    # Add appointment attendance tracking columns
+    try:
+        cursor.execute("ALTER TABLE appointments ADD COLUMN attendance_status TEXT DEFAULT 'scheduled'")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    try:
+        cursor.execute("ALTER TABLE appointments ADD COLUMN attendance_confirmed_by TEXT")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+
+    try:
+        cursor.execute("ALTER TABLE appointments ADD COLUMN attendance_confirmed_at DATETIME")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
     
     conn.commit()
     conn.close()
@@ -1425,6 +1441,12 @@ def approve_patient(approval_id):
             "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (?,?,?)",
             (clinician_username, f'You approved {patient_username} as your patient', 'patient_approved')
         )
+
+        # Clear any prior "approval_pending" notifications for this patient
+        cur.execute(
+            "UPDATE notifications SET read=1 WHERE recipient_username=? AND notification_type='approval_pending'",
+            (patient_username,)
+        )
         
         conn.commit()
         conn.close()
@@ -1462,6 +1484,12 @@ def reject_patient(approval_id):
         cur.execute(
             "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (?,?,?)",
             (patient_username, f'Dr. {clinician_username} declined your request. Please select another clinician.', 'approval_rejected')
+        )
+
+        # Clear any prior "approval_pending" notifications for this patient when rejected
+        cur.execute(
+            "UPDATE notifications SET read=1 WHERE recipient_username=? AND notification_type='approval_pending'",
+            (patient_username,)
         )
         
         conn.commit()
@@ -4635,7 +4663,7 @@ def manage_appointments():
                 appointments = cur.execute("""
                     SELECT id, patient_username, appointment_date, appointment_type, notes, 
                            pdf_generated, notification_sent, created_at, patient_acknowledged,
-                           patient_response, patient_response_date
+                           patient_response, patient_response_date, attendance_status, attendance_confirmed_by, attendance_confirmed_at
                     FROM appointments 
                     WHERE clinician_username=? AND appointment_date >= datetime('now', '-30 days')
                     ORDER BY appointment_date DESC
@@ -4645,7 +4673,7 @@ def manage_appointments():
                 appointments = cur.execute("""
                     SELECT id, clinician_username, appointment_date, appointment_type, notes, 
                            pdf_generated, notification_sent, created_at, patient_acknowledged,
-                           patient_response, patient_response_date
+                           patient_response, patient_response_date, attendance_status, attendance_confirmed_by, attendance_confirmed_at
                     FROM appointments 
                     WHERE patient_username=? AND appointment_date >= datetime('now', '-7 days')
                     ORDER BY appointment_date ASC
@@ -4665,7 +4693,10 @@ def manage_appointments():
                     'created_at': apt[7],
                     'patient_acknowledged': bool(apt[8]),
                     'patient_response': apt[9] or 'pending',
-                    'patient_response_date': apt[10]
+                    'patient_response_date': apt[10],
+                    'attendance_status': apt[11] or 'scheduled',
+                    'attendance_confirmed_by': apt[12],
+                    'attendance_confirmed_at': apt[13]
                 }
                 
                 if clinician_username:
@@ -4811,6 +4842,67 @@ def respond_to_appointment(appointment_id):
             'message': f'Appointment {action} successfully'
         }), 200
         
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/appointments/<int:appointment_id>/attendance', methods=['POST'])
+def confirm_appointment_attendance(appointment_id):
+    """Clinician confirms whether a patient attended an appointment"""
+    try:
+        data = request.json
+        clinician_username = data.get('clinician_username')
+        status = data.get('status')  # 'attended' or 'no_show' or 'missed'
+
+        if not clinician_username or not status:
+            return jsonify({'error': 'clinician_username and status are required'}), 400
+
+        if status not in ['attended', 'no_show', 'missed']:
+            return jsonify({'error': "status must be one of: 'attended', 'no_show', 'missed'"}), 400
+
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+
+        # Verify appointment and clinician ownership
+        apt = cur.execute(
+            "SELECT patient_username, clinician_username FROM appointments WHERE id=?",
+            (appointment_id,)
+        ).fetchone()
+
+        if not apt:
+            conn.close()
+            return jsonify({'error': 'Appointment not found'}), 404
+
+        patient_username, owner = apt
+        if owner != clinician_username:
+            conn.close()
+            return jsonify({'error': 'Clinician not authorised for this appointment'}), 403
+
+        # Update attendance fields
+        cur.execute(
+            "UPDATE appointments SET attendance_status=?, attendance_confirmed_by=?, attendance_confirmed_at=? WHERE id=?",
+            (status, clinician_username, datetime.now(), appointment_id)
+        )
+
+        # Notify patient of attendance status
+        message = ''
+        if status == 'attended':
+            message = f'Your clinician {clinician_username} has confirmed you attended the appointment.'
+        else:
+            message = f'Your clinician {clinician_username} has marked the appointment as {status}.'
+
+        cur.execute(
+            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (?,?,?)",
+            (patient_username, message, 'appointment_attendance')
+        )
+
+        conn.commit()
+        conn.close()
+
+        log_event(clinician_username, 'clinician', 'appointment_attendance_confirmed', f'Appointment {appointment_id} marked {status}')
+
+        return jsonify({'success': True, 'message': f'Appointment marked {status}'}), 200
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

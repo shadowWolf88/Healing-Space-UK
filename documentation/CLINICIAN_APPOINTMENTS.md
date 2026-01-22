@@ -129,8 +129,11 @@ CREATE TABLE appointments (
     notes TEXT,
     pdf_generated INTEGER DEFAULT 0,
     pdf_path TEXT,
-    notification_sent INTEGER DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+   notification_sent INTEGER DEFAULT 0,
+   attendance_status TEXT DEFAULT 'scheduled',
+   attendance_confirmed_by TEXT,
+   attendance_confirmed_at DATETIME,
+   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(clinician_username) REFERENCES users(username),
     FOREIGN KEY(patient_username) REFERENCES users(username)
 )
@@ -237,6 +240,13 @@ pip install -r requirements.txt
    - Creates entry in `notifications` table
    - Message: "⚠️ Appointment with {patient} in 2 days. Generate progress PDF!"
    - Type: `appointment_reminder`
+
+3. **Post-Appointment Attendance Confirmation**
+   - Clinicians can confirm whether a patient attended an appointment.
+   - Status values: `attended`, `no_show`, `missed`.
+   - The system updates the `appointments` record (`attendance_status`, `attendance_confirmed_by`, `attendance_confirmed_at`) and creates a notification of type `appointment_attendance` for the patient.
+   - Example: Clinician marks appointment `123` as `attended` via `/api/appointments/123/attendance` (POST `{ "clinician_username": "dr_smith", "status": "attended" }`).
+
 
 3. **Tracking:**
    - Sets `notification_sent = 1` in appointments table

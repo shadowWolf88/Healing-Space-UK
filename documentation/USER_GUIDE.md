@@ -401,6 +401,25 @@ Your safety plan is always available in the Safety Plan tab. In a crisis:
 
 ---
 
+## Appointments
+
+**Location**: 📅 Appointments tab
+
+### What you can do as a patient
+- View upcoming and recent appointments scheduled by your clinician
+- Acknowledge an appointment (accept/decline) so your clinician knows your availability
+- See clinician-confirmed attendance after the appointment (`attended`, `no_show`, or `missed`)
+
+### Notifications
+- You will receive an `appointment_new` notification when a clinician schedules an appointment
+- After you respond, the clinician receives an `appointment_response` notification
+- After the appointment, you will receive an `appointment_attendance` notification when your clinician confirms whether you attended
+
+### Tips
+- Keep your availability updated
+- If marked as `no_show` but you did attend, contact your clinician to correct the record
+
+
 ## Progress Insights
 
 **Location**: 📈 Progress tab
@@ -493,6 +512,13 @@ Once approved, patients appear in **"Your Patients"** section:
 - Medical conditions
 - Registration date
 - Click **"View Details"** to see full profile
+
+### Appointments (Clinician)
+
+- Schedule face-to-face appointments from the clinician dashboard
+- Receive patient `accepted`/`declined` responses via `appointment_response` notifications
+- After the session, confirm attendance using the clinician action (sets `attended`, `no_show`, or `missed`) — this creates an `appointment_attendance` notification for the patient and updates the appointment record
+
 
 ---
 
