@@ -5268,9 +5268,27 @@ def get_patient_analytics(username):
             FROM alerts
             WHERE username=? AND resolved=0
         """, (username,)).fetchone()
+
+        # Upcoming appointments (next 30 days)
+        upcoming = cur.execute("""
+            SELECT id, clinician_username, appointment_date, appointment_type, notes, attendance_status, attendance_confirmed_by, attendance_confirmed_at
+            FROM appointments
+            WHERE patient_username=? AND datetime(appointment_date) >= datetime('now')
+            ORDER BY datetime(appointment_date) ASC
+            LIMIT 10
+        """, (username,)).fetchall()
+
+        # Recent past appointments (last 7 days) to allow clinicians to confirm attendance
+        recent_past = cur.execute("""
+            SELECT id, clinician_username, appointment_date, appointment_type, notes, attendance_status, attendance_confirmed_by, attendance_confirmed_at
+            FROM appointments
+            WHERE patient_username=? AND datetime(appointment_date) < datetime('now') AND datetime(appointment_date) >= datetime('now', '-7 days')
+            ORDER BY datetime(appointment_date) DESC
+            LIMIT 10
+        """, (username,)).fetchall()
         
         conn.close()
-        
+
         return jsonify({
             'mood_trend': [
                 {'date': row[0], 'score': row[1], 'notes': row[2]}
@@ -5291,6 +5309,31 @@ def get_patient_analytics(username):
                 'active_alerts': risk_data[0] or 0,
                 'last_alert': risk_data[1]
             }
+            ,
+            'upcoming_appointments': [
+                {
+                    'id': r[0],
+                    'clinician_username': r[1],
+                    'appointment_date': r[2],
+                    'appointment_type': r[3],
+                    'notes': r[4],
+                    'attendance_status': r[5],
+                    'attendance_confirmed_by': r[6],
+                    'attendance_confirmed_at': r[7]
+                } for r in upcoming
+            ],
+            'recent_past_appointments': [
+                {
+                    'id': r[0],
+                    'clinician_username': r[1],
+                    'appointment_date': r[2],
+                    'appointment_type': r[3],
+                    'notes': r[4],
+                    'attendance_status': r[5],
+                    'attendance_confirmed_by': r[6],
+                    'attendance_confirmed_at': r[7]
+                } for r in recent_past
+            ]
         }), 200
         
     except Exception as e:

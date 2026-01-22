@@ -6457,6 +6457,30 @@ ${reportText}
                 alert('Failed to load patient details');
             }
         }
+
+        async function confirmAttendance(appointmentId, status, patientUsername) {
+            if (!confirm(`Confirm marking appointment ${appointmentId} as ${status}?`)) return;
+            try {
+                const resp = await fetch(`/api/appointments/${appointmentId}/attendance`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ clinician_username: currentUser, status })
+                });
+                const data = await resp.json();
+                if (!resp.ok) {
+                    alert('Failed to update attendance: ' + (data.error || JSON.stringify(data)));
+                    return;
+                }
+                // Update UI: refresh patient details modal
+                alert(data.message || 'Attendance updated');
+                // Remove existing modal and reload details
+                document.querySelectorAll('[style*=fixed]').forEach(n => n.remove());
+                await viewPatientDetails(patientUsername);
+            } catch (err) {
+                console.error('Attendance update error', err);
+                alert('Error updating attendance');
+            }
+        }
         
         function displayPatientDetailsModal(username, data) {
             const modal = document.createElement('div');
@@ -6523,6 +6547,54 @@ ${reportText}
                     <div style="margin-top: 20px; display: flex; gap: 10px;">
                         <button onclick="showReportGenerator('${username}')" style="flex: 1; padding: 12px; background: #8b5cf6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Generate Report</button>
                         <button onclick="this.closest('[style*=fixed]').remove()" style="flex: 1; padding: 12px; background: #6b7280; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Close</button>
+                    </div>
+                    
+                    <!-- Appointments Section -->
+                    <div style="background: #ffffff; padding: 16px; border-radius: 8px; margin-top: 18px; border: 1px solid #e5e7eb;">
+                        <h3 style="margin: 0 0 10px 0; color: #1f2937;">Upcoming Appointments</h3>
+                        ${data.upcoming_appointments && data.upcoming_appointments.length > 0 ? `
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                ${data.upcoming_appointments.map(a => `
+                                    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-radius:6px; background:#f8fafc;">
+                                        <div>
+                                            <strong>${a.appointment_type}</strong>
+                                            <div style="font-size:13px; color:#6b7280;">${a.appointment_date} — Clinician: ${a.clinician_username}</div>
+                                            ${a.notes ? `<div style="font-size:13px; color:#374151; margin-top:6px;">${a.notes}</div>` : ''}
+                                        </div>
+                                        <div style="text-align:right">
+                                            <div style="font-weight:600; color:#374151">Status: ${a.attendance_status || 'scheduled'}</div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : `<p style="color:#6b7280;">No upcoming appointments</p>`}
+                    </div>
+
+                    <div style="background: #ffffff; padding: 16px; border-radius: 8px; margin-top: 12px; border: 1px solid #e5e7eb;">
+                        <h3 style="margin: 0 0 10px 0; color: #1f2937;">Recent Appointments (past 7 days)</h3>
+                        ${data.recent_past_appointments && data.recent_past_appointments.length > 0 ? `
+                            <div style="display:flex; flex-direction:column; gap:10px;">
+                                ${data.recent_past_appointments.map(a => `
+                                    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-radius:6px; background:#f8fafc;">
+                                        <div>
+                                            <strong>${a.appointment_type}</strong>
+                                            <div style="font-size:13px; color:#6b7280;">${a.appointment_date} — Clinician: ${a.clinician_username}</div>
+                                            ${a.notes ? `<div style="font-size:13px; color:#374151; margin-top:6px;">${a.notes}</div>` : ''}
+                                        </div>
+                                        <div style="text-align:right">
+                                            <div style="font-weight:600; color:#374151">Status: <span id="apt-status-${a.id}">${a.attendance_status || 'scheduled'}</span></div>
+                                            ${currentUserRole === 'clinician' && currentUser === a.clinician_username ? `
+                                                <div style="margin-top:8px; display:flex; gap:6px; justify-content:flex-end;">
+                                                    <button onclick="confirmAttendance(${a.id}, 'attended', '${username}')" style="padding:6px 8px; background:#10b981; color:white; border:none; border-radius:6px; cursor:pointer;">Mark attended</button>
+                                                    <button onclick="confirmAttendance(${a.id}, 'no_show', '${username}')" style="padding:6px 8px; background:#ef4444; color:white; border:none; border-radius:6px; cursor:pointer;">Mark no-show</button>
+                                                    <button onclick="confirmAttendance(${a.id}, 'missed', '${username}')" style="padding:6px 8px; background:#f59e0b; color:white; border:none; border-radius:6px; cursor:pointer;">Mark missed</button>
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : `<p style="color:#6b7280;">No recent appointments</p>`}
                     </div>
                 </div>
             `;
