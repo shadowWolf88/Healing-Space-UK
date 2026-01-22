@@ -5,7 +5,7 @@ Purpose
 - Goals: Safe onboarding, reliable data capture, clear crisis workflows, and minimal clinician friction.
 
 Contents
-1. Quick Summary
+1. Quick Summary 
 2. Roles & Responsibilities
 3. Setup & Access
 4. Clinical Workflow
