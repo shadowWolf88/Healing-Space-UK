@@ -237,7 +237,39 @@ def init_db():
                        pdf_path TEXT,
                        notification_sent INTEGER DEFAULT 0,
                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP)''')
-    
+
+    # Developer Dashboard Tables
+    cursor.execute('''CREATE TABLE IF NOT EXISTS dev_messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        from_username TEXT,
+        to_username TEXT,
+        message TEXT,
+        message_type TEXT DEFAULT 'info',
+        read INTEGER DEFAULT 0,
+        parent_message_id INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (parent_message_id) REFERENCES dev_messages(id)
+    )''')
+
+    cursor.execute('''CREATE TABLE IF NOT EXISTS dev_terminal_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT,
+        command TEXT,
+        output TEXT,
+        exit_code INTEGER,
+        duration_ms INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )''')
+
+    cursor.execute('''CREATE TABLE IF NOT EXISTS dev_ai_chats (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT,
+        session_id TEXT,
+        role TEXT,
+        message TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )''')
+
     # Add email and phone columns if they don't exist
     try:
         cursor.execute("ALTER TABLE users ADD COLUMN email TEXT")
@@ -1265,6 +1297,49 @@ def clinician_register():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/auth/developer/register', methods=['POST'])
+def developer_register():
+    """Register single developer account (one-time setup)"""
+    try:
+        data = request.json
+        username = data.get('username')
+        password = data.get('password')
+        pin = data.get('pin')
+        registration_key = data.get('registration_key')
+
+        # Verify secret key
+        expected_key = os.getenv('DEVELOPER_REGISTRATION_KEY')
+        if not expected_key or registration_key != expected_key:
+            return jsonify({'error': 'Invalid registration key'}), 403
+
+        # Check if developer already exists
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        existing = cur.execute("SELECT username FROM users WHERE role='developer'").fetchone()
+        if existing:
+            conn.close()
+            return jsonify({'error': 'Developer account already exists'}), 409
+
+        # Validate and hash
+        if len(password) < 8:
+            return jsonify({'error': 'Password must be at least 8 characters'}), 400
+
+        hashed_password = hash_password(password)
+        hashed_pin = hash_pin(pin)
+
+        # Create developer account
+        cur.execute(
+            "INSERT INTO users (username, password, pin, role, last_login) VALUES (?,?,?,?,?)",
+            (username, hashed_password, hashed_pin, 'developer', datetime.now())
+        )
+        conn.commit()
+        conn.close()
+
+        log_event(username, 'api', 'developer_registered', 'Developer account created')
+        return jsonify({'success': True, 'message': 'Developer account created'}), 201
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/auth/disclaimer/accept', methods=['POST'])
 def accept_disclaimer():
     """Mark disclaimer as accepted for user"""
@@ -1284,6 +1359,368 @@ def accept_disclaimer():
         return jsonify({'success': True}), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+# ========== DEVELOPER DASHBOARD ENDPOINTS ==========
+
+@app.route('/api/developer/terminal/execute', methods=['POST'])
+def execute_terminal():
+    """Execute terminal command with full access"""
+    try:
+        data = request.json
+        username = data.get('username')
+        command = data.get('command')
+
+        # Verify developer role
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        role = cur.execute("SELECT role FROM users WHERE username=?", (username,)).fetchone()
+
+        if not role or role[0] != 'developer':
+            conn.close()
+            return jsonify({'error': 'Unauthorized - Developer access required'}), 403
+
+        # Execute command (FULL ACCESS - NO RESTRICTIONS)
+        import subprocess
+        import time
+
+        start_time = time.time()
+        try:
+            result = subprocess.run(
+                command,
+                shell=True,  # Full shell access
+                capture_output=True,
+                text=True,
+                timeout=30,  # 30 second timeout
+                cwd=os.getcwd()  # Full filesystem access
+            )
+            duration_ms = int((time.time() - start_time) * 1000)
+
+            output = result.stdout + result.stderr
+            exit_code = result.returncode
+
+            # Log command
+            cur.execute(
+                "INSERT INTO dev_terminal_logs (username, command, output, exit_code, duration_ms) VALUES (?,?,?,?,?)",
+                (username, command, output[:10000], exit_code, duration_ms)  # Truncate output to 10k chars
+            )
+            conn.commit()
+            conn.close()
+
+            return jsonify({
+                'output': output,
+                'exit_code': exit_code,
+                'duration_ms': duration_ms
+            }), 200
+
+        except subprocess.TimeoutExpired:
+            conn.close()
+            return jsonify({'error': 'Command timed out (30s limit)'}), 408
+        except Exception as e:
+            conn.close()
+            return jsonify({'error': str(e)}), 500
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/developer/ai/chat', methods=['POST'])
+def developer_ai_chat():
+    """Developer AI assistant"""
+    try:
+        data = request.json
+        username = data.get('username')
+        message = data.get('message')
+        session_id = data.get('session_id', 'default')
+
+        # Verify developer role
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        role = cur.execute("SELECT role FROM users WHERE username=?", (username,)).fetchone()
+
+        if not role or role[0] != 'developer':
+            conn.close()
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # Get chat history
+        history = cur.execute(
+            "SELECT role, message FROM dev_ai_chats WHERE username=? AND session_id=? ORDER BY created_at DESC LIMIT 10",
+            (username, session_id)
+        ).fetchall()
+
+        # Build conversation context
+        messages = [
+            {
+                "role": "system",
+                "content": """You are a technical assistant for the Healing Space platform developer. You help with:
+- Debugging code issues in Python/Flask/JavaScript
+- Writing and optimizing SQL queries
+- Explaining system architecture and data flows
+- Database schema questions
+- API endpoint usage and troubleshooting
+- Frontend UI development (HTML/CSS/JavaScript)
+- Security best practices
+- User support message drafting
+- Performance optimization
+
+You have full knowledge of the codebase and can provide specific advice. Be concise but thorough."""
+            }
+        ]
+
+        for h in reversed(history):
+            messages.append({"role": h[0], "content": h[1]})
+        messages.append({"role": "user", "content": message})
+
+        # Call Groq API
+        groq_key = os.getenv('GROQ_API_KEY')
+        response = requests.post(
+            'https://api.groq.com/openai/v1/chat/completions',
+            headers={'Authorization': f'Bearer {groq_key}', 'Content-Type': 'application/json'},
+            json={'model': 'llama-3.3-70b-versatile', 'messages': messages, 'max_tokens': 1000}
+        )
+
+        if response.status_code == 200:
+            ai_response = response.json()['choices'][0]['message']['content']
+
+            # Save to database
+            cur.execute(
+                "INSERT INTO dev_ai_chats (username, session_id, role, message) VALUES (?,?,?,?)",
+                (username, session_id, 'user', message)
+            )
+            cur.execute(
+                "INSERT INTO dev_ai_chats (username, session_id, role, message) VALUES (?,?,?,?)",
+                (username, session_id, 'assistant', ai_response)
+            )
+            conn.commit()
+            conn.close()
+
+            return jsonify({'response': ai_response, 'session_id': session_id}), 200
+        else:
+            conn.close()
+            return jsonify({'error': 'AI API error'}), 500
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/developer/messages/send', methods=['POST'])
+def send_dev_message():
+    """Send message from developer to user(s)"""
+    try:
+        data = request.json
+        from_username = data.get('from_username')
+        to_username = data.get('to_username')
+        message = data.get('message')
+        message_type = data.get('message_type', 'info')
+
+        # Verify developer role
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        role = cur.execute("SELECT role FROM users WHERE username=?", (from_username,)).fetchone()
+
+        if not role or role[0] != 'developer':
+            conn.close()
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        if to_username == 'ALL':
+            # Broadcast to all users
+            users = cur.execute("SELECT username FROM users WHERE role != 'developer'").fetchall()
+            for user in users:
+                cur.execute(
+                    "INSERT INTO dev_messages (from_username, to_username, message, message_type) VALUES (?,?,?,?)",
+                    (from_username, user[0], message, message_type)
+                )
+                send_notification(user[0], f"Message from developer: {message}", 'dev_message')
+        else:
+            # Send to specific user
+            cur.execute(
+                "INSERT INTO dev_messages (from_username, to_username, message, message_type) VALUES (?,?,?,?)",
+                (from_username, to_username, message, message_type)
+            )
+            send_notification(to_username, f"Message from developer: {message}", 'dev_message')
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/developer/messages/list', methods=['GET'])
+def list_dev_messages():
+    """Get messages for current user (dev or patient/clinician)"""
+    try:
+        username = request.args.get('username')
+
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+
+        # Get role
+        role = cur.execute("SELECT role FROM users WHERE username=?", (username,)).fetchone()
+
+        if role and role[0] == 'developer':
+            # Developer sees all messages they sent + replies
+            messages = cur.execute("""
+                SELECT id, from_username, to_username, message, message_type, read, parent_message_id, created_at
+                FROM dev_messages
+                WHERE from_username=? OR to_username=?
+                ORDER BY created_at DESC
+            """, (username, username)).fetchall()
+        else:
+            # Regular user sees messages to/from developer
+            messages = cur.execute("""
+                SELECT id, from_username, to_username, message, message_type, read, parent_message_id, created_at
+                FROM dev_messages
+                WHERE to_username=? OR from_username=?
+                ORDER BY created_at DESC
+            """, (username, username)).fetchall()
+
+        conn.close()
+
+        return jsonify({
+            'messages': [
+                {
+                    'id': m[0],
+                    'from_username': m[1],
+                    'to_username': m[2],
+                    'message': m[3],
+                    'message_type': m[4],
+                    'read': bool(m[5]),
+                    'parent_message_id': m[6],
+                    'created_at': m[7]
+                }
+                for m in messages
+            ]
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/developer/messages/reply', methods=['POST'])
+def reply_dev_message():
+    """Reply to a developer message"""
+    try:
+        data = request.json
+        from_username = data.get('from_username')
+        parent_message_id = data.get('parent_message_id')
+        message = data.get('message')
+
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+
+        # Get original message to determine recipient
+        original = cur.execute(
+            "SELECT from_username, to_username FROM dev_messages WHERE id=?",
+            (parent_message_id,)
+        ).fetchone()
+
+        if not original:
+            conn.close()
+            return jsonify({'error': 'Original message not found'}), 404
+
+        # Determine who to send to (if user replies, send to developer; if dev replies, send to user)
+        to_username = original[0] if original[1] == from_username else original[1]
+
+        # Insert reply
+        cur.execute(
+            "INSERT INTO dev_messages (from_username, to_username, message, message_type, parent_message_id) VALUES (?,?,?,?,?)",
+            (from_username, to_username, message, 'reply', parent_message_id)
+        )
+        conn.commit()
+        conn.close()
+
+        # Send notification
+        send_notification(to_username, f"{from_username} replied: {message}", 'dev_message_reply')
+
+        return jsonify({'success': True}), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/developer/stats', methods=['GET'])
+def developer_stats():
+    """Get system statistics"""
+    try:
+        username = request.args.get('username')
+
+        # Verify developer role
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        role = cur.execute("SELECT role FROM users WHERE username=?", (username,)).fetchone()
+
+        if not role or role[0] != 'developer':
+            conn.close()
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # Gather stats
+        stats = {}
+        stats['total_users'] = cur.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        stats['total_patients'] = cur.execute("SELECT COUNT(*) FROM users WHERE role='user'").fetchone()[0]
+        stats['total_clinicians'] = cur.execute("SELECT COUNT(*) FROM users WHERE role='clinician'").fetchone()[0]
+        stats['total_developers'] = cur.execute("SELECT COUNT(*) FROM users WHERE role='developer'").fetchone()[0]
+        stats['total_chats'] = cur.execute("SELECT COUNT(*) FROM chat_history").fetchone()[0]
+        stats['total_mood_logs'] = cur.execute("SELECT COUNT(*) FROM mood_logs").fetchone()[0]
+        stats['total_assessments'] = cur.execute("SELECT COUNT(*) FROM clinical_scales").fetchone()[0]
+
+        # Database size
+        db_size = os.path.getsize(DB_PATH) / (1024 * 1024)  # MB
+        stats['database_size_mb'] = round(db_size, 2)
+
+        conn.close()
+
+        return jsonify(stats), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/developer/users/list', methods=['GET'])
+def list_all_users():
+    """List all users with filter"""
+    try:
+        username = request.args.get('username')
+        role_filter = request.args.get('role', 'all')
+        search = request.args.get('search', '')
+
+        # Verify developer role
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        role = cur.execute("SELECT role FROM users WHERE username=?", (username,)).fetchone()
+
+        if not role or role[0] != 'developer':
+            conn.close()
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # Build query
+        query = "SELECT username, role, email, last_login FROM users WHERE 1=1"
+        params = []
+
+        if role_filter != 'all':
+            query += " AND role=?"
+            params.append(role_filter)
+
+        if search:
+            query += " AND (username LIKE ? OR email LIKE ?)"
+            params.extend([f'%{search}%', f'%{search}%'])
+
+        query += " ORDER BY last_login DESC"
+
+        users = cur.execute(query, params).fetchall()
+        conn.close()
+
+        return jsonify({
+            'users': [
+                {
+                    'username': u[0],
+                    'role': u[1],
+                    'email': u[2],
+                    'last_login': u[3]
+                }
+                for u in users
+            ]
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ========== END DEVELOPER DASHBOARD ENDPOINTS ==========
 
 @app.route('/api/clinicians/list', methods=['GET'])
 def get_clinicians():

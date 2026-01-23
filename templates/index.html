@@ -966,6 +966,52 @@
                 width: auto;
             }
         }
+
+        /* Developer Dashboard Styles */
+        .dev-subtab-btn {
+            background: transparent;
+            color: #667eea;
+            border: 2px solid #667eea;
+            padding: 10px 20px;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .dev-subtab-btn:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .dev-subtab-btn.active {
+            background: #667eea;
+            color: white;
+            border: none;
+        }
+
+        .dev-subtab-content {
+            display: none;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .stat-value {
+            font-size: 42px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            opacity: 0.9;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -984,6 +1030,31 @@
                 <button class="btn btn-secondary" onclick="console.log('Clinician button clicked'); showClinicianAuth();" style="width: 100%; padding: 20px; font-size: 18px;">
                     👨‍⚕️ I'm a Clinician
                 </button>
+                
+            <!-- Developer Access Button (fixed to window) -->
+            <button id="devAccessBtn" onclick="showDevLogin()" style="position: fixed; bottom: 18px; right: 18px; background: #222; color: #fff; opacity: 0.6; font-size: 13px; padding: 7px 16px; border-radius: 16px; border: none; z-index: 3000; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: opacity 0.2s; min-width: 0; width: auto; height: auto;">
+                Developer Access
+            </button>
+
+            <!-- Developer Login Form (modal overlay) -->
+            <div id="devLoginForm" class="hidden" style="position: fixed; bottom: 0; right: 0; left: 0; top: 0; background: rgba(0,0,0,0.45); z-index: 4000; display: flex; align-items: center; justify-content: center;">
+                <div style="background: #fff; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); padding: 36px 32px; min-width: 320px; max-width: 95vw; width: 100%; max-width: 350px;">
+                    <h3 style="text-align: center; margin-bottom: 20px;">Developer Login</h3>
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" id="devLoginUsername" placeholder="Enter developer username">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <div class="password-field-wrapper">
+                            <input type="password" id="devLoginPassword" placeholder="Enter password">
+                            <button type="button" class="password-toggle" onclick="togglePassword('devLoginPassword', this)" title="Show/Hide password">👁️</button>
+                        </div>
+                    </div>
+                    <button class="btn" onclick="login('developer')">Login</button>
+                    <button class="btn btn-secondary" onclick="closeDevLogin()" style="margin-top: 10px;">Cancel</button>
+                </div>
+            </div>
             </div>
             
             <!-- Patient Login Form -->
@@ -1607,6 +1678,7 @@
                 <button class="tab-btn" onclick="switchTab('sleep', this)">😴 Sleep</button>
                 <button class="tab-btn" onclick="switchTab('history', this)">📈 History</button>
                 <button class="tab-btn" id="professionalTabBtn" onclick="switchTab('professional', this)" style="display:none;">👨‍⚕️ Professional</button>
+                <button class="tab-btn" id="developerTabBtn" onclick="switchTab('developer', this)" style="display:none;">⚙️ Developer</button>
             </div>
             
             <div class="main-content">
@@ -2512,6 +2584,189 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Developer Dashboard Tab -->
+            <div id="developerTab" class="tab-content">
+                <h3>⚙️ Developer Dashboard</h3>
+                <p style="color: #666; margin-bottom: 20px;">Platform administration and development tools.</p>
+
+                <div style="background: #ffebee; border-left: 4px solid #e74c3c; padding: 15px; margin-bottom: 20px; border-radius: 8px;">
+                    <strong style="color: #c62828;">⚠️ FULL ACCESS MODE</strong><br>
+                    <span style="color: #666; font-size: 14px;">All commands have unrestricted system access. Use responsibly.</span>
+                </div>
+
+                <!-- Sub-Navigation -->
+                <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; flex-wrap: wrap;">
+                    <button class="dev-subtab-btn active" onclick="switchDevTab('terminal', this)" id="terminalSubtabBtn">
+                        💻 Terminal
+                    </button>
+                    <button class="dev-subtab-btn" onclick="switchDevTab('ai', this)">
+                        🤖 AI Assistant
+                    </button>
+                    <button class="dev-subtab-btn" onclick="switchDevTab('messages', this)">
+                        📨 Messages
+                    </button>
+                    <button class="dev-subtab-btn" onclick="switchDevTab('stats', this)">
+                        📊 Stats
+                    </button>
+                    <button class="dev-subtab-btn" onclick="switchDevTab('users', this)">
+                        👥 Users
+                    </button>
+                </div>
+
+                <!-- Terminal Subtab -->
+                <div id="devTerminalTab" class="dev-subtab-content">
+                    <div class="card">
+                        <h4>💻 Full Terminal Access</h4>
+
+                        <div id="terminalOutput" style="background: #1e1e1e; color: #00ff00; font-family: 'Courier New', monospace; padding: 20px; border-radius: 8px; height: 500px; overflow-y: auto; margin-bottom: 15px; white-space: pre-wrap;"><span style="color: #00ff00;">╔═══════════════════════════════════════════════════════════════╗
+║   Healing Space Developer Terminal v1.0 - FULL ACCESS MODE   ║
+║   Type any command - no restrictions, no sandboxing          ║
+╚═══════════════════════════════════════════════════════════════╝</span>
+
+$ <span id="terminalCursor">_</span></div>
+
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="terminalCommand" placeholder="Enter command (full shell access)..."
+                                style="flex: 1; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-family: 'Courier New', monospace;"
+                                onkeypress="if(event.key==='Enter') executeTerminalCommand()">
+                            <button class="btn" onclick="executeTerminalCommand()">Execute</button>
+                            <button class="btn btn-secondary" onclick="clearTerminal()">Clear</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Assistant Subtab -->
+                <div id="devAITab" class="dev-subtab-content" style="display: none;">
+                    <div class="card">
+                        <h4>🤖 Developer AI Assistant</h4>
+                        <p style="color: #666; margin-bottom: 15px;">
+                            Technical support for debugging, SQL queries, architecture, and more.
+                        </p>
+
+                        <div id="devAIChatContainer" style="background: #f8f9fa; padding: 20px; border-radius: 8px; height: 500px; overflow-y: auto; margin-bottom: 15px;">
+                            <div style="text-align: center; color: #999; padding: 60px 20px;">
+                                <div style="font-size: 48px;">🤖</div>
+                                <div style="margin-top: 15px; font-size: 18px;">Developer AI Assistant</div>
+                                <div style="margin-top: 10px;">Ask me about code, database, architecture, debugging, or support drafts!</div>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 10px;">
+                            <input type="text" id="devAIInput" placeholder="Ask a technical question..."
+                                style="flex: 1; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px;"
+                                onkeypress="if(event.key==='Enter') sendDevAIMessage()">
+                            <button class="btn" onclick="sendDevAIMessage()">Send</button>
+                            <button class="btn btn-secondary" onclick="clearDevAIChat()">Clear</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Messages Subtab -->
+                <div id="devMessagesTab" class="dev-subtab-content" style="display: none;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <!-- Send Message -->
+                        <div class="card">
+                            <h4>📤 Send Message</h4>
+
+                            <div class="form-group">
+                                <label>Recipient</label>
+                                <select id="messageRecipient" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                                    <option value="ALL">🔔 Broadcast to All Users</option>
+                                    <option disabled>──────────</option>
+                                </select>
+                                <small style="color: #666; display: block; margin-top: 5px;">Users loaded dynamically</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Type</label>
+                                <select id="messageType" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                                    <option value="info">ℹ️ Information</option>
+                                    <option value="warning">⚠️ Warning</option>
+                                    <option value="alert">🚨 Alert</option>
+                                    <option value="system">⚙️ System</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Message</label>
+                                <textarea id="messageContent" rows="4" placeholder="Enter your message..."
+                                    style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px;"></textarea>
+                            </div>
+
+                            <button class="btn" onclick="sendDevMessage()">📤 Send Message</button>
+                        </div>
+
+                        <!-- Message Thread -->
+                        <div class="card" style="max-height: 600px; overflow-y: auto;">
+                            <h4>💬 Message Thread</h4>
+                            <div id="messageThread">
+                                <p style="color: #999; text-align: center; padding: 40px;">Loading messages...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Stats Subtab -->
+                <div id="devStatsTab" class="dev-subtab-content" style="display: none;">
+                    <div class="card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h4>📊 System Statistics</h4>
+                            <button class="btn btn-secondary" onclick="loadSystemStats()">🔄 Refresh</button>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                            <div class="stat-card">
+                                <div class="stat-value" id="statTotalUsers">-</div>
+                                <div class="stat-label">Total Users</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="statTotalPatients">-</div>
+                                <div class="stat-label">Patients</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="statTotalClinicians">-</div>
+                                <div class="stat-label">Clinicians</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="statTotalChats">-</div>
+                                <div class="stat-label">Total Chats</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="statTotalMoodLogs">-</div>
+                                <div class="stat-label">Mood Logs</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="statDbSize">-</div>
+                                <div class="stat-label">Database Size</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Management Subtab -->
+                <div id="devUsersTab" class="dev-subtab-content" style="display: none;">
+                    <div class="card">
+                        <h4>👥 User Management</h4>
+
+                        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                            <input type="text" id="userSearchInput" placeholder="🔍 Search users..."
+                                style="flex: 1; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                            <select id="userRoleFilter" style="padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px;">
+                                <option value="all">All Roles</option>
+                                <option value="user">Patients</option>
+                                <option value="clinician">Clinicians</option>
+                            </select>
+                            <button class="btn" onclick="searchUsers()">Search</button>
+                        </div>
+
+                        <div id="usersList" style="max-height: 500px; overflow-y: auto;">
+                            <p style="color: #999;">Loading users...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div> <!-- End of app-content -->
     </div> <!-- End of app screen -->
     
@@ -2564,6 +2819,15 @@
         function showClinicianAuth() {
             hideAllAuthForms();
             document.getElementById('clinicianLoginForm').classList.remove('hidden');
+        }
+
+        // Show dev login modal (does not hide other forms)
+        function showDevLogin() {
+            document.getElementById('devLoginForm').classList.remove('hidden');
+        }
+        // Hide dev login modal
+        function closeDevLogin() {
+            document.getElementById('devLoginForm').classList.add('hidden');
         }
         
         console.log('Auth functions defined:', typeof showPatientAuth, typeof showClinicianAuth);
@@ -2780,21 +3044,37 @@
                 setTimeout(() => {
                     switchClinicalTab('overview', document.getElementById('overviewSubtabBtn'));
                 }, 100);
+            } else if (currentUserRole === 'developer') {
+                // DEVELOPER: Show only developer tab
+                document.getElementById('developerTabBtn').style.display = 'block';
+
+                // Hide patient and clinician tabs
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    if (btn.id !== 'developerTabBtn') {
+                        btn.style.display = 'none';
+                    }
+                });
+
+                // Auto-switch to developer tab
+                setTimeout(() => {
+                    switchTab('developer', document.getElementById('developerTabBtn'));
+                    switchDevTab('terminal', document.getElementById('terminalSubtabBtn'));
+                }, 100);
             } else {
                 // PATIENT: Hide professional tab, SHOW all patient tabs
                 document.getElementById('professionalTabBtn').style.display = 'none';
                 document.getElementById('professionalTab').style.display = 'none';
-                
+
                 // Ensure patient tab buttons are visible
                 document.querySelectorAll('.tab-btn').forEach(btn => {
-                    if (btn.id !== 'professionalTabBtn') {
+                    if (btn.id !== 'professionalTabBtn' && btn.id !== 'developerTabBtn') {
                         btn.style.display = 'inline-block';
                     }
                 });
-                
+
                 // Ensure patient tab content exists (will be shown/hidden by switchTab)
-                const patientTabs = ['therapyTab', 'moodTab', 'gratitudeTab', 'cbtTab', 'petTab', 
-                                     'clinicalTab', 'communityTab', 'safetyTab', 'insightsTab', 
+                const patientTabs = ['therapyTab', 'moodTab', 'gratitudeTab', 'cbtTab', 'petTab',
+                                     'clinicalTab', 'communityTab', 'safetyTab', 'insightsTab',
                                      'sleepTab', 'historyTab'];
                 patientTabs.forEach(tabId => {
                     const tab = document.getElementById(tabId);
@@ -6963,6 +7243,350 @@ ${reportText}
             console.log('All session data cleared. Reloading page...');
             location.reload();
         };
+
+        // ========== DEVELOPER DASHBOARD FUNCTIONS ==========
+
+        // Developer Tab Management
+        function switchDevTab(subtabName, buttonEl) {
+            document.querySelectorAll('.dev-subtab-content').forEach(tab => {
+                tab.style.display = 'none';
+            });
+
+            document.querySelectorAll('.dev-subtab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            document.getElementById('dev' + subtabName.charAt(0).toUpperCase() + subtabName.slice(1) + 'Tab').style.display = 'block';
+
+            if (buttonEl) {
+                buttonEl.classList.add('active');
+            }
+
+            if (subtabName === 'messages') {
+                loadMessageRecipients();
+                loadMessageThread();
+            } else if (subtabName === 'stats') {
+                loadSystemStats();
+            } else if (subtabName === 'users') {
+                loadUsersList();
+            }
+        }
+
+        // Terminal Functions
+        async function executeTerminalCommand() {
+            const command = document.getElementById('terminalCommand').value.trim();
+            if (!command) return;
+
+            const output = document.getElementById('terminalOutput');
+            const timestamp = new Date().toLocaleTimeString();
+            output.innerHTML += `\n<span style="color: #00ff00;">[${timestamp}]</span> $ ${command}\n`;
+
+            try {
+                const response = await fetch('/api/developer/terminal/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: currentUser,
+                        command
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    output.innerHTML += `<span style="color: #ffffff;">${data.output}</span>\n`;
+                    output.innerHTML += `<span style="color: #888;">[Exit: ${data.exit_code}, Time: ${data.duration_ms}ms]</span>\n`;
+                } else {
+                    output.innerHTML += `<span style="color: #ff0000;">ERROR: ${data.error}</span>\n`;
+                }
+            } catch (error) {
+                output.innerHTML += `<span style="color: #ff0000;">NETWORK ERROR: ${error.message}</span>\n`;
+            }
+
+            document.getElementById('terminalCommand').value = '';
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearTerminal() {
+            document.getElementById('terminalOutput').innerHTML = `<span style="color: #00ff00;">╔═══════════════════════════════════════════════════════════════╗
+║   Healing Space Developer Terminal v1.0 - FULL ACCESS MODE   ║
+║   Type any command - no restrictions, no sandboxing          ║
+╚═══════════════════════════════════════════════════════════════╝</span>
+
+$ <span id="terminalCursor">_</span>`;
+        }
+
+        // AI Assistant Functions
+        async function sendDevAIMessage() {
+            const input = document.getElementById('devAIInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            const container = document.getElementById('devAIChatContainer');
+
+            if (container.innerHTML.includes('Ask me about')) {
+                container.innerHTML = '';
+            }
+
+            container.innerHTML += `
+                <div style="background: #667eea; color: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; max-width: 85%; margin-left: auto;">
+                    <strong>You:</strong><br>${message}
+                </div>
+            `;
+
+            input.value = '';
+            container.scrollTop = container.scrollHeight;
+
+            container.innerHTML += `
+                <div id="aiLoading" style="background: #f0f0f0; padding: 15px; border-radius: 12px; margin-bottom: 15px; max-width: 85%;">
+                    <strong>AI:</strong><br>Thinking...
+                </div>
+            `;
+            container.scrollTop = container.scrollHeight;
+
+            try {
+                const response = await fetch('/api/developer/ai/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: currentUser,
+                        message
+                    })
+                });
+
+                const data = await response.json();
+
+                document.getElementById('aiLoading').remove();
+
+                if (response.ok) {
+                    container.innerHTML += `
+                        <div style="background: white; border: 2px solid #e0e0e0; padding: 15px; border-radius: 12px; margin-bottom: 15px; max-width: 85%;">
+                            <strong>AI:</strong><br>${data.response.replace(/\n/g, '<br>')}
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML += `
+                        <div style="background: #ffebee; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+                            <strong>Error:</strong> ${data.error}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('aiLoading').remove();
+                container.innerHTML += `
+                    <div style="background: #ffebee; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
+                        <strong>Network Error:</strong> ${error.message}
+                    </div>
+                `;
+            }
+
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function clearDevAIChat() {
+            document.getElementById('devAIChatContainer').innerHTML = `
+                <div style="text-align: center; color: #999; padding: 60px 20px;">
+                    <div style="font-size: 48px;">🤖</div>
+                    <div style="margin-top: 15px; font-size: 18px;">Developer AI Assistant</div>
+                    <div style="margin-top: 10px;">Ask me about code, database, architecture, debugging, or support drafts!</div>
+                </div>
+            `;
+        }
+
+        // Messaging Functions
+        async function loadMessageRecipients() {
+            try {
+                const response = await fetch(`/api/developer/users/list?username=${currentUser}&role=all`);
+                const data = await response.json();
+
+                const select = document.getElementById('messageRecipient');
+                const broadcastOption = select.querySelector('option[value="ALL"]');
+                const separator = select.querySelector('option[disabled]');
+
+                select.innerHTML = '';
+                select.appendChild(broadcastOption.cloneNode(true));
+                select.appendChild(separator.cloneNode(true));
+
+                data.users.forEach(user => {
+                    if (user.role !== 'developer') {
+                        const option = document.createElement('option');
+                        option.value = user.username;
+                        option.textContent = `${user.username} (${user.role})`;
+                        select.appendChild(option);
+                    }
+                });
+            } catch (error) {
+                console.error('Failed to load recipients:', error);
+            }
+        }
+
+        async function sendDevMessage() {
+            const recipient = document.getElementById('messageRecipient').value;
+            const type = document.getElementById('messageType').value;
+            const content = document.getElementById('messageContent').value.trim();
+
+            if (!content) {
+                alert('Please enter a message');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/developer/messages/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        from_username: currentUser,
+                        to_username: recipient,
+                        message: content,
+                        message_type: type
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert(`Message sent to ${recipient === 'ALL' ? 'all users' : recipient}!`);
+                    document.getElementById('messageContent').value = '';
+                    loadMessageThread();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+            }
+        }
+
+        async function loadMessageThread() {
+            try {
+                const response = await fetch(`/api/developer/messages/list?username=${currentUser}`);
+                const data = await response.json();
+
+                const thread = document.getElementById('messageThread');
+
+                if (data.messages.length === 0) {
+                    thread.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">No messages yet</p>';
+                    return;
+                }
+
+                thread.innerHTML = data.messages.map(msg => {
+                    const isFromDev = msg.from_username === currentUser;
+                    const icon = msg.message_type === 'warning' ? '⚠️' :
+                                msg.message_type === 'alert' ? '🚨' :
+                                msg.message_type === 'system' ? '⚙️' : 'ℹ️';
+
+                    return `
+                        <div style="background: ${isFromDev ? '#e8f4fd' : '#f8f9fa'}; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ${isFromDev ? '#2196F3' : '#667eea'};">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <strong>${icon} ${msg.from_username} → ${msg.to_username}</strong>
+                                <span style="color: #999; font-size: 12px;">${new Date(msg.created_at).toLocaleString()}</span>
+                            </div>
+                            <div>${msg.message}</div>
+                            ${!isFromDev ? `<button onclick="replyToMessage(${msg.id})" style="margin-top: 8px; padding: 5px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Reply</button>` : ''}
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (error) {
+                console.error('Failed to load messages:', error);
+            }
+        }
+
+        function replyToMessage(messageId) {
+            const reply = prompt('Enter your reply:');
+            if (!reply) return;
+
+            fetch('/api/developer/messages/reply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    from_username: currentUser,
+                    parent_message_id: messageId,
+                    message: reply
+                })
+            }).then(response => {
+                if (response.ok) {
+                    alert('Reply sent!');
+                    loadMessageThread();
+                } else {
+                    alert('Failed to send reply');
+                }
+            });
+        }
+
+        // System Stats Functions
+        async function loadSystemStats() {
+            try {
+                const response = await fetch(`/api/developer/stats?username=${currentUser}`);
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('statTotalUsers').textContent = data.total_users;
+                    document.getElementById('statTotalPatients').textContent = data.total_patients;
+                    document.getElementById('statTotalClinicians').textContent = data.total_clinicians;
+                    document.getElementById('statTotalChats').textContent = data.total_chats;
+                    document.getElementById('statTotalMoodLogs').textContent = data.total_mood_logs;
+                    document.getElementById('statDbSize').textContent = data.database_size_mb + ' MB';
+                }
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        // User Management Functions
+        async function loadUsersList() {
+            searchUsers();
+        }
+
+        async function searchUsers() {
+            const search = document.getElementById('userSearchInput').value;
+            const role = document.getElementById('userRoleFilter').value;
+
+            try {
+                const response = await fetch(`/api/developer/users/list?username=${currentUser}&role=${role}&search=${search}`);
+                const data = await response.json();
+
+                const list = document.getElementById('usersList');
+
+                if (data.users.length === 0) {
+                    list.innerHTML = '<p style="color: #999; padding: 20px; text-align: center;">No users found</p>';
+                    return;
+                }
+
+                list.innerHTML = `
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f8f9fa; border-bottom: 2px solid #e0e0e0;">
+                                <th style="padding: 12px; text-align: left;">Username</th>
+                                <th style="padding: 12px; text-align: left;">Role</th>
+                                <th style="padding: 12px; text-align: left;">Email</th>
+                                <th style="padding: 12px; text-align: left;">Last Login</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.users.map(user => `
+                                <tr style="border-bottom: 1px solid #e0e0e0;">
+                                    <td style="padding: 12px;">${user.username}</td>
+                                    <td style="padding: 12px;">
+                                        <span style="background: ${user.role === 'clinician' ? '#e8f4fd' : '#f0f4ff'}; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                                            ${user.role}
+                                        </span>
+                                    </td>
+                                    <td style="padding: 12px;">${user.email || 'N/A'}</td>
+                                    <td style="padding: 12px; color: #666; font-size: 13px;">${user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+
+            } catch (error) {
+                console.error('Failed to load users:', error);
+                document.getElementById('usersList').innerHTML = '<p style="color: #e74c3c; padding: 20px;">Error loading users</p>';
+            }
+        }
+
+        // ========== END DEVELOPER DASHBOARD FUNCTIONS ==========
+
     </script>
 </body>
 </html>

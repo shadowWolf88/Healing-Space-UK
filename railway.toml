@@ -1,5 +1,6 @@
 [build]
 builder = "nixpacks"
+# Force rebuild: v2026.01.23.2
 
 [deploy]
 startCommand = "gunicorn api:app"
