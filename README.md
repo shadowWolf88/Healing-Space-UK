@@ -1,109 +1,126 @@
 # Healing Space 🌿
 
-A mental health companion desktop application with AI therapy, mood tracking, CBT tools, and gamification features.
+A mental health companion application (desktop and web) that combines AI therapy, mood tracking, CBT tools, clinical assessments, gamified self-care, clinician oversight, secure storage, and GDPR-compliant training-data collection.
 
-## 📚 Complete Documentation
+## Quick links
 
-**All documentation has been moved to the [`documentation/`](documentation/) folder.**
+- Documentation index: documentation/00_INDEX.md
+- Documentation folder: documentation/
+- User Guide: documentation/USER_GUIDE.md
+- Quick Start: documentation/QUICKSTART.md
+- Training Data & GDPR: documentation/TRAINING_DATA_GUIDE.md and documentation/GDPR_IMPLEMENTATION_SUMMARY.md
+- Deployment: documentation/DEPLOYMENT.md
 
-Start here: **[Documentation Index](documentation/00_INDEX.md)**
+## What this repository contains
 
-Quick links:
-- 🚀 [Quick Start Guide](documentation/QUICKSTART.md)
-- 📖 [User Guide (797 lines)](documentation/USER_GUIDE.md)
-- 🧪 [Testing Guide](documentation/TESTING_GUIDE.md)
-- 🔐 [GDPR Compliance](documentation/GDPR_IMPLEMENTATION_SUMMARY.md)
-- 🤖 [Training Data System](documentation/TRAINING_DATA_GUIDE.md)
-- 🚂 [Deployment Guide](documentation/DEPLOYMENT.md)
+This project provides both a desktop (Tkinter/CustomTkinter) and web (Flask) version of the Healing Space mental health companion. The repository contains:
 
-## Features
+- Desktop UI (legacy_desktop/) — full-featured Tkinter desktop application and utilities.
+- Web API (api.py + templates/) — Flask REST API and web UI designed for container/cloud deployment.
+- Shared modules: secrets_manager.py, fhir_export.py, secure_transfer.py, audit.py, training_data_manager.py
+- Databases (local SQLite by default): therapist_app.db, pet_game.db, ai_training_data.db
+- Comprehensive documentation in documentation/ (full user & developer guides)
+- Tests in tests/
 
-- 🤖 **AI Therapy Sessions** - Talk to an AI therapist with persistent memory
-- 📊 **Mood Tracking** - Log mood, sleep, medications, and activities
-- 🧠 **CBT Tools** - Cognitive Behavioral Therapy exercises and thought records
-- 📈 **Progress Insights** - Clinical scales (PHQ-9/GAD-7), data visualization, and progress reports
-- 🐾 **Pet Companion** - Gamified self-care with a virtual pet that reflects your wellbeing
-- 🔒 **Privacy & Security** - End-to-end encryption, local SQLite storage, GDPR-compliant
-- 📋 **FHIR Export** - Export medical data in standardized FHIR format
-- 🚨 **Crisis Detection** - Safety monitoring with automatic alerts
-- 🤖 **Training Data Collection** - GDPR-compliant anonymized dataset for AI training
-- 👨‍⚕️ **Professional Dashboard** - Clinician oversight and therapy notes
+## Features (complete)
 
-## Architecture
+User-facing features:
+- AI Therapy Sessions: conversational AI therapist with persistent memory, session summaries, and therapy notes.
+- Mood Tracking: daily mood logs, sleep, medications, activities, and optional reminders.
+- Clinical Assessments: PHQ-9 and GAD-7 scoring, historical trend charts, and automated progress reports.
+- CBT Toolkit: thought records, behavioral experiments, worksheets, and guided exercises.
+- Pet Companion Gamification: virtual pet that reflects user wellbeing, rewards for self-care, and pet progression stored in pet_game.db.
+- Clinician Features: professional dashboard, clinician notes, appointment calendar (desktop), and FHIR export for records review.
+- Crisis Detection & Escalation: automated safety monitoring, alerting via webhooks/SMTP/SFTP, and configurable escalation rules.
+- FHIR Export: HMAC-signed FHIR (R4) exports of medical/assessment data for interoperability.
+- Training Data Collection: GDPR-aware anonymized dataset collection pipeline with opt-in/out controls, local staging (ai_training_data.db), and export scripts.
 
-- **Desktop GUI**: Python with Tkinter + CustomTkinter
-- **Database**: SQLite (local storage) - 3 databases
-  - `therapist_app.db` - Main application data
-  - `pet_game.db` - Pet gamification
-  - `ai_training_data.db` - Anonymized training data (GDPR)
-- **AI Integration**: Groq API (LLM)
-- **Security**: Fernet encryption, Argon2/bcrypt password hashing, 2FA PIN
-- **Optional Integrations**: HashiCorp Vault, SFTP, webhooks, SMTP
+Security & privacy features:
+- Data encryption at rest using Fernet (ENCRYPTION_KEY environment variable).
+- Password hashing with Argon2 (preferred), bcrypt fallback, and PBKDF2 fallback migration for legacy hashes.
+- 2FA support via PIN with salted hashing (PIN_SALT).
+- Audit logging for sensitive operations (audit.py).
+- GDPR-aligned anonymization, user consent tracking, and data export/delete flows.
 
-## Quick Start
+Integrations and optional components:
+- Groq LLM integration (GROQ_API_KEY) for AI therapist (can be swapped for other LLM providers by adapting api integration).
+- Optional HashiCorp Vault support (hvac) for secret management.
+- Optional SFTP (paramiko) for secure file transfer of exports/backups.
+- SMTP/webhook support for alerts and scheduled reminders.
+- Optional PostgreSQL migration notes and guidance for cloud persistence.
 
-### Prerequisites
+Developer & operational features:
+- Local backups folder with scheduled/automatic DB backups.
+- CLI scripts and automation helpers (scripts/) for git hooks and deployment automation.
+- Test suite (pytest) and testing guide in documentation/TESTING_GUIDE.md.
+- CI/CD friendly structure and Railway deployment guidance.
 
+## Architecture overview
+
+- Desktop GUI: legacy_desktop/main.py — Tkinter + CustomTkinter UI with local SQLite databases and PDF report generation.
+- Web API: api.py — Flask REST API, used by the web UI (templates/) and suitable for Railway/container deployment.
+- Databases: SQLite by default; three logical DBs used and documented:
+  - therapist_app.db — main application data, users, sessions, mood logs, clinical scales.
+  - pet_game.db — gamification, pet state, rewards.
+  - ai_training_data.db — anonymized training examples and consent metadata.
+- Security: Fernet encryption for sensitive fields, Argon2/bcrypt/PBKDF2 password handling, audit trails, HMAC-signed FHIR exports.
+- Optional: HashiCorp Vault secrets manager integration (secrets_manager.py), SFTP export (secure_transfer.py), scheduled tasks (CRON_SETUP.md).
+
+## Installation & Quick Start (desktop & web)
+
+Prerequisites:
 - Python 3.8+
-- pip package manager
+- pip
 
-### Installation
+Clone and install:
 
-1. **Clone the repository**:
-   ```bash
-   git clone <your-repo-url>
-   cd python-chat-bot
-   ```
-
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Set up environment variables**:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your keys
-   ```
-
-4. **Generate encryption keys**:
-   ```bash
-   # Generate ENCRYPTION_KEY
-   python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-   
-   # Generate PIN_SALT
-   python3 -c "import secrets; print(secrets.token_urlsafe(32))"
-   ```
-
-5. **Run the application**:
-   ```bash
-   export DEBUG=1
-   export PIN_SALT=your_generated_salt
-   export ENCRYPTION_KEY=your_generated_key
-   export GROQ_API_KEY=your_groq_key
-   python3 main.py
-   ```
-
-## Development
-
-### Project Structure
-
-```
-.
-├── main.py                 # Main application entry point
-├── pet_game.py            # Gamification module
-├── secrets_manager.py     # Vault/environment secret handling
-├── fhir_export.py         # FHIR medical data export
-├── secure_transfer.py     # SFTP upload helper
-├── audit.py               # Audit logging
-├── tests/
-│   └── test_app.py       # Unit tests
-├── backups/               # Auto-generated DB backups
-└── .github/
-    └── copilot-instructions.md  # Developer guide
+```bash
+git clone https://github.com/shadowWolf88/python-chat-bot.git
+cd python-chat-bot
+pip install -r requirements.txt
 ```
 
-### Running Tests
+Environment variables (minimum required):
+- ENCRYPTION_KEY — Fernet key used to encrypt DB fields (generate with cryptography.Fernet.generate_key())
+- PIN_SALT — random salt for PIN hashing (secrets.token_urlsafe(32))
+- GROQ_API_KEY — API key for Groq LLM (or other configured LLM provider API key)
+
+Optional environment variables:
+- DEBUG — set to 1 for developer permissive fallbacks
+- VAULT_ADDR, VAULT_TOKEN — HashiCorp Vault settings
+- SFTP_HOST, SFTP_USERNAME, SFTP_PASSWORD — SFTP uploads
+- ALERT_WEBHOOK_URL — crisis alert webhook
+- SMTP config variables — used for email alerts
+
+Generate keys example:
+
+```bash
+python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+Run (desktop):
+
+```bash
+# Desktop UI (requires tkinter/customtkinter)
+python3 legacy_desktop/main.py
+```
+
+Run (web API/server):
+
+```bash
+export ENCRYPTION_KEY=...
+export PIN_SALT=...
+export GROQ_API_KEY=...
+python3 api.py
+# or use the provided railway/docker configurations for container deploy
+```
+
+See documentation/QUICKSTART.md for full step-by-step instructions (including Windows instructions and PyInstaller notes).
+
+## Testing
+
+Install pytest and run tests:
 
 ```bash
 pip install pytest
@@ -113,139 +130,74 @@ export ENCRYPTION_KEY=$(python3 -c "from cryptography.fernet import Fernet; prin
 pytest -v
 ```
 
-### Key Concepts
-
-- **Password Hashing**: Argon2 (preferred) → bcrypt → PBKDF2 fallback
-- **Optional Dependencies**: Code gracefully handles missing packages (argon2, bcrypt, paramiko, hvac)
-- **Debug Mode**: `DEBUG=1` enables permissive fallbacks for development
-- **UI Patches**: CustomTkinter is monkeypatched for better UX (topmost windows, Escape to close)
+See documentation/TESTING_GUIDE.md for end-to-end and integration testing details.
 
 ## Deployment
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions on:
-- GitHub repository setup
-- Railway deployment (web conversion needed)
-- Environment variable configuration
-- Database persistence strategies
-- Desktop distribution with PyInstaller
+This repository includes deployment guides for:
+- Local desktop distribution (PyInstaller) — see DEPLOYMENT.md and legacy_desktop notes
+- Containerized web deployment (Railway, Docker) — see documentation/DEPLOYMENT.md and railway.toml
+- Persistence strategies (SQLite vs PostgreSQL) and migration instructions — see documentation/POSTGRESQL_SETUP.md
+- Optional automated deploy hooks and scripts (scripts/setup-git-hooks.sh)
 
-### Automated local deploys (push → Railway)
+## Configuration & Maintenance
 
-This repository includes optional local automation so that commits can be pushed to GitHub and trigger Railway deployments automatically.
+- Automated backups: backups/ (local) and secure upload via SFTP if configured.
+- Cron/periodic tasks: CRON_SETUP.md documents scheduled exports, reminders, and backups.
+- Logging & audit: audit.py records sensitive actions; rotate logs and secure backups.
 
-- Install hooks: `scripts/setup-git-hooks.sh` copies `.githooks/post-commit` into your local `.git/hooks/`.
-- The post-commit hook will `git push origin <branch>` and, if the Railway CLI and env vars are configured, run `railway up --project $RAILWAY_PROJECT --detach`.
-- See documentation: [documentation/DEPLOY_AUTOMATION.md](documentation/DEPLOY_AUTOMATION.md)
+## GDPR, Training Data & Privacy
 
-**Note**: This is a desktop GUI application. For cloud deployment, consider converting to a web app or distributing executables via GitHub Releases.
-
-## Configuration
-
-### Required Environment Variables
-
-- `GROQ_API_KEY` - API key for Groq LLM
-- `ENCRYPTION_KEY` - Fernet key for data encryption
-- `PIN_SALT` - Salt for PIN hashing
-
-### Optional Environment Variables
-
-- `DEBUG` - Set to `1` for development mode
-- `VAULT_ADDR` - HashiCorp Vault address
-- `VAULT_TOKEN` - Vault authentication token
-- `SFTP_HOST` - SFTP server for exports
-- `ALERT_WEBHOOK_URL` - Webhook for crisis alerts
-
-## 📚 Documentation
-
-**Complete documentation is now organized in the [`documentation/`](documentation/) folder:**
-
-### Getting Started:
-- 📖 **[Documentation Index](documentation/00_INDEX.md)** - Complete documentation overview
-- 🚀 **[Quick Start](documentation/QUICKSTART.md)** - 5-minute setup
-- 📘 **[User Guide](documentation/USER_GUIDE.md)** - Complete manual (797 lines)
-- 🧪 **[Testing Guide](documentation/TESTING_GUIDE.md)** - Test all features
-
-### Key Topics:
-- 🔐 **[GDPR Compliance](documentation/GDPR_IMPLEMENTATION_SUMMARY.md)** - Privacy & compliance
-- 🤖 **[Training Data System](documentation/TRAINING_DATA_GUIDE.md)** - AI dataset collection (670 lines)
-- 🚂 **[Deployment](documentation/DEPLOYMENT.md)** - GitHub + Railway deployment
-- 🔒 **[Security](documentation/EMAIL_SETUP.md)** - Email, encryption, 2FA
-- ⚙️ **[Configuration](documentation/CRON_SETUP.md)** - Automated tasks
-
-### Architecture:
-- **[Architecture Guide](.github/copilot-instructions.md)** - System architecture
-- **[Feature Updates](documentation/FEATURE_UPDATES.md)** - Recent changes
-
-## 🗂️ Project Structure
-
-```
-python-chat-bot/
-├── main.py                      # Main GUI (1,976 lines)
-├── api.py                       # Flask API (3,450 lines)
-├── training_data_manager.py     # GDPR training data (425 lines)
-├── export_training_data.py      # Automated export
-├── test_anonymization.py        # Tests
-├── pet_game.py                  # Pet gamification
-├── therapist_app.db            # Main database
-├── ai_training_data.db         # Training data (anonymized)
-├── documentation/              # 📚 ALL DOCUMENTATION
-│   ├── 00_INDEX.md            # Documentation index
-│   ├── USER_GUIDE.md          # User manual (797 lines)
-│   ├── TRAINING_DATA_GUIDE.md # Training data (670 lines)
-│   └── ...                    # 21+ docs
-└── tests/                      # Test suite
-```
+- Training data is collected only with explicit user consent and can be reviewed/exported/deleted per user request.
+- Anonymization pipeline and storage lives in ai_training_data.db; see documentation/TRAINING_DATA_GUIDE.md for details and opt-out procedures.
+- GDPR_IMPLEMENTATION_SUMMARY.md covers compliance mapping, data subject rights, retention, and deletion workflows.
 
 ## Security
 
-- All user data encrypted at rest with Fernet
-- Passwords hashed with Argon2 (or bcrypt/PBKDF2 fallback)
-- 2FA with PIN authentication
-- Automatic migration of legacy password hashes
-- GDPR-compliant training data collection
-- Best-effort audit logging
-- Crisis detection with automatic escalation
-- HMAC-signed FHIR exports
+- All sensitive data encrypted at rest with Fernet (ENCRYPTION_KEY).
+- Passwords hashed with Argon2 (preferred), bcrypt fallback; legacy hashes are migrated on login.
+- 2FA PIN with salted hashing using PIN_SALT.
+- HMAC-signed FHIR exports for integrity.
+- Optional HashiCorp Vault integration for production secret management.
 
-## 🆘 Support & Crisis Resources
+## Crisis & Safety
 
-**Medical Disclaimer:** This app does not provide medical advice and is not a substitute for professional treatment.
-
-**In case of crisis or emergency:**
-- 🇬🇧 **UK**: Call **999** (Emergency) or **111** (NHS)
-- 🇺🇸 **USA**: Call **988** (Suicide & Crisis Lifeline) or **911**
-- 🇨🇦 **Canada**: Call **988** or **911**
-
-**For technical support:**
-- Check [Documentation Index](documentation/00_INDEX.md)
-- Review [Troubleshooting](documentation/00_INDEX.md#-troubleshooting)
+- Crisis detection runs on message content and assessment scores; configurable rules trigger alerts via webhook/email/SFTP.
+- Built-in escalation procedures and clinician notification flow are documented in the User Guide and crisis sections.
 
 ## Contributing
 
-1. Read `.github/copilot-instructions.md` for architecture overview
-2. Check [documentation/](documentation/) for feature details
-3. Run tests before submitting PRs
+- Read .github/copilot-instructions.md for architecture notes.
+- Run tests and linters before submitting PRs.
+- Documentation is required for new features; add or update files in documentation/.
+
+## Support & Disclaimer
+
+This app is a mental health companion and not a substitute for professional medical care. In case of emergency, contact local emergency services.
+
+For technical support: consult documentation/00_INDEX.md and open issues on GitHub if needed.
+
+## Files & Structure (high-level)
+
+```
+python-chat-bot/
+├── api.py                      # Flask API (web)
+├── templates/                  # Web UI templates
+├── legacy_desktop/             # Desktop-only GUI and utilities
+├── documentation/              # Complete documentation and guides
+├── requirements.txt
+├── tests/
+├── scripts/                    # automation scripts and hooks
+├── fhir_export.py
+├── secrets_manager.py
+├── secure_transfer.py
+├── audit.py
+└── backups/
+```
+
+## Version & Last Updated
+
+Version: 1.0
+Last Updated: 2026-01-24
 
 ---
-
-**Version:** 1.0  
-**Last Updated:** January 17, 2026  
-**Documentation:** See [`documentation/`](documentation/) folder
-3. Follow existing patterns for optional dependencies
-4. Add audit logs for sensitive operations
-5. Update tests for new features
-
-## License
-
-[Add your license here]
-
-## Support
-
-For development questions, see:
-- [.github/copilot-instructions.md](.github/copilot-instructions.md) - Developer guide
-- [DEPLOYMENT.md](DEPLOYMENT.md) - Deployment guide
-- [tests/test_app.py](tests/test_app.py) - Code examples
-
-## Disclaimer
-
-This application is designed as a mental health companion tool and should not replace professional medical care. If you are experiencing a mental health crisis, please contact emergency services or a crisis helpline immediately.
