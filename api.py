@@ -1519,43 +1519,54 @@ def send_dev_message():
         message = data.get('message')
         message_type = data.get('message_type', 'info')
 
-        # Verify developer role
+        # Allow: developer can message anyone; clinician can message patients; patient can only send new messages to developer
         conn = get_db_connection()
         cur = conn.cursor()
         role = cur.execute("SELECT role FROM users WHERE username=?", (from_username,)).fetchone()
 
-        if not role or role[0] != 'developer':
+        if not role:
             conn.close()
             return jsonify({'error': 'Unauthorized'}), 403
 
-        if to_username == 'ALL':
-            # Broadcast to all users
-            users = cur.execute("SELECT username, role FROM users WHERE role != 'developer'").fetchall()
-            for user in users:
-                # If sender is clinician, only send to patients
-                if role[0] == 'clinician' and user[1] != 'user':
-                    continue
-                cur.execute(
-                    "INSERT INTO dev_messages (from_username, to_username, message, message_type) VALUES (?,?,?,?)",
-                    (from_username, user[0], message, message_type)
-                )
-        else:
-            # Restrict: If sender is clinician, recipient must be patient; if sender is patient, block
-            recipient_role = cur.execute("SELECT role FROM users WHERE username=?", (to_username,)).fetchone()
-            if role[0] == 'clinician' and recipient_role and recipient_role[0] == 'user':
-                cur.execute(
-                    "INSERT INTO dev_messages (from_username, to_username, message, message_type) VALUES (?,?,?,?)",
-                    (from_username, to_username, message, message_type)
-                )
-            elif role[0] == 'user':
-                conn.close()
-                return jsonify({'error': 'Patients cannot initiate new messages to clinicians. You may only reply.'}), 403
+        if role[0] == 'developer':
+            # Developer can message anyone
+            if to_username == 'ALL':
+                users = cur.execute("SELECT username FROM users WHERE role != 'developer'").fetchall()
+                for user in users:
+                    cur.execute(
+                        "INSERT INTO dev_messages (from_username, to_username, message, message_type) VALUES (?,?,?,?)",
+                        (from_username, user[0], message, message_type)
+                    )
             else:
-                # Developer or other roles: allow
                 cur.execute(
                     "INSERT INTO dev_messages (from_username, to_username, message, message_type) VALUES (?,?,?,?)",
                     (from_username, to_username, message, message_type)
                 )
+        elif role[0] == 'clinician':
+            # Clinician can only message patients
+            recipient_role = cur.execute("SELECT role FROM users WHERE username=?", (to_username,)).fetchone()
+            if recipient_role and recipient_role[0] == 'user':
+                cur.execute(
+                    "INSERT INTO dev_messages (from_username, to_username, message, message_type) VALUES (?,?,?,?)",
+                    (from_username, to_username, message, message_type)
+                )
+            else:
+                conn.close()
+                return jsonify({'error': 'Clinicians can only send messages to patients.'}), 403
+        elif role[0] == 'user':
+            # Patient can only send new messages to developer
+            recipient_role = cur.execute("SELECT role FROM users WHERE username=?", (to_username,)).fetchone()
+            if recipient_role and recipient_role[0] == 'developer':
+                cur.execute(
+                    "INSERT INTO dev_messages (from_username, to_username, message, message_type) VALUES (?,?,?,?)",
+                    (from_username, to_username, message, message_type)
+                )
+            else:
+                conn.close()
+                return jsonify({'error': 'Patients can only send new messages to the developer. You may only reply to messages from clinicians.'}), 403
+        else:
+            conn.close()
+            return jsonify({'error': 'Unauthorized'}), 403
 
         conn.commit()
         conn.close()
