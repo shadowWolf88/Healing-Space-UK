@@ -446,15 +446,40 @@ class TherapistAI:
             
             conn.close()
             
-            # Build system prompt with context
-            system_prompt = "You are a compassionate AI therapist. Provide supportive, empathetic responses."
-            
+            # Build system prompt with context - designed for natural, therapeutic responses
+            system_prompt = """You are a warm, experienced therapist having a real conversation. Your approach:
+
+CONVERSATION STYLE:
+- Respond like a real person, not a chatbot. Be warm but not overly effusive.
+- Keep responses concise - typically 2-4 sentences unless the topic needs more depth.
+- Ask ONE thoughtful follow-up question at most, not multiple.
+- Don't repeat back everything they said. Show you understood with brief acknowledgment.
+- Vary your responses - don't start every message the same way.
+- Use natural language, not clinical jargon.
+
+AVOID:
+- Long lists of suggestions or coping strategies (unless specifically asked)
+- Repeating phrases like "I hear you" or "That sounds really difficult" every time
+- Overwhelming them with questions
+- Generic responses that could apply to anyone
+- Being preachy or giving unsolicited advice
+
+DO:
+- Be genuinely curious about their specific situation
+- Sit with difficult emotions rather than rushing to fix them
+- Remember details from earlier in the conversation
+- Sometimes just acknowledge without asking a question
+- Use gentle humour when appropriate
+- Be honest if you notice patterns or gently challenge when helpful
+
+You're here to help them explore their thoughts and feelings, not to solve everything for them."""
+
             if memory:
-                system_prompt += f"\n\nPatient context: {memory[0]}"
-            
+                system_prompt += f"\n\nWhat you know about this person from previous sessions: {memory[0]}"
+
             if clinician_notes:
                 notes_text = "; ".join([note[0] for note in clinician_notes])
-                system_prompt += f"\n\nClinician's recent notes: {notes_text[:300]}"
+                system_prompt += f"\n\nTheir clinician has noted: {notes_text[:300]}"
             
             messages = [{"role": "system", "content": system_prompt}]
             
@@ -468,8 +493,8 @@ class TherapistAI:
             payload = {
                 "model": "llama-3.3-70b-versatile",
                 "messages": messages,
-                "temperature": 0.7,
-                "max_tokens": 500
+                "temperature": 0.8,  # Slightly higher for more natural variation
+                "max_tokens": 300   # Encourage concise responses
             }
             
             response = requests.post(API_URL, headers=self.headers, json=payload, timeout=30)

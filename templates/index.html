@@ -411,17 +411,35 @@
             padding: 20px;
             gap: 10px;
             border-top: 2px solid #e0e0e0;
+            align-items: flex-end;
         }
-        
-        .chat-input-area input {
+
+        .chat-input-area textarea {
             flex: 1;
             padding: 12px;
             border: 2px solid #e0e0e0;
             border-radius: 8px;
             font-size: 16px;
+            resize: none;
+            min-height: 44px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-family: inherit;
+            line-height: 1.4;
         }
-        
-        .chat-input-area button {
+
+        .chat-input-area textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .chat-input-buttons {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .chat-input-area .send-btn {
             padding: 12px 24px;
             background: #667eea;
             color: white;
@@ -429,6 +447,86 @@
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
+        }
+
+        .chat-input-area .voice-btn {
+            padding: 12px 14px;
+            background: #f0f0f0;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s;
+        }
+
+        .chat-input-area .voice-btn:hover {
+            background: #e8e8e8;
+        }
+
+        .chat-input-area .voice-btn.listening {
+            background: #fee2e2;
+            border-color: #ef4444;
+            animation: pulse-red 1.5s infinite;
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+        }
+
+        .voice-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 20px;
+            background: #fef3c7;
+            border-top: 1px solid #fcd34d;
+            font-size: 14px;
+            color: #92400e;
+        }
+
+        .voice-indicator {
+            width: 10px;
+            height: 10px;
+            background: #ef4444;
+            border-radius: 50%;
+            animation: pulse-dot 1s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* AI Thinking Animation */
+        .ai-thinking {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 15px 20px;
+            color: #666;
+        }
+
+        .thinking-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .thinking-dots span {
+            width: 8px;
+            height: 8px;
+            background: #667eea;
+            border-radius: 50%;
+            animation: thinking-bounce 1.4s infinite ease-in-out;
+        }
+
+        .thinking-dots span:nth-child(1) { animation-delay: -0.32s; }
+        .thinking-dots span:nth-child(2) { animation-delay: -0.16s; }
+        .thinking-dots span:nth-child(3) { animation-delay: 0s; }
+
+        @keyframes thinking-bounce {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; }
+            40% { transform: scale(1); opacity: 1; }
         }
         
         /* Mood Tracker */
@@ -1725,8 +1823,17 @@
                 <div class="chat-container">
                     <div class="chat-messages" id="chatMessages"></div>
                     <div class="chat-input-area">
-                        <input type="text" id="chatInput" placeholder="Type your message..." onkeypress="if(event.key==='Enter') sendMessage()">
-                        <button onclick="sendMessage()">Send</button>
+                        <textarea id="chatInput" placeholder="Type your message or use the microphone..." rows="2" onkeypress="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }"></textarea>
+                        <div class="chat-input-buttons">
+                            <button id="voiceBtn" onclick="toggleVoiceInput()" class="voice-btn" title="Voice input">
+                                🎤
+                            </button>
+                            <button onclick="sendMessage()" class="send-btn">Send</button>
+                        </div>
+                    </div>
+                    <div id="voiceStatus" class="voice-status" style="display: none;">
+                        <span class="voice-indicator"></span>
+                        <span id="voiceStatusText">Listening...</span>
                     </div>
                 </div>
             </div>
@@ -3844,34 +3951,63 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
         }
         
         // Chat Functions
+        let isVoiceListening = false;
+        let speechRecognition = null;
+
         async function sendMessage() {
             const input = document.getElementById('chatInput');
             const message = input.value.trim();
-            
+
             if (!message) return;
-            
+
             addMessage(message, 'user', null, new Date().toISOString());
             input.value = '';
-            
-            // Show loading
-            const loadingId = Date.now();
-            addMessage('<div class="loading"></div>', 'ai', loadingId);
-            
+            input.style.height = 'auto'; // Reset textarea height
+
+            // Show thinking animation
+            const thinkingId = Date.now();
+            const thinkingHtml = `
+                <div class="ai-thinking">
+                    <div class="thinking-dots">
+                        <span></span><span></span><span></span>
+                    </div>
+                    <span>Thinking...</span>
+                </div>
+            `;
+            addMessage(thinkingHtml, 'ai', thinkingId);
+
+            const startTime = Date.now();
+
             try {
                 const response = await fetch('/api/therapy/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: currentUser, message })
                 });
-                
+
                 const data = await response.json();
-                
-                // Remove loading
-                const loadingEl = document.getElementById('msg-' + loadingId);
-                if (loadingEl) loadingEl.remove();
-                
+
+                // Ensure minimum "thinking" time of 2-4 seconds for realism
+                const elapsed = Date.now() - startTime;
+                const minDelay = 2000 + Math.random() * 2000; // 2-4 seconds
+                if (elapsed < minDelay) {
+                    await new Promise(resolve => setTimeout(resolve, minDelay - elapsed));
+                }
+
+                // Remove thinking animation
+                const thinkingEl = document.getElementById('msg-' + thinkingId);
+                if (thinkingEl) thinkingEl.remove();
+
                 if (response.ok) {
-                    addMessage(data.response, 'ai', null, new Date().toISOString());
+                    const aiMessageEl = addMessage(data.response, 'ai', null, new Date().toISOString());
+
+                    // Scroll so the AI response beginning is visible
+                    if (aiMessageEl) {
+                        setTimeout(() => {
+                            aiMessageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 100);
+                    }
+
                     // Reward pet for therapy session
                     await rewardPet('therapy');
                 } else {
@@ -3880,23 +4016,131 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     addMessage(`Error: ${errorMsg}`, 'ai');
                 }
             } catch (error) {
-                document.getElementById('msg-' + loadingId)?.remove();
+                document.getElementById('msg-' + thinkingId)?.remove();
                 addMessage('Connection error. Please check your internet.', 'ai');
                 console.error('Chat error:', error);
             }
         }
+
+        // Voice Input Functions
+        function initVoiceRecognition() {
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                speechRecognition = new SpeechRecognition();
+                speechRecognition.continuous = true;
+                speechRecognition.interimResults = true;
+                speechRecognition.lang = 'en-GB';
+
+                speechRecognition.onresult = (event) => {
+                    let finalTranscript = '';
+                    let interimTranscript = '';
+
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const transcript = event.results[i][0].transcript;
+                        if (event.results[i].isFinal) {
+                            finalTranscript += transcript;
+                        } else {
+                            interimTranscript += transcript;
+                        }
+                    }
+
+                    const input = document.getElementById('chatInput');
+                    if (finalTranscript) {
+                        input.value += finalTranscript;
+                        autoResizeTextarea(input);
+                    }
+
+                    document.getElementById('voiceStatusText').textContent =
+                        interimTranscript ? `"${interimTranscript}"` : 'Listening...';
+                };
+
+                speechRecognition.onerror = (event) => {
+                    console.error('Speech recognition error:', event.error);
+                    stopVoiceInput();
+                    if (event.error === 'not-allowed') {
+                        alert('Microphone access denied. Please allow microphone access in your browser settings.');
+                    }
+                };
+
+                speechRecognition.onend = () => {
+                    if (isVoiceListening) {
+                        // Restart if still supposed to be listening
+                        speechRecognition.start();
+                    }
+                };
+
+                return true;
+            }
+            return false;
+        }
+
+        function toggleVoiceInput() {
+            if (isVoiceListening) {
+                stopVoiceInput();
+            } else {
+                startVoiceInput();
+            }
+        }
+
+        function startVoiceInput() {
+            if (!speechRecognition && !initVoiceRecognition()) {
+                alert('Voice input is not supported in your browser. Try Chrome or Edge.');
+                return;
+            }
+
+            isVoiceListening = true;
+            document.getElementById('voiceBtn').classList.add('listening');
+            document.getElementById('voiceStatus').style.display = 'flex';
+            document.getElementById('voiceStatusText').textContent = 'Listening...';
+
+            try {
+                speechRecognition.start();
+            } catch (e) {
+                console.error('Speech start error:', e);
+            }
+        }
+
+        function stopVoiceInput() {
+            isVoiceListening = false;
+            document.getElementById('voiceBtn').classList.remove('listening');
+            document.getElementById('voiceStatus').style.display = 'none';
+
+            if (speechRecognition) {
+                try {
+                    speechRecognition.stop();
+                } catch (e) {
+                    console.error('Speech stop error:', e);
+                }
+            }
+        }
+
+        // Auto-resize textarea as user types
+        function autoResizeTextarea(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
+        }
+
+        // Initialize textarea auto-resize
+        document.addEventListener('DOMContentLoaded', () => {
+            const chatInput = document.getElementById('chatInput');
+            if (chatInput) {
+                chatInput.addEventListener('input', function() {
+                    autoResizeTextarea(this);
+                });
+            }
+        });
         
         function addMessage(text, sender, id, timestamp) {
             const messagesDiv = document.getElementById('chatMessages');
             const messageEl = document.createElement('div');
             messageEl.className = `message ${sender}`;
             if (id) messageEl.id = 'msg-' + id;
-            
+
             // Add message content
             const contentDiv = document.createElement('div');
             contentDiv.innerHTML = text;
             messageEl.appendChild(contentDiv);
-            
+
             // Add timestamp if provided
             if (timestamp) {
                 const timestampDiv = document.createElement('div');
@@ -3906,9 +4150,15 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 messageEl.dataset.timestamp = timestamp;
                 messageEl.dataset.searchText = text.toLowerCase();
             }
-            
+
             messagesDiv.appendChild(messageEl);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            // For user messages, scroll to bottom; for AI, we'll handle separately
+            if (sender === 'user') {
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+
+            return messageEl; // Return element for scroll positioning
         }
         
         function formatTimestamp(timestamp) {
