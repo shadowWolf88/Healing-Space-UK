@@ -13,10 +13,15 @@ DEBUG = os.environ.get('DEBUG', '').lower() in ('1', 'true', 'yes')
 secrets = SecretsManager(debug=DEBUG)
 
 # Local decrypt helper using same ENCRYPTION_KEY sourcing as main
+# SECURITY: Encryption key MUST be provided via environment variable or secrets manager.
+# File-based key storage is NOT supported for security reasons.
 _enc = secrets.get_secret("ENCRYPTION_KEY") or os.environ.get("ENCRYPTION_KEY")
 if _enc:
     ENCRYPTION_KEY = _enc.encode() if isinstance(_enc, str) else _enc
-    _cipher = Fernet(ENCRYPTION_KEY)
+    try:
+        _cipher = Fernet(ENCRYPTION_KEY)
+    except Exception as e:
+        raise ValueError(f"Invalid ENCRYPTION_KEY format in fhir_export. Must be a valid Fernet key. Error: {e}")
 else:
     # Do not raise at import time; allow the app to run without FHIR signing available.
     ENCRYPTION_KEY = None
@@ -24,9 +29,16 @@ else:
     if DEBUG:
         # For local debug runs, generate a temporary key so signing can proceed if needed.
         import warnings
-        warnings.warn('ENCRYPTION_KEY not set; generating temporary key for DEBUG mode')
+        warnings.warn(
+            'ENCRYPTION_KEY not set in fhir_export; generating temporary key for DEBUG mode. '
+            'FHIR signatures will NOT be verifiable after restart! '
+            'Set ENCRYPTION_KEY env var for persistent signing.'
+        )
         ENCRYPTION_KEY = Fernet.generate_key()
         _cipher = Fernet(ENCRYPTION_KEY)
+    else:
+        # In production, log the issue but don't crash at import
+        print("WARNING: ENCRYPTION_KEY not set. FHIR export signing will fail in production.")
 
 def _decrypt(v):
     if not v: return ""

@@ -47,6 +47,10 @@ backups/*.bak
 secrets/
 *.key
 *.pem
+encryption_key.key
+encryption_key
+secret_key
+*.secret
 
 # Audio/Media generated at runtime
 *.mp3

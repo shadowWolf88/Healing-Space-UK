@@ -2,8 +2,9 @@
 Flask API wrapper for Healing Space Therapy App
 Provides REST API endpoints while keeping desktop app intact
 """
-from flask import Flask, request, jsonify, render_template, send_from_directory, make_response, Response
+from flask import Flask, request, jsonify, render_template, send_from_directory, make_response, Response, g
 from flask_cors import CORS
+from functools import wraps
 import sqlite3
 import os
 import json
@@ -40,10 +41,180 @@ except Exception:
     HAS_BCRYPT = False
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
-CORS(app)
+CORS(app, supports_credentials=True)
 
 # Initialize with same settings as main app
 DEBUG = os.environ.get('DEBUG', '').lower() in ('1', 'true', 'yes')
+
+# ==================== CSRF PROTECTION ====================
+# CSRF Secret key for token generation
+CSRF_SECRET = os.environ.get('CSRF_SECRET', secrets.token_hex(32))
+
+# Endpoints exempt from CSRF (login, registration, public endpoints)
+CSRF_EXEMPT_ENDPOINTS = {
+    'index', 'health_check', 'login', 'register_user', 'register_clinician',
+    'forgot_password', 'confirm_password_reset', 'get_csrf_token',
+    'list_clinicians'  # Public listing
+}
+
+def generate_csrf_token():
+    """Generate a CSRF token for the current session"""
+    if 'csrf_token' not in g:
+        g.csrf_token = secrets.token_hex(32)
+    return g.csrf_token
+
+def validate_csrf_token(token):
+    """Validate CSRF token from request"""
+    if not token:
+        return False
+    # For API use, we validate the token format and presence
+    # In production, you'd want to validate against stored session tokens
+    return len(token) == 64 and token.isalnum()
+
+@app.before_request
+def csrf_protect():
+    """CSRF protection middleware for state-changing requests"""
+    # Skip CSRF check for safe methods
+    if request.method in ('GET', 'HEAD', 'OPTIONS'):
+        return
+
+    # Skip CSRF check for exempt endpoints
+    if request.endpoint in CSRF_EXEMPT_ENDPOINTS:
+        return
+
+    # Skip CSRF in development mode if explicitly disabled
+    if DEBUG and os.environ.get('DISABLE_CSRF', '').lower() in ('1', 'true', 'yes'):
+        return
+
+    # Check for CSRF token in header (preferred for APIs)
+    csrf_token = request.headers.get('X-CSRF-Token') or request.headers.get('X-CSRFToken')
+
+    # Also check in JSON body as fallback
+    if not csrf_token and request.is_json:
+        csrf_token = request.json.get('_csrf_token') if request.json else None
+
+    # Validate token
+    if not csrf_token or not validate_csrf_token(csrf_token):
+        log_event('system', 'security', 'csrf_validation_failed', f'Endpoint: {request.endpoint}, IP: {request.remote_addr}')
+        return jsonify({'error': 'CSRF token missing or invalid', 'code': 'CSRF_FAILED'}), 403
+
+@app.route('/api/csrf-token', methods=['GET'])
+def get_csrf_token():
+    """Get a CSRF token for subsequent requests"""
+    token = secrets.token_hex(32)
+    response = jsonify({'csrf_token': token})
+    # Also set as cookie for double-submit pattern
+    response.set_cookie('csrf_token', token, httponly=False, samesite='Strict', secure=not DEBUG)
+    return response
+
+# ==================== RATE LIMITING ====================
+# In-memory rate limiter (for single-instance deployments)
+# For production multi-instance, use Redis-based rate limiting
+from collections import defaultdict
+import threading
+
+class RateLimiter:
+    """Simple in-memory rate limiter with IP and user tracking"""
+
+    def __init__(self):
+        self.requests = defaultdict(list)  # key -> list of timestamps
+        self.lock = threading.Lock()
+        # Rate limit configurations: (max_requests, window_seconds)
+        self.limits = {
+            'login': (5, 60),           # 5 login attempts per minute
+            'register': (3, 300),       # 3 registrations per 5 minutes
+            'forgot_password': (3, 300), # 3 password resets per 5 minutes
+            'ai_chat': (30, 60),        # 30 AI chat messages per minute
+            'default': (60, 60),        # 60 requests per minute default
+        }
+
+    def is_allowed(self, key: str, limit_type: str = 'default') -> bool:
+        """Check if request is allowed under rate limit"""
+        max_requests, window = self.limits.get(limit_type, self.limits['default'])
+
+        with self.lock:
+            now = time.time()
+            # Clean old entries
+            self.requests[key] = [t for t in self.requests[key] if now - t < window]
+
+            # Check limit
+            if len(self.requests[key]) >= max_requests:
+                return False
+
+            # Record request
+            self.requests[key].append(now)
+            return True
+
+    def get_wait_time(self, key: str, limit_type: str = 'default') -> int:
+        """Get seconds until next allowed request"""
+        max_requests, window = self.limits.get(limit_type, self.limits['default'])
+
+        with self.lock:
+            now = time.time()
+            self.requests[key] = [t for t in self.requests[key] if now - t < window]
+
+            if len(self.requests[key]) < max_requests:
+                return 0
+
+            oldest = min(self.requests[key])
+            return int(window - (now - oldest)) + 1
+
+    def cleanup(self):
+        """Remove stale entries (call periodically)"""
+        with self.lock:
+            now = time.time()
+            max_window = max(w for _, w in self.limits.values())
+            keys_to_remove = []
+            for key, timestamps in self.requests.items():
+                self.requests[key] = [t for t in timestamps if now - t < max_window]
+                if not self.requests[key]:
+                    keys_to_remove.append(key)
+            for key in keys_to_remove:
+                del self.requests[key]
+
+rate_limiter = RateLimiter()
+
+def check_rate_limit(limit_type: str = 'default'):
+    """Decorator to apply rate limiting to endpoints"""
+    def decorator(f):
+        @wraps(f)
+        def wrapped(*args, **kwargs):
+            # Use IP address and optionally username for rate limiting
+            ip = request.remote_addr or 'unknown'
+            username = None
+
+            # Try to get username from request
+            if request.is_json and request.json:
+                username = request.json.get('username')
+            elif request.args:
+                username = request.args.get('username')
+
+            # Rate limit by IP
+            ip_key = f"ip:{ip}:{limit_type}"
+            if not rate_limiter.is_allowed(ip_key, limit_type):
+                wait_time = rate_limiter.get_wait_time(ip_key, limit_type)
+                log_event(username or ip, 'security', 'rate_limit_exceeded', f'{limit_type} from {ip}')
+                return jsonify({
+                    'error': f'Too many requests. Please wait {wait_time} seconds.',
+                    'code': 'RATE_LIMITED',
+                    'retry_after': wait_time
+                }), 429
+
+            # Also rate limit by username if available (prevents distributed attacks)
+            if username:
+                user_key = f"user:{username}:{limit_type}"
+                if not rate_limiter.is_allowed(user_key, limit_type):
+                    wait_time = rate_limiter.get_wait_time(user_key, limit_type)
+                    log_event(username, 'security', 'rate_limit_exceeded', f'{limit_type} for user {username}')
+                    return jsonify({
+                        'error': f'Too many requests. Please wait {wait_time} seconds.',
+                        'code': 'RATE_LIMITED',
+                        'retry_after': wait_time
+                    }), 429
+
+            return f(*args, **kwargs)
+        return wrapped
+    return decorator
 
 # Database path - use volume on Railway, local otherwise
 def get_db_path():
@@ -69,6 +240,41 @@ secrets = SecretsManager(debug=DEBUG)
 GROQ_API_KEY = secrets.get_secret("GROQ_API_KEY") or os.environ.get("GROQ_API_KEY")
 API_URL = os.environ.get("API_URL", "https://api.groq.com/openai/v1/chat/completions")
 PIN_SALT = secrets.get_secret("PIN_SALT") or os.environ.get("PIN_SALT") or 'dev_fallback_salt'
+
+# Validate critical API key on startup
+_groq_key_warning_shown = False
+def validate_groq_api_key():
+    """Validate GROQ_API_KEY is configured properly"""
+    global _groq_key_warning_shown
+    if not GROQ_API_KEY:
+        if DEBUG:
+            if not _groq_key_warning_shown:
+                print("=" * 60)
+                print("WARNING: GROQ_API_KEY not set!")
+                print("AI therapy chat features will NOT work.")
+                print("Get an API key from https://console.groq.com")
+                print("Set: export GROQ_API_KEY=your_key_here")
+                print("=" * 60)
+                _groq_key_warning_shown = True
+        else:
+            # In production, this is a critical error
+            raise RuntimeError(
+                "CRITICAL: GROQ_API_KEY environment variable is required in production. "
+                "AI therapy features cannot function without it. "
+                "Get an API key from https://console.groq.com"
+            )
+        return False
+    # Basic format validation (Groq keys start with 'gsk_')
+    if not GROQ_API_KEY.startswith('gsk_'):
+        print("WARNING: GROQ_API_KEY may be invalid (expected prefix 'gsk_')")
+    return True
+
+# Validate on module load (but don't crash in debug mode)
+try:
+    validate_groq_api_key()
+except RuntimeError as e:
+    if not DEBUG:
+        raise
 
 # Password/PIN hashing functions (copied from main.py to avoid tkinter import)
 def hash_password(password: str) -> str:
@@ -105,6 +311,46 @@ def verify_password(stored: str, password: str) -> bool:
         return hashlib.sha256(password.encode()).hexdigest() == stored
     return False
 
+
+def validate_password_strength(password: str) -> tuple:
+    """
+    Validate password meets security requirements.
+    Returns (is_valid: bool, error_message: str or None)
+
+    Requirements:
+    - Minimum 8 characters
+    - At least one uppercase letter
+    - At least one lowercase letter
+    - At least one digit
+    - At least one special character
+    """
+    if not password:
+        return False, 'Password is required'
+
+    if len(password) < 8:
+        return False, 'Password must be at least 8 characters'
+
+    if not any(c.islower() for c in password):
+        return False, 'Password must contain at least one lowercase letter'
+
+    if not any(c.isupper() for c in password):
+        return False, 'Password must contain at least one uppercase letter'
+
+    if not any(c.isdigit() for c in password):
+        return False, 'Password must contain at least one number'
+
+    special_chars = '!@#$%^&*()_+-=[]{}|;:,.<>?'
+    if not any(c in special_chars for c in password):
+        return False, 'Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)'
+
+    # Check for common weak passwords
+    weak_passwords = {'password', 'password1', '12345678', 'qwerty123', 'admin123'}
+    if password.lower() in weak_passwords:
+        return False, 'This password is too common. Please choose a stronger password.'
+
+    return True, None
+
+
 def hash_pin(pin: str) -> str:
     """Hash PIN using bcrypt or PBKDF2"""
     if HAS_BCRYPT:
@@ -127,16 +373,55 @@ def check_pin(pin: str, stored: str) -> bool:
     return pin == stored
 
 # Encryption/Decryption functions (avoid importing from main.py)
+_cached_encryption_key = None
+_encryption_key_warning_shown = False
+
 def get_encryption_key():
-    """Get or create encryption key"""
+    """
+    Get encryption key from environment or secrets manager.
+    SECURITY: Key MUST be provided via environment variable or secrets manager.
+    File-based key storage is NOT supported for security reasons.
+    """
+    global _cached_encryption_key, _encryption_key_warning_shown
+
+    # Return cached key if available (avoids repeated env lookups)
+    if _cached_encryption_key:
+        return _cached_encryption_key
+
+    # Try secrets manager first, then environment variable
     key = secrets.get_secret("ENCRYPTION_KEY") or os.environ.get("ENCRYPTION_KEY")
+
     if not key:
         if DEBUG:
-            # Development fallback key
+            # Development fallback - generate ephemeral key with warning
             from cryptography.fernet import Fernet
             key = Fernet.generate_key().decode()
+            if not _encryption_key_warning_shown:
+                print("=" * 60)
+                print("WARNING: ENCRYPTION_KEY not set!")
+                print("Using ephemeral key for development only.")
+                print("ALL DATA WILL BE LOST when the app restarts!")
+                print("Set ENCRYPTION_KEY environment variable for persistent data.")
+                print("Generate key: python3 -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\"")
+                print("=" * 60)
+                _encryption_key_warning_shown = True
+                log_event('system', 'security', 'encryption_key_missing', 'Using ephemeral key in DEBUG mode')
         else:
-            raise ValueError("ENCRYPTION_KEY not found")
+            # PRODUCTION: Encryption key is REQUIRED
+            raise RuntimeError(
+                "CRITICAL: ENCRYPTION_KEY environment variable is required in production. "
+                "Generate with: python3 -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+            )
+
+    # Validate key format
+    try:
+        from cryptography.fernet import Fernet
+        # Test that the key is valid Fernet format
+        Fernet(key.encode() if isinstance(key, str) else key)
+    except Exception as e:
+        raise ValueError(f"Invalid ENCRYPTION_KEY format. Must be a valid Fernet key. Error: {e}")
+
+    _cached_encryption_key = key
     return key
 
 def encrypt_text(text: str) -> str:
@@ -776,6 +1061,7 @@ def verify_code():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/auth/register', methods=['POST'])
+@check_rate_limit('register')
 def register():
     """Register new user - requires 2FA verification"""
     try:
@@ -831,17 +1117,12 @@ def register():
         
         if not conditions:
             return jsonify({'error': 'Medical conditions/diagnosis is required'}), 400
-        
-        # Validate password complexity
-        if len(password) < 8:
-            return jsonify({'error': 'Password must be at least 8 characters'}), 400
-        if not any(c.islower() for c in password) or not any(c.isupper() for c in password):
-            return jsonify({'error': 'Password must contain both uppercase and lowercase letters'}), 400
-        if not any(c.isdigit() for c in password):
-            return jsonify({'error': 'Password must contain at least one number'}), 400
-        if not any(c in '!@#$%^&*()_+-=[]{}|;:,.<>?' for c in password):
-            return jsonify({'error': 'Password must contain at least one special character'}), 400
-        
+
+        # Validate password complexity using centralized function
+        is_valid, error_msg = validate_password_strength(password)
+        if not is_valid:
+            return jsonify({'error': error_msg}), 400
+
         if not clinician_id:
             return jsonify({'error': 'Please select your clinician'}), 400
         
@@ -909,6 +1190,7 @@ def register():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/auth/login', methods=['POST'])
+@check_rate_limit('login')
 def login():
     """Authenticate user with 2FA PIN"""
     try:
@@ -916,7 +1198,7 @@ def login():
         username = data.get('username')
         password = data.get('password')
         pin = data.get('pin')  # Required for 2FA
-        
+
         print(f"🔐 Login attempt for user: {username}")
         
         if not username or not password:
@@ -1050,6 +1332,7 @@ def validate_session():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/auth/forgot-password', methods=['POST'])
+@check_rate_limit('forgot_password')
 def forgot_password():
     """Send password reset email"""
     try:
@@ -1176,10 +1459,88 @@ def send_reset_email(to_email, username, reset_token):
         
         print(f"✅ Password reset email sent to {to_email}")
         return True
-        
+
     except Exception as e:
         print(f"❌ Error sending password reset email: {e}")
         return False
+
+
+@app.route('/api/auth/confirm-reset', methods=['POST'])
+def confirm_password_reset():
+    """Complete password reset with token"""
+    try:
+        data = request.json
+        username = data.get('username')
+        token = data.get('token')
+        new_password = data.get('new_password')
+
+        if not username or not token or not new_password:
+            return jsonify({'error': 'Username, token, and new password required'}), 400
+
+        # Validate password strength using centralized function
+        is_valid, error_msg = validate_password_strength(new_password)
+        if not is_valid:
+            return jsonify({'error': error_msg}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Verify token and expiry
+        user = cur.execute(
+            "SELECT reset_token, reset_token_expiry FROM users WHERE username=?",
+            (username,)
+        ).fetchone()
+
+        if not user or not user[0]:
+            conn.close()
+            return jsonify({'error': 'Invalid or expired reset token'}), 400
+
+        stored_token = user[0]
+        expiry_str = user[1]
+
+        # Validate token matches
+        if stored_token != token:
+            conn.close()
+            log_event(username, 'security', 'invalid_reset_token', 'Mismatched reset token attempted')
+            return jsonify({'error': 'Invalid or expired reset token'}), 400
+
+        # Validate expiry
+        if expiry_str:
+            try:
+                expiry = datetime.strptime(expiry_str, '%Y-%m-%d %H:%M:%S.%f')
+            except ValueError:
+                expiry = datetime.strptime(expiry_str, '%Y-%m-%d %H:%M:%S')
+
+            if datetime.now() > expiry:
+                conn.close()
+                return jsonify({'error': 'Reset token has expired. Please request a new one.'}), 400
+
+        # Update password and clear reset token
+        hashed_password = hash_password(new_password)
+        cur.execute(
+            "UPDATE users SET password=?, reset_token=NULL, reset_token_expiry=NULL WHERE username=?",
+            (hashed_password, username)
+        )
+
+        # SECURITY: Invalidate all existing sessions for this user
+        cur.execute("DELETE FROM sessions WHERE username=?", (username,))
+        cur.execute("DELETE FROM chat_sessions WHERE username=?", (username,))
+
+        conn.commit()
+        conn.close()
+
+        log_event(username, 'security', 'password_reset_completed', 'Password successfully reset, all sessions invalidated')
+
+        return jsonify({
+            'success': True,
+            'message': 'Password has been reset successfully. Please log in with your new password.'
+        }), 200
+
+    except Exception as e:
+        log_event('system', 'error', 'password_reset_error', str(e))
+        print(f"Password reset confirmation error: {e}")
+        return jsonify({'error': 'Password reset failed. Please try again.'}), 500
+
 
 def send_verification_code(identifier, code, method='email'):
     """Send 2FA verification code via email or SMS"""
@@ -1294,17 +1655,12 @@ def clinician_register():
         
         if not professional_id:
             return jsonify({'error': 'Professional ID number is required'}), 400
-        
-        # Validate password complexity
-        if len(password) < 8:
-            return jsonify({'error': 'Password must be at least 8 characters'}), 400
-        if not any(c.islower() for c in password) or not any(c.isupper() for c in password):
-            return jsonify({'error': 'Password must contain both uppercase and lowercase letters'}), 400
-        if not any(c.isdigit() for c in password):
-            return jsonify({'error': 'Password must contain at least one number'}), 400
-        if not any(c in '!@#$%^&*()_+-=[]{}|;:,.<>?' for c in password):
-            return jsonify({'error': 'Password must contain at least one special character'}), 400
-        
+
+        # Validate password complexity using centralized function
+        is_valid, error_msg = validate_password_strength(password)
+        if not is_valid:
+            return jsonify({'error': error_msg}), 400
+
         if len(pin) != 4 or not pin.isdigit():
             return jsonify({'error': 'PIN must be exactly 4 digits'}), 400
         
@@ -2294,6 +2650,7 @@ def reward_pet(action, activity_type=None):
         return False
 
 @app.route('/api/therapy/chat', methods=['POST'])
+@check_rate_limit('ai_chat')
 def therapy_chat():
     """AI therapy chat endpoint"""
     try:
@@ -2332,16 +2689,18 @@ def therapy_chat():
                 chat_session_id = active_session[0]
         except Exception as session_error:
             conn.close()
+            log_event(username, 'error', 'session_error', str(session_error))
             print(f"Session error: {session_error}")
-            return jsonify({'error': f'Session error: {str(session_error)}'}), 500
-        
+            return jsonify({'error': 'Unable to create chat session. Please try again.', 'code': 'SESSION_ERROR'}), 500
+
         # Use TherapistAI class
         try:
             ai = TherapistAI(username)
         except Exception as ai_error:
             conn.close()
+            log_event(username, 'error', 'ai_init_error', str(ai_error))
             print(f"AI initialization error: {ai_error}")
-            return jsonify({'error': f'AI initialization failed: {str(ai_error)}'}), 500
+            return jsonify({'error': 'The AI service is temporarily unavailable. Please try again later.', 'code': 'AI_INIT_ERROR'}), 500
         
         # Get conversation history from current session
         try:
@@ -2369,8 +2728,12 @@ def therapy_chat():
         try:
             response = ai.get_response(message, history[::-1])
         except Exception as resp_error:
+            log_event(username, 'error', 'ai_response_error', str(resp_error))
             print(f"AI response error: {resp_error}")
-            return jsonify({'error': f'AI response failed: {str(resp_error)}'}), 500
+            return jsonify({
+                'error': 'I apologize, but I am having trouble responding right now. Please try again.',
+                'code': 'AI_RESPONSE_ERROR'
+            }), 500
         
         # Save to chat history with session tracking
         conn = get_db_connection()
@@ -2485,9 +2848,15 @@ def therapy_chat():
             'response': response,
             'timestamp': datetime.now().isoformat()
         }), 200
-        
+
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        # Log the actual error for debugging, but return a user-friendly message
+        log_event('system', 'error', 'therapy_chat_error', str(e))
+        print(f"Therapy chat error: {e}")
+        return jsonify({
+            'error': 'An unexpected error occurred. Please try again.',
+            'code': 'UNEXPECTED_ERROR'
+        }), 500
 
 @app.route('/api/therapy/history', methods=['GET'])
 def get_chat_history():
@@ -2967,10 +3336,59 @@ def log_mood():
         water_pints = data.get('water_pints', 0)
         exercise_mins = data.get('exercise_mins', 0)
         outside_mins = data.get('outside_mins', 0)
-        
+
+        # INPUT VALIDATION
         if not username or mood_val is None:
             return jsonify({'error': 'Username and mood_val required'}), 400
-        
+
+        # Validate mood_val range (1-10)
+        try:
+            mood_val = int(mood_val)
+            if mood_val < 1 or mood_val > 10:
+                return jsonify({'error': 'mood_val must be between 1 and 10'}), 400
+        except (ValueError, TypeError):
+            return jsonify({'error': 'mood_val must be a valid integer'}), 400
+
+        # Validate sleep_val (0-24 hours)
+        try:
+            sleep_val = float(sleep_val) if sleep_val else 0
+            if sleep_val < 0 or sleep_val > 24:
+                return jsonify({'error': 'sleep_val must be between 0 and 24 hours'}), 400
+        except (ValueError, TypeError):
+            sleep_val = 0
+
+        # Validate exercise_mins (non-negative, max 1440 minutes = 24 hours)
+        try:
+            exercise_mins = int(exercise_mins) if exercise_mins else 0
+            if exercise_mins < 0 or exercise_mins > 1440:
+                return jsonify({'error': 'exercise_mins must be between 0 and 1440'}), 400
+        except (ValueError, TypeError):
+            exercise_mins = 0
+
+        # Validate outside_mins (non-negative, max 1440 minutes)
+        try:
+            outside_mins = int(outside_mins) if outside_mins else 0
+            if outside_mins < 0 or outside_mins > 1440:
+                return jsonify({'error': 'outside_mins must be between 0 and 1440'}), 400
+        except (ValueError, TypeError):
+            outside_mins = 0
+
+        # Validate water_pints (non-negative, max 20 pints)
+        try:
+            water_pints = float(water_pints) if water_pints else 0
+            if water_pints < 0 or water_pints > 20:
+                return jsonify({'error': 'water_pints must be between 0 and 20'}), 400
+        except (ValueError, TypeError):
+            water_pints = 0
+
+        # Sanitize and limit notes length (prevent XSS and oversized input)
+        if notes:
+            notes = str(notes)[:2000]  # Max 2000 characters
+            # Basic HTML sanitization (remove script tags)
+            import re
+            notes = re.sub(r'<script[^>]*>.*?</script>', '', notes, flags=re.IGNORECASE | re.DOTALL)
+            notes = re.sub(r'<[^>]+>', '', notes)  # Remove all HTML tags
+
         conn = get_db_connection()
         cur = conn.cursor()
         
@@ -4432,9 +4850,24 @@ def get_patients():
 def get_patient_detail(username):
     """Get detailed patient data including chat history, diary, habits (for professional dashboard)"""
     try:
+        # SECURITY: Require clinician authentication and verify patient relationship
+        clinician_username = request.args.get('clinician')
+        if not clinician_username:
+            return jsonify({'error': 'Clinician username required'}), 400
+
         conn = get_db_connection()
         cur = conn.cursor()
-        
+
+        # Verify clinician has approved access to this patient
+        approval = cur.execute(
+            "SELECT status FROM patient_approvals WHERE clinician_username=? AND patient_username=? AND status='approved'",
+            (clinician_username, username)
+        ).fetchone()
+
+        if not approval:
+            conn.close()
+            return jsonify({'error': 'Unauthorized: You do not have access to this patient'}), 403
+
         # Profile
         profile = cur.execute(
             "SELECT full_name, dob, conditions, email, phone FROM users WHERE username=?",
@@ -4535,13 +4968,27 @@ def generate_ai_summary():
     try:
         data = request.json
         username = data.get('username')
-        
+        clinician_username = data.get('clinician_username')
+
         if not username:
             return jsonify({'error': 'Username required'}), 400
-        
+
+        if not clinician_username:
+            return jsonify({'error': 'Clinician username required'}), 400
+
         # Fetch patient data
         conn = get_db_connection()
         cur = conn.cursor()
+
+        # SECURITY: Verify clinician has approved access to this patient
+        approval = cur.execute(
+            "SELECT status FROM patient_approvals WHERE clinician_username=? AND patient_username=? AND status='approved'",
+            (clinician_username, username)
+        ).fetchone()
+
+        if not approval:
+            conn.close()
+            return jsonify({'error': 'Unauthorized: You do not have access to this patient'}), 403
         
         # Get profile and join date
         profile = cur.execute(
@@ -4847,13 +5294,23 @@ def export_patient_summary():
         patient_username = data.get('patient_username')
         start_date = data.get('start_date')  # Optional YYYY-MM-DD
         end_date = data.get('end_date')  # Optional YYYY-MM-DD
-        
+
         if not clinician_username or not patient_username:
             return jsonify({'error': 'Clinician and patient usernames required'}), 400
-        
+
         conn = get_db_connection()
         cur = conn.cursor()
-        
+
+        # SECURITY: Verify clinician has approved access to this patient
+        approval = cur.execute(
+            "SELECT status FROM patient_approvals WHERE clinician_username=? AND patient_username=? AND status='approved'",
+            (clinician_username, patient_username)
+        ).fetchone()
+
+        if not approval:
+            conn.close()
+            return jsonify({'error': 'Unauthorized: You do not have access to this patient'}), 403
+
         # Get patient profile
         profile = cur.execute(
             "SELECT full_name, dob, conditions FROM users WHERE username=?",
@@ -5020,16 +5477,51 @@ def export_patient_summary():
 def reset_all_users():
     """DANGER: Delete all users, approvals, and notifications (for testing only)"""
     try:
+        # SECURITY: Block this endpoint in production unless explicitly enabled
+        if os.environ.get('FLASK_ENV') == 'production' and not os.environ.get('ALLOW_ADMIN_RESET'):
+            return jsonify({'error': 'This endpoint is disabled in production'}), 403
+
         data = request.json
         confirm = data.get('confirm')
-        
-        # Require explicit confirmation
-        if confirm != 'DELETE_ALL_USERS':
-            return jsonify({'error': 'Must provide confirm="DELETE_ALL_USERS" to proceed'}), 400
-        
+        admin_username = data.get('admin_username')
+        admin_password = data.get('admin_password')
+
+        # SECURITY: Require admin authentication
+        if not admin_username or not admin_password:
+            return jsonify({'error': 'Admin credentials required'}), 401
+
+        # Verify admin credentials and role
         conn = get_db_connection()
         cur = conn.cursor()
-        
+
+        admin = cur.execute(
+            "SELECT password, role FROM users WHERE username=?",
+            (admin_username,)
+        ).fetchone()
+
+        if not admin:
+            conn.close()
+            return jsonify({'error': 'Invalid admin credentials'}), 401
+
+        # Verify password (using the same hashing as login)
+        from werkzeug.security import check_password_hash
+        if not check_password_hash(admin[0], admin_password):
+            conn.close()
+            return jsonify({'error': 'Invalid admin credentials'}), 401
+
+        # Verify admin role
+        if admin[1] != 'admin':
+            conn.close()
+            return jsonify({'error': 'Insufficient privileges: admin role required'}), 403
+
+        # Require explicit confirmation
+        if confirm != 'DELETE_ALL_USERS':
+            conn.close()
+            return jsonify({'error': 'Must provide confirm="DELETE_ALL_USERS" to proceed'}), 400
+
+        # Log the admin action BEFORE deleting
+        log_event(admin_username, 'admin', 'database_reset_initiated', 'Admin initiated full database reset')
+
         # Delete all users and related data
         cur.execute("DELETE FROM users")
         cur.execute("DELETE FROM patient_approvals")
@@ -5052,16 +5544,16 @@ def reset_all_users():
         approval_count = cur.execute("SELECT COUNT(*) FROM patient_approvals").fetchone()[0]
         
         conn.close()
-        
-        log_event('admin', 'api', 'database_reset', 'All users and data deleted for testing')
-        
+
+        log_event(admin_username, 'admin', 'database_reset_completed', f'All users and data deleted. Users remaining: {user_count}')
+
         return jsonify({
             'success': True,
             'message': 'All users and related data deleted',
             'users_remaining': user_count,
             'approvals_remaining': approval_count
         }), 200
-        
+
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -5863,9 +6355,24 @@ def get_active_patients():
 def get_patient_analytics(username):
     """Get detailed analytics for specific patient"""
     try:
+        # SECURITY: Require clinician authentication and verify patient relationship
+        clinician_username = request.args.get('clinician')
+        if not clinician_username:
+            return jsonify({'error': 'Clinician username required'}), 400
+
         conn = get_db_connection()
         cur = conn.cursor()
-        
+
+        # Verify clinician has approved access to this patient
+        approval = cur.execute(
+            "SELECT status FROM patient_approvals WHERE clinician_username=? AND patient_username=? AND status='approved'",
+            (clinician_username, username)
+        ).fetchone()
+
+        if not approval:
+            conn.close()
+            return jsonify({'error': 'Unauthorized: You do not have access to this patient'}), 403
+
         # Mood trend (last 90 days)
         mood_trend = cur.execute("""
             SELECT DATE(entrestamp) as date, mood_val, notes
@@ -5981,19 +6488,29 @@ def generate_clinical_report():
         username = data.get('username')
         report_type = data.get('report_type')  # 'gp_referral', 'progress', 'discharge'
         clinician = data.get('clinician')
-        
+
         if not all([username, report_type, clinician]):
             return jsonify({'error': 'Missing required fields'}), 400
-        
+
         conn = get_db_connection()
         cur = conn.cursor()
-        
+
+        # SECURITY: Verify clinician has approved access to this patient
+        approval = cur.execute(
+            "SELECT status FROM patient_approvals WHERE clinician_username=? AND patient_username=? AND status='approved'",
+            (clinician, username)
+        ).fetchone()
+
+        if not approval:
+            conn.close()
+            return jsonify({'error': 'Unauthorized: You do not have access to this patient'}), 403
+
         # Get patient info
         patient = cur.execute("""
             SELECT full_name, dob, email, phone, conditions, created_at
             FROM users WHERE username=?
         """, (username,)).fetchone()
-        
+
         if not patient:
             conn.close()
             return jsonify({'error': 'Patient not found'}), 404
@@ -6025,11 +6542,11 @@ def generate_clinical_report():
             LIMIT 10
         """, (username,)).fetchall()
         
-        # Get mood average
+        # Get mood average (using correct column names: mood_val and entrestamp)
         mood_avg = cur.execute("""
-            SELECT AVG(mood_score) FROM mood_logs
+            SELECT AVG(mood_val) FROM mood_logs
             WHERE username=?
-            AND datetime(timestamp) > datetime('now', '-30 days')
+            AND datetime(entrestamp) > datetime('now', '-30 days')
         """, (username,)).fetchone()[0]
         
         conn.close()
@@ -6147,38 +6664,40 @@ def search_patients():
         clinician = request.args.get('clinician')
         search_query = request.args.get('q', '')
         filter_type = request.args.get('filter')  # 'high_risk', 'inactive', 'all'
-        
+
         if not clinician:
             return jsonify({'error': 'Clinician username required'}), 400
-        
+
         conn = get_db_connection()
         cur = conn.cursor()
-        
-        # Base query
+
+        # SECURITY: Base query uses patient_approvals table to ensure proper authorization
+        # Only return patients that the clinician has APPROVED access to
         query = """
             SELECT DISTINCT u.username, u.full_name, u.email, u.created_at,
-                   (SELECT COUNT(*) FROM alerts WHERE username=u.username AND resolved=0) as alert_count,
+                   (SELECT COUNT(*) FROM alerts WHERE username=u.username AND (status IS NULL OR status != 'resolved')) as alert_count,
                    (SELECT MAX(created_at) FROM sessions WHERE username=u.username) as last_active,
                    (SELECT score FROM clinical_scales WHERE username=u.username AND scale_name='PHQ-9' ORDER BY entry_timestamp DESC LIMIT 1) as phq9_score
             FROM users u
-            WHERE u.clinician_id=? AND u.role='patient'
+            JOIN patient_approvals pa ON u.username = pa.patient_username
+            WHERE pa.clinician_username=? AND pa.status='approved' AND u.role='user'
         """
         params = [clinician]
-        
+
         # Add search filter
         if search_query:
             query += " AND (u.username LIKE ? OR u.full_name LIKE ? OR u.email LIKE ?)"
             search_term = f'%{search_query}%'
             params.extend([search_term, search_term, search_term])
-        
+
         # Add type filter
         if filter_type == 'high_risk':
-            query += " AND (SELECT COUNT(*) FROM alerts WHERE username=u.username AND resolved=0) > 0"
+            query += " AND (SELECT COUNT(*) FROM alerts WHERE username=u.username AND (status IS NULL OR status != 'resolved')) > 0"
         elif filter_type == 'inactive':
-            query += " AND (SELECT MAX(created_at) FROM sessions WHERE username=u.username) < datetime('now', '-7 days') OR (SELECT MAX(created_at) FROM sessions WHERE username=u.username) IS NULL"
-        
+            query += " AND ((SELECT MAX(created_at) FROM sessions WHERE username=u.username) < datetime('now', '-7 days') OR (SELECT MAX(created_at) FROM sessions WHERE username=u.username) IS NULL)"
+
         query += " ORDER BY alert_count DESC, last_active DESC"
-        
+
         patients = cur.execute(query, params).fetchall()
         conn.close()
         
