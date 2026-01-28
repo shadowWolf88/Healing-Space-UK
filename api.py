@@ -41,10 +41,81 @@ except Exception:
     HAS_BCRYPT = False
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
-CORS(app, supports_credentials=True)
 
 # Initialize with same settings as main app
 DEBUG = os.environ.get('DEBUG', '').lower() in ('1', 'true', 'yes')
+
+# ==================== CORS CONFIGURATION ====================
+# Restrict CORS origins in production for security
+# In DEBUG mode, allow all origins for local development
+ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', '').split(',') if os.environ.get('ALLOWED_ORIGINS') else None
+
+if DEBUG and not ALLOWED_ORIGINS:
+    # Development mode: allow all origins
+    CORS(app, supports_credentials=True)
+else:
+    # Production mode: restrict to specific origins
+    production_origins = ALLOWED_ORIGINS or [
+        'https://healing-space.org.uk',
+        'https://www.healing-space.org.uk',
+        'https://web-production-64594.up.railway.app'
+    ]
+    CORS(app, origins=production_origins, supports_credentials=True)
+
+# ==================== SECURITY HEADERS ====================
+@app.after_request
+def add_security_headers(response):
+    """Add security headers to all responses"""
+    # Prevent clickjacking attacks
+    response.headers['X-Frame-Options'] = 'DENY'
+
+    # Prevent MIME type sniffing
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+
+    # Enable XSS filter in older browsers
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+
+    # Enforce HTTPS (only in production)
+    if not DEBUG:
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+
+    # Referrer policy for privacy
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+
+    # Permissions policy (disable unnecessary features)
+    response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
+
+    # Content Security Policy (basic - adjust as needed for your frontend)
+    if not DEBUG:
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https:; "
+            "font-src 'self' https:; "
+            "connect-src 'self' https://api.groq.com; "
+            "frame-ancestors 'none';"
+        )
+
+    return response
+
+# ==================== ERROR HANDLING HELPER ====================
+def handle_exception(e, context: str = 'unknown'):
+    """
+    Log exception details internally and return a safe generic error response.
+    Prevents leaking internal error details to clients.
+    """
+    # Log the actual error for debugging/monitoring
+    error_id = secrets.token_hex(4)  # Short unique ID for support reference
+    log_event('system', 'error', f'{context}_error', f'Error ID: {error_id}, Details: {str(e)}')
+    print(f"[ERROR {error_id}] {context}: {str(e)}")  # Also print for server logs
+
+    # Return generic error to client with reference ID
+    return jsonify({
+        'error': 'An unexpected error occurred. Please try again.',
+        'error_id': error_id,
+        'code': 'INTERNAL_ERROR'
+    }), 500
 
 # ==================== CSRF PROTECTION ====================
 # CSRF Secret key for token generation
@@ -647,7 +718,81 @@ def init_db():
         cursor.execute("ALTER TABLE appointments ADD COLUMN attendance_confirmed_at DATETIME")
     except sqlite3.OperationalError:
         pass  # Column already exists
-    
+
+    # ==================== DATABASE INDEXES ====================
+    # Create indexes on frequently queried columns for performance
+    # Using IF NOT EXISTS to make this idempotent
+
+    # User lookups (used in almost every authenticated request)
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_role ON users(role)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_users_clinician_id ON users(clinician_id)')
+
+    # Mood logs - queried by username and timestamp frequently
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_mood_logs_username ON mood_logs(username)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_mood_logs_entrestamp ON mood_logs(entrestamp)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_mood_logs_username_entrestamp ON mood_logs(username, entrestamp)')
+
+    # Sessions - queried by username for session management
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_sessions_username ON sessions(username)')
+
+    # Chat history - queried by session_id and chat_session_id
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_chat_history_session_id ON chat_history(session_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_chat_history_chat_session_id ON chat_history(chat_session_id)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_chat_history_timestamp ON chat_history(timestamp)')
+
+    # Chat sessions - queried by username and is_active
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_chat_sessions_username ON chat_sessions(username)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_chat_sessions_username_active ON chat_sessions(username, is_active)')
+
+    # Alerts - critical for clinician dashboard performance
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_alerts_username ON alerts(username)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_alerts_status ON alerts(status)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_alerts_username_status ON alerts(username, status)')
+
+    # Patient approvals - used in all professional endpoint authorization
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_patient_approvals_clinician ON patient_approvals(clinician_username)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_patient_approvals_patient ON patient_approvals(patient_username)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_patient_approvals_status ON patient_approvals(status)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_patient_approvals_clinician_status ON patient_approvals(clinician_username, status)')
+
+    # Clinical scales - queried for assessments
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_clinical_scales_username ON clinical_scales(username)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_clinical_scales_entry_timestamp ON clinical_scales(entry_timestamp)')
+
+    # Notifications - queried for unread notifications
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_notifications_recipient ON notifications(recipient_username)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_notifications_recipient_read ON notifications(recipient_username, read)')
+
+    # Appointments - queried by clinician and patient
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_appointments_clinician ON appointments(clinician_username)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_appointments_patient ON appointments(patient_username)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_appointments_date ON appointments(appointment_date)')
+
+    # Audit logs - queried by username and timestamp
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_audit_logs_username ON audit_logs(username)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp)')
+
+    # Gratitude logs
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_gratitude_logs_username ON gratitude_logs(username)')
+
+    # CBT records
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_cbt_records_username ON cbt_records(username)')
+
+    # Community posts
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_community_posts_username ON community_posts(username)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_community_posts_timestamp ON community_posts(entry_timestamp)')
+
+    # Community replies
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_community_replies_post_id ON community_replies(post_id)')
+
+    # Clinician notes
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_clinician_notes_clinician ON clinician_notes(clinician_username)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_clinician_notes_patient ON clinician_notes(patient_username)')
+
+    # Verification codes
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_verification_codes_identifier ON verification_codes(identifier)')
+
     conn.commit()
     conn.close()
 
@@ -965,7 +1110,7 @@ def admin_wipe_database():
         
     except Exception as e:
         print(f"❌ ADMIN: Database wipe error: {e}")
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/auth/send-verification', methods=['POST'])
 def send_verification():
@@ -1014,7 +1159,7 @@ def send_verification():
             }), 500
             
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/auth/verify-code', methods=['POST'])
 def verify_code():
@@ -1058,7 +1203,7 @@ def verify_code():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/auth/register', methods=['POST'])
 @check_rate_limit('register')
@@ -1187,7 +1332,7 @@ def register():
         }), 201
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/auth/login', methods=['POST'])
 @check_rate_limit('login')
@@ -1290,7 +1435,7 @@ def login():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/validate-session', methods=['POST'])
 def validate_session():
@@ -1329,7 +1474,7 @@ def validate_session():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/auth/forgot-password', methods=['POST'])
 @check_rate_limit('forgot_password')
@@ -1697,7 +1842,7 @@ def clinician_register():
         
         return jsonify({'success': True, 'message': 'Clinician account created successfully'}), 201
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/auth/developer/register', methods=['POST'])
 def developer_register():
@@ -1722,9 +1867,10 @@ def developer_register():
             conn.close()
             return jsonify({'error': 'Developer account already exists'}), 409
 
-        # Validate and hash
-        if len(password) < 8:
-            return jsonify({'error': 'Password must be at least 8 characters'}), 400
+        # Validate password strength using centralized function (same as user/clinician registration)
+        is_valid, error_msg = validate_password_strength(password)
+        if not is_valid:
+            return jsonify({'error': error_msg}), 400
 
         hashed_password = hash_password(password)
         hashed_pin = hash_pin(pin)
@@ -1740,7 +1886,7 @@ def developer_register():
         log_event(username, 'api', 'developer_registered', 'Developer account created')
         return jsonify({'success': True, 'message': 'Developer account created'}), 201
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/auth/disclaimer/accept', methods=['POST'])
 def accept_disclaimer():
@@ -1760,7 +1906,7 @@ def accept_disclaimer():
         
         return jsonify({'success': True}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 # ========== DEVELOPER DASHBOARD ENDPOINTS ==========
 
@@ -1819,10 +1965,10 @@ def execute_terminal():
             return jsonify({'error': 'Command timed out (30s limit)'}), 408
         except Exception as e:
             conn.close()
-            return jsonify({'error': str(e)}), 500
+            return handle_exception(e, request.endpoint or 'unknown')
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/developer/ai/chat', methods=['POST'])
 def developer_ai_chat():
@@ -1900,7 +2046,7 @@ You have full knowledge of the codebase and can provide specific advice. Be conc
             return jsonify({'error': 'AI API error'}), 500
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/developer/messages/send', methods=['POST'])
 def send_dev_message():
@@ -1977,7 +2123,7 @@ def send_dev_message():
         return jsonify({'success': True}), 200
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/developer/messages/list', methods=['GET'])
 def list_dev_messages():
@@ -2027,7 +2173,7 @@ def list_dev_messages():
         }), 200
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/developer/messages/reply', methods=['POST'])
 def reply_dev_message():
@@ -2071,7 +2217,7 @@ def reply_dev_message():
         return jsonify({'success': True}), 200
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/developer/stats', methods=['GET'])
 def developer_stats():
@@ -2107,7 +2253,7 @@ def developer_stats():
         return jsonify(stats), 200
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/developer/users/list', methods=['GET'])
 def list_all_users():
@@ -2155,7 +2301,7 @@ def list_all_users():
         }), 200
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/developer/users/delete', methods=['POST'])
 def delete_user():
@@ -2216,7 +2362,7 @@ def delete_user():
         return jsonify({'success': True, 'message': f'User {target_username} deleted successfully'}), 200
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 # ========== END DEVELOPER DASHBOARD ENDPOINTS ==========
 
@@ -2258,7 +2404,7 @@ def get_clinicians():
             ]
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 # === NOTIFICATIONS ===
 @app.route('/api/notifications', methods=['GET'])
@@ -2289,7 +2435,7 @@ def get_notifications():
             ]
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/notifications/<int:notification_id>/read', methods=['POST'])
 def mark_notification_read(notification_id):
@@ -2303,7 +2449,7 @@ def mark_notification_read(notification_id):
 
         return jsonify({'success': True}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/notifications/<int:notification_id>', methods=['DELETE'])
 def delete_notification(notification_id):
@@ -2317,7 +2463,7 @@ def delete_notification(notification_id):
 
         return jsonify({'success': True}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/notifications/clear-read', methods=['POST'])
 def clear_read_notifications():
@@ -2338,7 +2484,7 @@ def clear_read_notifications():
 
         return jsonify({'success': True, 'deleted': deleted_count}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 # === PATIENT APPROVAL SYSTEM ===
 @app.route('/api/approvals/pending', methods=['GET'])
@@ -2367,7 +2513,7 @@ def get_pending_approvals():
             ]
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/approvals/<int:approval_id>/approve', methods=['POST'])
 def approve_patient(approval_id):
@@ -2423,7 +2569,7 @@ def approve_patient(approval_id):
         
         return jsonify({'success': True, 'message': 'Patient approved successfully'}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/approvals/<int:approval_id>/reject', methods=['POST'])
 def reject_patient(approval_id):
@@ -2467,7 +2613,7 @@ def reject_patient(approval_id):
         
         return jsonify({'success': True, 'message': 'Patient request rejected'}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 def update_ai_memory(username):
     """Update AI memory with recent user activity summary including clinician notes"""
@@ -2903,7 +3049,7 @@ def get_chat_history():
             'history': [{'sender': h[0], 'message': h[1], 'timestamp': h[2]} for h in history]
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/therapy/export', methods=['POST'])
 def export_chat_history():
@@ -3000,7 +3146,7 @@ def export_chat_history():
             )
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/therapy/sessions', methods=['GET'])
 def get_chat_sessions():
@@ -3046,7 +3192,7 @@ def get_chat_sessions():
             } for s in sessions]
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/therapy/sessions', methods=['POST'])
 def create_chat_session():
@@ -3132,7 +3278,7 @@ def update_chat_session(session_id):
         
         return jsonify({'success': True}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/therapy/sessions/<int:session_id>', methods=['DELETE'])
 def delete_chat_session(session_id):
@@ -3190,7 +3336,7 @@ def delete_chat_session(session_id):
         
         return jsonify({'success': True}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/therapy/greeting', methods=['POST'])
 def get_therapy_greeting():
@@ -3244,7 +3390,7 @@ def get_therapy_greeting():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/therapy/initialize', methods=['POST'])
 def initialize_chat():
@@ -3321,7 +3467,7 @@ def initialize_chat():
         }), 201
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/mood/log', methods=['POST'])
 def log_mood():
@@ -3433,7 +3579,7 @@ def log_mood():
         }), 201
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/mood/history', methods=['GET'])
 def mood_history():
@@ -3474,7 +3620,7 @@ def mood_history():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/gratitude/log', methods=['POST'])
 def log_gratitude():
@@ -3509,7 +3655,7 @@ def log_gratitude():
         }), 201
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/export/fhir', methods=['GET'])
 def export_fhir():
@@ -3532,7 +3678,7 @@ def export_fhir():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/safety/check', methods=['POST'])
 def safety_check():
@@ -3560,7 +3706,7 @@ def safety_check():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 # ===== PET GAME ENDPOINTS =====
 @app.route('/api/pet/status', methods=['GET'])
@@ -3589,7 +3735,7 @@ def pet_status():
             }
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/ai/training-status', methods=['GET'])
 def get_ai_training_status():
@@ -3612,7 +3758,7 @@ def get_ai_training_status():
                 'message': f'Error: {str(e)}'
             }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/ai/trigger-training', methods=['POST'])
 def trigger_background_training():
@@ -3651,7 +3797,7 @@ def trigger_background_training():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/pet/create', methods=['POST'])
 def pet_create():
@@ -3691,7 +3837,7 @@ def pet_create():
         
         return jsonify({'success': True, 'message': 'Pet created!'}), 201
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/pet/feed', methods=['POST'])
 def pet_feed():
@@ -3722,7 +3868,7 @@ def pet_feed():
         
         return jsonify({'success': True, 'new_hunger': new_hunger, 'coins': new_coins}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/pet/reward', methods=['POST'])
 def pet_reward():
@@ -3803,7 +3949,7 @@ def pet_reward():
             'evolved': stage != pet[10]
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/pet/shop', methods=['GET'])
 def pet_shop():
@@ -3818,7 +3964,7 @@ def pet_shop():
         ]
         return jsonify({'items': items}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/pet/buy', methods=['POST'])
 def pet_buy():
@@ -3882,7 +4028,7 @@ def pet_buy():
             'new_hat': new_hat
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/pet/declutter', methods=['POST'])
 def pet_declutter():
@@ -3922,7 +4068,7 @@ def pet_declutter():
             'new_coins': new_coins
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/pet/adventure', methods=['POST'])
 def pet_adventure():
@@ -3957,7 +4103,7 @@ def pet_adventure():
             'return_time': adventure_end
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/pet/check-return', methods=['POST'])
 def pet_check_return():
@@ -3999,7 +4145,7 @@ def pet_check_return():
             return jsonify({'returned': False}), 200
             
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/pet/apply-decay', methods=['POST'])
 def pet_apply_decay():
@@ -4035,7 +4181,7 @@ def pet_apply_decay():
         conn.close()
         return jsonify({'success': True}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 # ===== CBT TOOLS ENDPOINTS =====
 @app.route('/api/cbt/thought-record', methods=['POST'])
@@ -4069,7 +4215,7 @@ def cbt_thought_record():
         
         return jsonify({'success': True, 'record_id': record_id}), 201
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/cbt/records', methods=['GET'])
 def get_cbt_records():
@@ -4094,7 +4240,7 @@ def get_cbt_records():
         
         return jsonify({'success': True, 'records': result}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 # ===== CLINICAL SCALES ENDPOINTS =====
 @app.route('/api/clinical/phq9', methods=['POST'])
@@ -4175,7 +4321,7 @@ def submit_phq9():
         
         return jsonify({'success': True, 'score': total, 'severity': severity}), 201
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/clinical/gad7', methods=['POST'])
 def submit_gad7():
@@ -4253,7 +4399,7 @@ def submit_gad7():
         
         return jsonify({'success': True, 'score': total, 'severity': severity}), 201
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 # === COMMUNITY SUPPORT BOARD ===
 @app.route('/api/community/posts', methods=['GET'])
@@ -4292,7 +4438,7 @@ def get_community_posts():
         conn.close()
         return jsonify({'posts': post_list}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/community/post', methods=['POST'])
 def create_community_post():
@@ -4319,7 +4465,7 @@ def create_community_post():
         
         return jsonify({'success': True}), 201
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/community/post/<int:post_id>/like', methods=['POST'])
 def like_community_post(post_id):
@@ -4354,7 +4500,7 @@ def like_community_post(post_id):
         
         return jsonify({'success': True}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/community/post/<int:post_id>', methods=['DELETE'])
 def delete_community_post(post_id):
@@ -4393,7 +4539,7 @@ def delete_community_post(post_id):
         
         return jsonify({'success': True}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/community/post/<int:post_id>/reply', methods=['POST'])
 def create_reply(post_id):
@@ -4417,7 +4563,7 @@ def create_reply(post_id):
         
         return jsonify({'success': True}), 201
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/community/post/<int:post_id>/replies', methods=['GET'])
 def get_replies(post_id):
@@ -4439,7 +4585,7 @@ def get_replies(post_id):
             } for r in replies
         ]}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 # === SAFETY PLAN ===
 @app.route('/api/safety-plan', methods=['GET'])
@@ -4468,7 +4614,7 @@ def get_safety_plan():
         else:
             return jsonify({'triggers': '', 'coping_strategies': '', 'support_contacts': '', 'professional_contacts': ''}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/safety-plan', methods=['POST'])
 def save_safety_plan():
@@ -4506,7 +4652,7 @@ def save_safety_plan():
         
         return jsonify({'success': True}), 201
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 # === DATA EXPORT ===
 @app.route('/api/export/csv', methods=['GET'])
@@ -4570,7 +4716,7 @@ def export_csv():
         response.headers["Content-Type"] = "text/csv"
         return response
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/export/pdf', methods=['GET'])
 def export_pdf():
@@ -4675,176 +4821,225 @@ def export_pdf():
         response.headers["Content-Type"] = "application/pdf"
         return response
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 # === PROGRESS INSIGHTS ===
 @app.route('/api/insights', methods=['GET'])
+# ...existing code...
+
+@app.route('/api/insights', methods=['GET'])
 def get_insights():
-    """Get AI-generated progress insights"""
+    """
+    Generate AI-powered insights for a patient or clinician over a custom date range.
+    Uses a descriptive prompt for the AI and includes all user data, conversations, and app interactions.
+    - Clinician: professional, data-rich summary
+    - Patient: narrative, empathetic summary
+    """
     try:
         username = request.args.get('username')
-        if not username:
-            return jsonify({'error': 'Username required'}), 400
-        
-        # Get optional date range parameters
+        role = request.args.get('role', 'patient')  # 'clinician' or 'patient'
         from_date = request.args.get('from_date')
         to_date = request.args.get('to_date')
-        
+        ai_prompt = request.args.get('prompt')  # The descriptive insights prompt
+
+        if not username or not ai_prompt:
+            return jsonify({'error': 'Username and prompt required'}), 400
+
         conn = get_db_connection()
         cur = conn.cursor()
-        
-        # Build query with optional date filtering
-        mood_query = "SELECT mood_val, sleep_val, entrestamp FROM mood_logs WHERE username=?"
-        query_params = [username]
-        
+
+        # Build mood log query with date range
+        mood_query = "SELECT mood_val, sleep_val, entrestamp, notes FROM mood_logs WHERE username=?"
+        params = [username]
         if from_date:
             mood_query += " AND date(entrestamp) >= date(?)"
-            query_params.append(from_date)
-        
+            params.append(from_date)
         if to_date:
             mood_query += " AND date(entrestamp) <= date(?)"
-            query_params.append(to_date)
-        
+            params.append(to_date)
         mood_query += " ORDER BY entrestamp DESC"
-        
-        # If no date range specified, limit to last 7 entries
-        if not from_date and not to_date:
-            mood_query += " LIMIT 7"
-        
-        # Get mood data for trends
-        moods = cur.execute(mood_query, tuple(query_params)).fetchall()
-        
-        # Get recent gratitude entries
-        gratitudes = cur.execute(
-            "SELECT entry FROM gratitude_logs WHERE username=? ORDER BY entry_timestamp DESC LIMIT 5",
-            (username,)
-        ).fetchall()
-        
+        moods = cur.execute(mood_query, tuple(params)).fetchall()
+
+        # Get chat history in date range
+        chat_query = "SELECT sender, message, timestamp FROM chat_history WHERE session_id=?"
+        chat_params = [f"{username}_session"]
+        if from_date:
+            chat_query += " AND date(timestamp) >= date(?)"
+            chat_params.append(from_date)
+        if to_date:
+            chat_query += " AND date(timestamp) <= date(?)"
+            chat_params.append(to_date)
+        chat_query += " ORDER BY timestamp DESC"
+        chat_history = cur.execute(chat_query, tuple(chat_params)).fetchall()
+
+        # Get gratitude entries
+        grat_query = "SELECT entry, entry_timestamp FROM gratitude_logs WHERE username=?"
+        grat_params = [username]
+        if from_date:
+            grat_query += " AND date(entry_timestamp) >= date(?)"
+            grat_params.append(from_date)
+        if to_date:
+            grat_query += " AND date(entry_timestamp) <= date(?)"
+            grat_params.append(to_date)
+        grat_query += " ORDER BY entry_timestamp DESC"
+        gratitudes = cur.execute(grat_query, tuple(grat_params)).fetchall()
+
         # Get CBT records
-        cbt = cur.execute(
-            "SELECT COUNT(*) FROM cbt_records WHERE username=?",
-            (username,)
-        ).fetchone()[0]
-        
+        cbt_query = "SELECT situation, thought, evidence, entry_timestamp FROM cbt_records WHERE username=?"
+        cbt_params = [username]
+        if from_date:
+            cbt_query += " AND date(entry_timestamp) >= date(?)"
+            cbt_params.append(from_date)
+        if to_date:
+            cbt_query += " AND date(entry_timestamp) <= date(?)"
+            cbt_params.append(to_date)
+        cbt_query += " ORDER BY entry_timestamp DESC"
+        cbt = cur.execute(cbt_query, tuple(cbt_params)).fetchall()
+
         # Get safety plan
         safety = cur.execute(
-            "SELECT triggers, coping FROM safety_plans WHERE username=?",
-            (username,)
+            "SELECT triggers, coping FROM safety_plans WHERE username=?", (username,)
         ).fetchone()
-        
-        conn.close()
-        
-        # Calculate trends
-        mood_trend = "stable"
-        if len(moods) >= 3:
-            recent_avg = sum(m[0] for m in moods[:3]) / 3
-            older_avg = sum(m[0] for m in moods[3:]) / max(1, len(moods) - 3)
-            if recent_avg > older_avg + 1:
-                mood_trend = "improving"
-            elif recent_avg < older_avg - 1:
-                mood_trend = "declining"
-        
-        avg_mood = sum(m[0] for m in moods) / len(moods) if moods else 0
-        avg_sleep = sum(m[1] for m in moods) / len(moods) if moods else 0
-        
-        date_range_text = ""
-        if from_date and to_date:
-            date_range_text = f" from {from_date} to {to_date}"
-        elif from_date:
-            date_range_text = f" from {from_date}"
-        elif to_date:
-            date_range_text = f" up to {to_date}"
-        
-        insight = f"Your average mood over {len(moods)} entries{date_range_text} is {avg_mood:.1f}/10 (trend: {mood_trend}). "
-        insight += f"Average sleep: {avg_sleep:.1f} hours. "
-        insight += f"You've completed {cbt} CBT thought records. "
-        insight += f"You've logged {len(gratitudes)} gratitude entries recently. "
-        
-        if mood_trend == "declining":
-            insight += "Consider reaching out to your support network or reviewing your safety plan."
-        elif mood_trend == "improving":
-            insight += "Great progress! Keep up the self-care routines that are working for you."
-        
-        return jsonify({
-            'insight': insight,
-            'mood_data': [{'value': m[0], 'timestamp': m[2]} for m in reversed(moods)],
-            'sleep_data': [{'value': m[1], 'timestamp': m[2]} for m in reversed(moods)],
-            'avg_mood': round(avg_mood, 1),
-            'avg_sleep': round(avg_sleep, 1),
-            'trend': mood_trend
-        }), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
+        conn.close()
+
+        # Format data for AI
+        mood_summary = [
+            f"{m[2][:10]}: Mood {m[0]}/10, Sleep {m[1]}h, Notes: {m[3][:50] if m[3] else '-'}"
+            for m in moods
+        ]
+        chat_summary = [
+            f"{c[2][:16]} {c[0].upper()}: {c[1][:100]}"
+            for c in chat_history
+        ]
+        gratitude_summary = [f"{g[1][:10]}: {g[0][:80]}" for g in gratitudes]
+        cbt_summary = [
+            f"{c[3][:10]}: Situation: {c[0][:40]}, Thought: {c[1][:40]}, Evidence: {c[2][:40]}"
+            for c in cbt
+        ]
+        safety_summary = f"Triggers: {safety[0] if safety else 'None'}, Coping: {safety[1] if safety else 'None'}"
+
+        # Compose AI input
+        if role == 'clinician':
+            ai_input = (
+                f"{ai_prompt}\n\n"
+                f"PATIENT DATA ({from_date or 'start'} to {to_date or 'now'}):\n"
+                f"- Mood Logs:\n" + "\n".join(mood_summary[:15]) + "\n"
+                f"- Chat History (user/AI):\n" + "\n".join(chat_summary[:10]) + "\n"
+                f"- Gratitude Entries:\n" + "\n".join(gratitude_summary[:5]) + "\n"
+                f"- CBT Records:\n" + "\n".join(cbt_summary[:5]) + "\n"
+                f"- Safety Plan: {safety_summary}\n"
+                f"Please provide a professional, data-driven clinical insight for the above period."
+            )
+        else:
+            ai_input = (
+                f"{ai_prompt}\n\n"
+                f"Here's your data from {from_date or 'the beginning'} to {to_date or 'now'}:\n"
+                f"- Mood logs: " + ", ".join([f"{m[0]}/10" for m in moods[:7]]) + "\n"
+                f"- Sleep: " + ", ".join([f"{m[1]}h" for m in moods[:7]]) + "\n"
+                f"- Recent gratitude: " + "; ".join([g[0][:40] for g in gratitudes[:3]]) + "\n"
+                f"- CBT: " + "; ".join([c[1][:40] for c in cbt[:2]]) + "\n"
+                f"- Safety plan: {safety_summary}\n"
+                f"Write an empathetic, narrative summary to help the user reflect on their progress."
+            )
+
+        # Call AI model (pseudo-code, replace with actual call)
+        ai_response = TherapistAI(username).get_insight(ai_input)
+
+        return jsonify({
+            'insight': ai_response,
+            'mood_data': [{'value': m[0], 'timestamp': m[2]} for m in moods],
+            'sleep_data': [{'value': m[1], 'timestamp': m[2]} for m in moods],
+            'from_date': from_date,
+            'to_date': to_date,
+            'role': role
+        }), 200
+
+    except Exception as e:
+        return handle_exception(e, request.endpoint or 'unknown')
+# ...existing code...
 # === PROFESSIONAL DASHBOARD ===
 @app.route('/api/professional/patients', methods=['GET'])
 def get_patients():
-    """Get list of all patients assigned to logged-in clinician"""
+    """Get list of all patients assigned to logged-in clinician.
+
+    OPTIMIZED: Uses a single query with subqueries instead of N+1 pattern.
+    Previously: 1 + 4*N queries (where N = number of patients)
+    Now: 1 query (with subqueries executed once per patient in SQL)
+    """
     try:
         clinician_username = request.args.get('clinician')
-        
+
         if not clinician_username:
             return jsonify({'error': 'Clinician username required'}), 400
-        
+
         conn = get_db_connection()
         cur = conn.cursor()
-        
-        # Get only APPROVED patients assigned to this clinician
-        users = cur.execute(
-            """SELECT u.username FROM users u
-               JOIN patient_approvals pa ON u.username = pa.patient_username
-               WHERE u.role='user' AND pa.clinician_username=? AND pa.status='approved'""",
-            (clinician_username,)
-        ).fetchall()
-        
+
+        # OPTIMIZED: Single query with correlated subqueries
+        # This is much more efficient than N+1 queries in application code
+        patients = cur.execute("""
+            SELECT
+                u.username,
+                u.last_login,
+                -- 7-day mood average (correlated subquery)
+                (SELECT AVG(mood_val)
+                 FROM mood_logs ml
+                 WHERE ml.username = u.username
+                   AND ml.entrestamp > datetime('now', '-7 days')
+                ) as avg_mood_7d,
+                -- 7-day alert count (correlated subquery)
+                (SELECT COUNT(*)
+                 FROM alerts a
+                 WHERE a.username = u.username
+                   AND a.created_at > datetime('now', '-7 days')
+                ) as alert_count_7d,
+                -- Latest assessment info (using nested subqueries)
+                (SELECT scale_name FROM clinical_scales cs
+                 WHERE cs.username = u.username
+                 ORDER BY entry_timestamp DESC LIMIT 1) as latest_scale_name,
+                (SELECT score FROM clinical_scales cs
+                 WHERE cs.username = u.username
+                 ORDER BY entry_timestamp DESC LIMIT 1) as latest_scale_score,
+                (SELECT severity FROM clinical_scales cs
+                 WHERE cs.username = u.username
+                 ORDER BY entry_timestamp DESC LIMIT 1) as latest_scale_severity,
+                (SELECT entry_timestamp FROM clinical_scales cs
+                 WHERE cs.username = u.username
+                 ORDER BY entry_timestamp DESC LIMIT 1) as latest_scale_date
+            FROM users u
+            JOIN patient_approvals pa ON u.username = pa.patient_username
+            WHERE u.role = 'user'
+              AND pa.clinician_username = ?
+              AND pa.status = 'approved'
+            ORDER BY alert_count_7d DESC, u.username ASC
+        """, (clinician_username,)).fetchall()
+
+        # Build response from single query results
         patient_list = []
-        for user in users:
-            username = user[0]
-            
-            # Get recent mood average
-            mood_avg = cur.execute(
-                "SELECT AVG(mood_val) FROM mood_logs WHERE username=? AND entrestamp > datetime('now', '-7 days')",
-                (username,)
-            ).fetchone()[0] or 0
-            
-            # Get alert count (use alerts table, not safety_alerts)
-            alert_count = cur.execute(
-                "SELECT COUNT(*) FROM alerts WHERE username=? AND created_at > datetime('now', '-7 days')",
-                (username,)
-            ).fetchone()[0]
-            
-            # Get latest assessment
-            latest_scale = cur.execute(
-                "SELECT scale_name, score, severity, entry_timestamp FROM clinical_scales WHERE username=? ORDER BY entry_timestamp DESC LIMIT 1",
-                (username,)
-            ).fetchone()
-            
-            # Get last login
-            last_login = cur.execute(
-                "SELECT last_login FROM users WHERE username=?",
-                (username,)
-            ).fetchone()
-            
+        for p in patients:
+            username, last_login, avg_mood, alert_count, scale_name, scale_score, scale_severity, scale_date = p
+
             patient_list.append({
                 'username': username,
-                'avg_mood_7d': round(mood_avg, 1),
-                'alert_count_7d': alert_count,
-                'last_login': last_login[0] if last_login and last_login[0] else None,
+                'avg_mood_7d': round(avg_mood, 1) if avg_mood else 0,
+                'alert_count_7d': alert_count or 0,
+                'last_login': last_login,
                 'latest_assessment': {
-                    'name': latest_scale[0],
-                    'score': latest_scale[1],
-                    'severity': latest_scale[2],
-                    'date': latest_scale[3]
-                } if latest_scale else None
+                    'name': scale_name,
+                    'score': scale_score,
+                    'severity': scale_severity,
+                    'date': scale_date
+                } if scale_name else None
             })
-        
+
         conn.close()
         return jsonify({'patients': patient_list}), 200
     except Exception as e:
         print(f"ERROR in get_patients: {str(e)}")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/professional/patient/<username>', methods=['GET'])
 def get_patient_detail(username):
@@ -4960,7 +5155,7 @@ def get_patient_detail(username):
             ]
         }), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/professional/ai-summary', methods=['POST'])
 def generate_ai_summary():
@@ -5187,7 +5382,7 @@ def generate_ai_summary():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 # ===== CLINICIAN NOTES & PDF EXPORT =====
 @app.route('/api/professional/notes', methods=['POST'])
@@ -5220,7 +5415,7 @@ def create_clinician_note():
         
         return jsonify({'success': True, 'note_id': note_id, 'message': 'Note saved and AI memory updated'}), 201
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/professional/notes/<patient_username>', methods=['GET'])
 def get_clinician_notes(patient_username):
@@ -5248,7 +5443,7 @@ def get_clinician_notes(patient_username):
             } for n in notes
         ]}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/professional/notes/<int:note_id>', methods=['DELETE'])
 def delete_clinician_note(note_id):
@@ -5283,7 +5478,7 @@ def delete_clinician_note(note_id):
         
         return jsonify({'success': True}), 200
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/professional/export-summary', methods=['POST'])
 def export_patient_summary():
@@ -5470,7 +5665,7 @@ def export_patient_summary():
         print(f"Export summary error: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 # ===== ADMIN / TESTING ENDPOINTS =====
 @app.route('/api/admin/reset-users', methods=['POST'])
@@ -5555,7 +5750,7 @@ def reset_all_users():
         }), 200
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 # === DAILY MOOD REMINDER ===
 @app.route('/api/mood/check-reminder', methods=['POST'])
@@ -5612,7 +5807,7 @@ def check_mood_reminder():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/mood/check-today', methods=['GET'])
 def check_mood_today():
@@ -5640,7 +5835,7 @@ def check_mood_today():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 # === TRAINING DATA MANAGEMENT (GDPR-COMPLIANT) ===
 from training_data_manager import TrainingDataManager
@@ -5673,7 +5868,7 @@ def set_training_consent():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/training/consent/status', methods=['GET'])
 def get_training_consent_status():
@@ -5690,7 +5885,7 @@ def get_training_consent_status():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/training/export', methods=['POST'])
 def export_training_data():
@@ -5729,7 +5924,7 @@ def export_training_data():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/training/delete', methods=['POST'])
 def delete_training_data():
@@ -5749,7 +5944,7 @@ def delete_training_data():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/training/stats', methods=['GET'])
 def get_training_stats():
@@ -5763,7 +5958,7 @@ def get_training_stats():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 # ==================== APPOINTMENT CALENDAR ENDPOINTS ====================
 
@@ -5872,7 +6067,7 @@ def manage_appointments():
             }), 201
             
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/appointments/<int:appointment_id>', methods=['DELETE'])
 def cancel_appointment(appointment_id):
@@ -5908,7 +6103,7 @@ def cancel_appointment(appointment_id):
             return jsonify({'error': 'Appointment not found'}), 404
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/appointments/<int:appointment_id>/respond', methods=['POST'])
 def respond_to_appointment(appointment_id):
@@ -5967,7 +6162,7 @@ def respond_to_appointment(appointment_id):
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 
 @app.route('/api/appointments/<int:appointment_id>/attendance', methods=['POST'])
@@ -6028,7 +6223,7 @@ def confirm_appointment_attendance(appointment_id):
         return jsonify({'success': True, 'message': f'Appointment marked {status}'}), 200
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/patient/profile', methods=['GET', 'PUT'])
 def patient_profile():
@@ -6118,7 +6313,7 @@ def patient_profile():
             return jsonify({'success': True, 'message': 'Profile updated'}), 200
             
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 # ==================== ANALYTICS ENDPOINTS ====================
 
@@ -6269,7 +6464,7 @@ def get_analytics_dashboard():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/analytics/active-patients', methods=['GET'])
 def get_active_patients():
@@ -6349,7 +6544,7 @@ def get_active_patients():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/analytics/patient/<username>', methods=['GET'])
 def get_patient_analytics(username):
@@ -6476,7 +6671,7 @@ def get_patient_analytics(username):
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 # ==================== REPORT GENERATOR ENDPOINTS ====================
 
@@ -6653,7 +6848,7 @@ Mental Health Clinician
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 # ==================== SEARCH & FILTER ENDPOINTS ====================
 
@@ -6723,7 +6918,7 @@ def search_patients():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return handle_exception(e, request.endpoint or 'unknown')
 
 @app.errorhandler(404)
 def not_found(e):
