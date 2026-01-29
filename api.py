@@ -3721,47 +3721,23 @@ def pet_status():
     try:
         username = request.args.get('username')
         if not username:
-            return jsonify({'error': 'Username required'}), 400
-        
+            return jsonify({'exists': False, 'error': 'Username required'}), 200
         conn = sqlite3.connect("pet_game.db")
         cur = conn.cursor()
         pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
         conn.close()
-        
         if not pet:
-            return jsonify({'exists': False}), 200
-        
+            return jsonify({'exists': False, 'error': 'No pet found for user'}), 200
         return jsonify({
             'exists': True,
-            try:
-                username = request.args.get('username')
-                if not username:
-                    return jsonify({'exists': False, 'error': 'Username required'}), 200
-                conn = sqlite3.connect("pet_game.db")
-                cur = conn.cursor()
-                pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
-                conn.close()
-                if not pet:
-                    return jsonify({'exists': False, 'error': 'No pet found for user'}), 200
-                return jsonify({
-                    'exists': True,
-                    'pet': {
-                        'name': pet[1], 'species': pet[2], 'gender': pet[3],
-                        'hunger': pet[4], 'happiness': pet[5], 'energy': pet[6],
-                        # ...existing code...
-                    }
-                }), 200
-            except Exception as e:
-                return jsonify({'exists': False, 'error': str(e)}), 200
-                'message': 'Training system not available (transformers library not installed)'
-            }), 200
-        except Exception as e:
-            return jsonify({
-                'trained': False,
-                'message': f'Error: {str(e)}'
-            }), 200
+            'pet': {
+                'name': pet[1], 'species': pet[2], 'gender': pet[3],
+                'hunger': pet[4], 'happiness': pet[5], 'energy': pet[6],
+                # ...existing code...
+            }
+        }), 200
     except Exception as e:
-        return handle_exception(e, request.endpoint or 'unknown')
+        return jsonify({'exists': False, 'error': str(e)}), 200
 
 @app.route('/api/ai/trigger-training', methods=['POST'])
 def trigger_background_training():
