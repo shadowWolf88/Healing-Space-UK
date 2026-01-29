@@ -1063,9 +1063,12 @@ def admin_wipe_database():
         data = request.json
         admin_key = data.get('admin_key')
         
-        # Check admin key (set via environment variable)
-        required_key = os.getenv('ADMIN_WIPE_KEY', 'change-this-secret-key-in-production')
-        
+        # Check admin key (MUST be set via environment variable - no default)
+        required_key = os.getenv('ADMIN_WIPE_KEY')
+
+        if not required_key:
+            return jsonify({'error': 'Admin wipe key not configured on server'}), 500
+
         if not admin_key or admin_key != required_key:
             return jsonify({'error': 'Unauthorized - invalid admin key'}), 403
         
@@ -1552,13 +1555,12 @@ def forgot_password():
             log_event(username, 'api', 'password_reset_email_failed', str(email_error))
             return jsonify({
                 'success': True,
-                'message': 'Reset initiated. Please contact support if you don\'t receive an email.',
-                'error_details': str(email_error) if DEBUG else None
+                'message': 'Reset initiated. Please contact support if you don\'t receive an email.'
             }), 200
-        
+
     except Exception as e:
-        print(f"Password reset error: {e}")
-        return jsonify({'error': 'Password reset failed', 'details': str(e) if DEBUG else None}), 500
+        print(f"Password reset error: {e}")  # Server-side logging only
+        return handle_exception(e, 'password_reset')
 
 def send_reset_email(to_email, username, reset_token):
     """Send password reset email via SMTP"""
@@ -3671,10 +3673,15 @@ def log_gratitude():
         data = request.json
         username = data.get('username')
         entry = data.get('entry')
-        
+
         if not username or not entry:
             return jsonify({'error': 'Username and entry required'}), 400
-        
+
+        # INPUT VALIDATION: Length limits
+        MAX_ENTRY_LENGTH = 1000
+        if len(entry) > MAX_ENTRY_LENGTH:
+            return jsonify({'error': f'Entry too long. Maximum {MAX_ENTRY_LENGTH} characters allowed.'}), 400
+
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("INSERT INTO gratitude_logs (username, entry) VALUES (?,?)", (username, entry))
@@ -4276,10 +4283,16 @@ def cbt_thought_record():
         situation = data.get('situation')
         thought = data.get('thought')
         evidence = data.get('evidence')
-        
+
         if not all([username, situation, thought]):
             return jsonify({'error': 'Username, situation, and thought required'}), 400
-        
+
+        # INPUT VALIDATION: Length limits
+        MAX_FIELD_LENGTH = 2000
+        for field_name, field_value in [('situation', situation), ('thought', thought), ('evidence', evidence)]:
+            if field_value and len(field_value) > MAX_FIELD_LENGTH:
+                return jsonify({'error': f'{field_name.capitalize()} too long. Maximum {MAX_FIELD_LENGTH} characters allowed.'}), 400
+
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
@@ -4530,8 +4543,16 @@ def create_community_post():
         data = request.json
         username = data.get('username')
         message = data.get('message')
-        
+
         if not username or not message:
+            return jsonify({'error': 'Username and message required'}), 400
+
+        # INPUT VALIDATION: Length limits to prevent abuse
+        MAX_POST_LENGTH = 2000
+        if len(message) > MAX_POST_LENGTH:
+            return jsonify({'error': f'Message too long. Maximum {MAX_POST_LENGTH} characters allowed.'}), 400
+
+        if len(username) > 50:
             return jsonify({'error': 'Username and message required'}), 400
         
         conn = get_db_connection()
