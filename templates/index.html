@@ -1146,10 +1146,10 @@
             <!-- Landing Page -->
             <div id="landingPage">
                 <h2 style="text-align: center; margin-bottom: 30px;">Welcome! Please select:</h2>
-                <button class="btn" onclick="console.log('Patient button clicked'); showPatientAuth();" style="width: 100%; margin-bottom: 15px; padding: 20px; font-size: 18px;">
+                <button class="btn" onclick="showPatientAuth();" style="width: 100%; margin-bottom: 15px; padding: 20px; font-size: 18px;">
                     👤 I'm a Patient
                 </button>
-                <button class="btn btn-secondary" onclick="console.log('Clinician button clicked'); showClinicianAuth();" style="width: 100%; padding: 20px; font-size: 18px;">
+                <button class="btn btn-secondary" onclick="showClinicianAuth();" style="width: 100%; padding: 20px; font-size: 18px;">
                     👨‍⚕️ I'm a Clinician
                 </button>
                 
@@ -2941,11 +2941,42 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
     </div> <!-- End of app screen -->
     
     <script>
-        console.log('Script loading - v2026.01.29-CSRF-FIX');
+        // Script loading - v2026.01.29-SECURITY-FIX
         let currentUser = null;
         let currentUserRole = 'user';
         let currentClinicianName = null; // Store assigned clinician's name
         let csrfToken = null; // CSRF token for secure requests
+
+        // ========== PRODUCTION MODE: Suppress console logging ==========
+        // Set to true in production to hide debug info from browser console
+        const PRODUCTION_MODE = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+
+        if (PRODUCTION_MODE) {
+            // Store original console methods for critical errors only
+            const originalError = console.error;
+            console.log = function() {}; // Suppress logs
+            console.warn = function() {}; // Suppress warnings
+            console.error = function(...args) {
+                // Only log errors without sensitive details
+                if (args[0] && typeof args[0] === 'string' && !args[0].includes('token') && !args[0].includes('password')) {
+                    originalError.apply(console, ['[App Error]']);
+                }
+            };
+        }
+
+        // ========== SECURITY: HTML SANITIZATION ==========
+        // Prevents XSS attacks by escaping HTML special characters
+        function sanitizeHTML(str) {
+            if (str === null || str === undefined) return '';
+            const temp = document.createElement('div');
+            temp.textContent = str;
+            return temp.innerHTML;
+        }
+
+        // For displaying user content that should preserve some formatting (newlines only)
+        function sanitizeWithLineBreaks(str) {
+            return sanitizeHTML(str).replace(/\n/g, '<br>');
+        }
 
         // ========== CSRF TOKEN HANDLING ==========
         async function fetchCsrfToken() {
@@ -2961,7 +2992,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             }
         }
 
-        // Override fetch to automatically include CSRF token for POST/PUT/DELETE
+        // Override fetch to automatically include CSRF token and handle errors
         const originalFetch = window.fetch;
         window.fetch = async function(url, options = {}) {
             // Always send cookies (session, CSRF) for all requests
@@ -2980,8 +3011,32 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     }
                 }
             }
-            return originalFetch(url, options);
+            try {
+                const response = await originalFetch(url, options);
+                return response;
+            } catch (networkError) {
+                // Handle network errors gracefully
+                console.error('Network error:', networkError.message);
+                // Return a mock response that won't break JSON parsing
+                return {
+                    ok: false,
+                    status: 0,
+                    statusText: 'Network Error',
+                    json: async () => ({ error: 'Connection failed. Please check your internet connection.' }),
+                    text: async () => 'Connection failed'
+                };
+            }
         };
+
+        // Safe JSON parsing helper
+        async function safeParseJSON(response) {
+            try {
+                return await response.json();
+            } catch (parseError) {
+                console.error('JSON parse error');
+                return { error: 'Invalid response from server' };
+            }
+        }
 
         // Fetch CSRF token on page load
         fetchCsrfToken();
@@ -4391,9 +4446,9 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             messageEl.className = `message ${sender}`;
             if (id) messageEl.id = 'msg-' + id;
 
-            // Add message content
+            // Add message content (sanitized to prevent XSS)
             const contentDiv = document.createElement('div');
-            contentDiv.innerHTML = text;
+            contentDiv.innerHTML = sanitizeWithLineBreaks(text);
             messageEl.appendChild(contentDiv);
 
             // Add timestamp if provided
@@ -5416,11 +5471,11 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     const html = data.posts.map(post => `
                         <div class="community-post" id="post-${post.id}">
                             <div class="post-header">
-                                <strong>${post.username}</strong>
+                                <strong>${sanitizeHTML(post.username)}</strong>
                                 <span>${new Date(post.timestamp).toLocaleString()}</span>
                                 ${post.username === currentUser ? `<button onclick="deletePost(${post.id})" style="background: #e74c3c; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; margin-left: 10px;">Delete</button>` : ''}
                             </div>
-                            <div class="post-message">${post.message}</div>
+                            <div class="post-message">${sanitizeWithLineBreaks(post.message)}</div>
                             <div style="display: flex; gap: 15px; margin-top: 10px; font-size: 14px;">
                                 <button onclick="likePost(${post.id})" style="background: none; border: none; cursor: pointer; color: ${post.liked_by_user ? '#e74c3c' : '#666'}; font-size: 14px;">❤️ ${post.likes} ${post.likes === 1 ? 'like' : 'likes'}</button>
                                 <button onclick="toggleReplies(${post.id})" style="background: none; border: none; cursor: pointer; color: #667eea; font-size: 14px;">💬 Reply</button>
@@ -5815,7 +5870,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     document.getElementById('avgMood').textContent = avgMood.toFixed(1);
                     document.getElementById('avgSleep').textContent = avgSleep.toFixed(1) + 'h';
                     document.getElementById('moodTrend').textContent = data.trend || 'No data';
-                    document.getElementById('aiInsight').innerHTML = `<p>${data.insight || 'No insights available yet. Log some moods to get started!'}</p>`;
+                    document.getElementById('aiInsight').innerHTML = `<p>${sanitizeWithLineBreaks(data.insight || 'No insights available yet. Log some moods to get started!')}</p>`;
                     
                     // Draw mood chart
                     if (data.mood_data && data.mood_data.length > 0) {
@@ -7863,13 +7918,13 @@ ${reportText}
                 const data = await response.json();
 
                 if (response.ok) {
-                    output.innerHTML += `<span style="color: #ffffff;">${data.output}</span>\n`;
+                    output.innerHTML += `<span style="color: #ffffff;">${sanitizeHTML(data.output)}</span>\n`;
                     output.innerHTML += `<span style="color: #888;">[Exit: ${data.exit_code}, Time: ${data.duration_ms}ms]</span>\n`;
                 } else {
-                    output.innerHTML += `<span style="color: #ff0000;">ERROR: ${data.error}</span>\n`;
+                    output.innerHTML += `<span style="color: #ff0000;">ERROR: ${sanitizeHTML(data.error)}</span>\n`;
                 }
             } catch (error) {
-                output.innerHTML += `<span style="color: #ff0000;">NETWORK ERROR: ${error.message}</span>\n`;
+                output.innerHTML += `<span style="color: #ff0000;">NETWORK ERROR: ${sanitizeHTML(error.message)}</span>\n`;
             }
 
             // Recreate input field at the end

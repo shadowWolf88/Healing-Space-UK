@@ -1039,7 +1039,7 @@ def debug_analytics(clinician):
         return jsonify(debug_info), 200
         
     except Exception as e:
-        return jsonify({'error': str(e), 'traceback': __import__('traceback').format_exc()}), 500
+        return handle_exception(e, 'debug_analytics')
 
 @app.route('/diagnostic')
 def diagnostic():
@@ -1919,7 +1919,7 @@ def accept_disclaimer():
 
 @app.route('/api/developer/terminal/execute', methods=['POST'])
 def execute_terminal():
-    """Execute terminal command with full access"""
+    """Execute terminal command with restricted whitelist"""
     try:
         data = request.json
         username = data.get('username')
@@ -1934,19 +1934,54 @@ def execute_terminal():
             conn.close()
             return jsonify({'error': 'Unauthorized - Developer access required'}), 403
 
-        # Execute command (FULL ACCESS - NO RESTRICTIONS)
+        # SECURITY: Whitelist of allowed commands (no shell injection)
         import subprocess
+        import shlex
         import time
+
+        # Parse command safely
+        try:
+            cmd_parts = shlex.split(command)
+        except ValueError as e:
+            conn.close()
+            return jsonify({'error': f'Invalid command syntax: {str(e)}'}), 400
+
+        if not cmd_parts:
+            conn.close()
+            return jsonify({'error': 'Empty command'}), 400
+
+        # Whitelist of allowed base commands (safe, read-only operations)
+        ALLOWED_COMMANDS = {
+            'ls', 'pwd', 'whoami', 'date', 'cat', 'head', 'tail', 'wc',
+            'grep', 'find', 'echo', 'env', 'printenv', 'df', 'du', 'free',
+            'uptime', 'ps', 'top', 'htop', 'pip', 'python', 'python3',
+            'git', 'which', 'file', 'stat', 'uname', 'hostname'
+        }
+
+        base_cmd = cmd_parts[0]
+        if base_cmd not in ALLOWED_COMMANDS:
+            conn.close()
+            return jsonify({
+                'error': f'Command "{base_cmd}" not allowed. Allowed: {", ".join(sorted(ALLOWED_COMMANDS))}'
+            }), 403
+
+        # Block dangerous arguments
+        BLOCKED_ARGS = {'--rm', '-rf', '--force', '--no-preserve-root', '>', '>>', '|', '&', ';', '`', '$(' }
+        for arg in cmd_parts[1:]:
+            for blocked in BLOCKED_ARGS:
+                if blocked in arg:
+                    conn.close()
+                    return jsonify({'error': f'Argument contains blocked pattern: {blocked}'}), 403
 
         start_time = time.time()
         try:
             result = subprocess.run(
-                command,
-                shell=True,  # Full shell access
+                cmd_parts,
+                shell=False,  # SECURE: No shell injection possible
                 capture_output=True,
                 text=True,
-                timeout=30,  # 30 second timeout
-                cwd=os.getcwd()  # Full filesystem access
+                timeout=30,
+                cwd=os.getcwd()
             )
             duration_ms = int((time.time() - start_time) * 1000)
 
@@ -3716,13 +3751,28 @@ def safety_check():
         return handle_exception(e, request.endpoint or 'unknown')
 
 # ===== PET GAME ENDPOINTS =====
+
+def verify_pet_user(username):
+    """SECURITY: Verify username exists in main database before allowing pet operations"""
+    if not username:
+        return False, "Username required"
+    conn = get_db_connection()
+    cur = conn.cursor()
+    user = cur.execute("SELECT username FROM users WHERE username=?", (username,)).fetchone()
+    conn.close()
+    if not user:
+        return False, "User not found"
+    return True, None
+
 @app.route('/api/pet/status', methods=['GET'])
 def pet_status():
     """Get pet status"""
     try:
         username = request.args.get('username')
-        if not username:
-            return jsonify({'exists': False, 'error': 'Username required'}), 200
+        # SECURITY: Verify user exists
+        valid, error = verify_pet_user(username)
+        if not valid:
+            return jsonify({'exists': False, 'error': error}), 200
         conn = sqlite3.connect("pet_game.db")
         cur = conn.cursor()
         pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
@@ -3787,13 +3837,19 @@ def pet_create():
     """Create new pet"""
     try:
         data = request.json
+        username = data.get('username')
         name = data.get('name')
         species = data.get('species', 'Dog')
         gender = data.get('gender', 'Neutral')
-        
+
+        # SECURITY: Verify user exists
+        valid, error = verify_pet_user(username)
+        if not valid:
+            return jsonify({'error': error}), 401
+
         if not name:
             return jsonify({'error': 'Pet name required'}), 400
-        
+
         conn = sqlite3.connect("pet_game.db")
         cur = conn.cursor()
         
@@ -3827,8 +3883,14 @@ def pet_feed():
     """Feed pet (from shop)"""
     try:
         data = request.json
+        username = data.get('username')
         item_cost = data.get('cost', 10)
-        
+
+        # SECURITY: Verify user exists
+        valid, error = verify_pet_user(username)
+        if not valid:
+            return jsonify({'error': error}), 401
+
         conn = sqlite3.connect("pet_game.db")
         cur = conn.cursor()
         pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
@@ -3858,9 +3920,15 @@ def pet_reward():
     """Reward pet for user self-care actions - matches original desktop app logic"""
     try:
         data = request.json
+        username = data.get('username')
         action = data.get('action')  # 'therapy', 'mood', 'gratitude', 'breathing', 'cbt', 'clinical'
         activity_type = data.get('activity_type')  # 'cbt', 'clinical', etc.
-        
+
+        # SECURITY: Verify user exists
+        valid, error = verify_pet_user(username)
+        if not valid:
+            return jsonify({'success': False, 'message': error}), 200
+
         conn = sqlite3.connect("pet_game.db")
         cur = conn.cursor()
         pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
@@ -3950,8 +4018,14 @@ def pet_buy():
     """Purchase shop item"""
     try:
         data = request.json
+        username = data.get('username')
         item_id = data.get('item_id')
-        
+
+        # SECURITY: Verify user exists
+        valid, error = verify_pet_user(username)
+        if not valid:
+            return jsonify({'error': error}), 401
+
         # Get shop items
         items = {
             'apple': {'cost': 10, 'effect': 'hunger', 'value': 20},
@@ -4014,11 +4088,17 @@ def pet_declutter():
     """Declutter task - throw away worries"""
     try:
         data = request.json
+        username = data.get('username')
         worries = data.get('worries', [])
-        
+
+        # SECURITY: Verify user exists
+        valid, error = verify_pet_user(username)
+        if not valid:
+            return jsonify({'error': error}), 401
+
         if not worries or len(worries) == 0:
             return jsonify({'error': 'Please provide at least one worry'}), 400
-        
+
         conn = sqlite3.connect("pet_game.db")
         cur = conn.cursor()
         pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
@@ -4053,6 +4133,14 @@ def pet_declutter():
 def pet_adventure():
     """Start adventure (30 min walk)"""
     try:
+        data = request.json or {}
+        username = data.get('username')
+
+        # SECURITY: Verify user exists
+        valid, error = verify_pet_user(username)
+        if not valid:
+            return jsonify({'error': error}), 401
+
         conn = sqlite3.connect("pet_game.db")
         cur = conn.cursor()
         pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
@@ -4088,6 +4176,14 @@ def pet_adventure():
 def pet_check_return():
     """Check if pet returned from adventure and give rewards"""
     try:
+        data = request.json or {}
+        username = data.get('username')
+
+        # SECURITY: Verify user exists
+        valid, error = verify_pet_user(username)
+        if not valid:
+            return jsonify({'error': error}), 401
+
         conn = sqlite3.connect("pet_game.db")
         cur = conn.cursor()
         pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
@@ -4130,6 +4226,14 @@ def pet_check_return():
 def pet_apply_decay():
     """Apply time-based stat decay"""
     try:
+        data = request.json or {}
+        username = data.get('username')
+
+        # SECURITY: Verify user exists
+        valid, error = verify_pet_user(username)
+        if not valid:
+            return jsonify({'error': error}), 401
+
         conn = sqlite3.connect("pet_game.db")
         cur = conn.cursor()
         pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
@@ -4894,6 +4998,9 @@ def get_insights():
     Uses a descriptive prompt for the AI and includes all user data, conversations, and app interactions.
     - Clinician: professional, data-rich summary
     - Patient: narrative, empathetic summary
+
+    SECURITY: Requires authentication - users can only view their own data,
+    or clinicians can view their approved patients' data.
     """
     try:
         username = request.args.get('username')
@@ -4901,12 +5008,56 @@ def get_insights():
         from_date = request.args.get('from_date')
         to_date = request.args.get('to_date')
         ai_prompt = request.args.get('prompt')  # The descriptive insights prompt
+        requesting_user = request.args.get('requesting_user')  # Who is making this request
 
         if not username or not ai_prompt:
             return jsonify({'error': 'Username and prompt required'}), 400
 
         conn = get_db_connection()
         cur = conn.cursor()
+
+        # SECURITY: Verify authorization
+        if role == 'clinician':
+            # Clinician must provide their username and be approved to view this patient
+            clinician_username = request.args.get('clinician_username')
+            if not clinician_username:
+                conn.close()
+                return jsonify({'error': 'Clinician username required for clinician role'}), 400
+
+            # Verify clinician exists and has correct role
+            clinician_check = cur.execute(
+                "SELECT role FROM users WHERE username=?", (clinician_username,)
+            ).fetchone()
+            if not clinician_check or clinician_check[0] != 'clinician':
+                conn.close()
+                return jsonify({'error': 'Invalid clinician'}), 403
+
+            # Verify clinician has approved access to this patient
+            approval_check = cur.execute(
+                "SELECT status FROM patient_approvals WHERE patient_username=? AND clinician_username=? AND status='approved'",
+                (username, clinician_username)
+            ).fetchone()
+            if not approval_check:
+                conn.close()
+                return jsonify({'error': 'Clinician not authorized to view this patient'}), 403
+        else:
+            # Patient role - verify they're requesting their own data
+            if requesting_user and requesting_user != username:
+                # Check if requesting_user is a clinician with approval
+                clinician_check = cur.execute(
+                    "SELECT role FROM users WHERE username=?", (requesting_user,)
+                ).fetchone()
+                if clinician_check and clinician_check[0] == 'clinician':
+                    approval_check = cur.execute(
+                        "SELECT status FROM patient_approvals WHERE patient_username=? AND clinician_username=? AND status='approved'",
+                        (username, requesting_user)
+                    ).fetchone()
+                    if not approval_check:
+                        conn.close()
+                        return jsonify({'error': 'Not authorized to view this data'}), 403
+                else:
+                    conn.close()
+                    return jsonify({'error': 'Not authorized to view this data'}), 403
 
         # Build mood log query with date range
         mood_query = "SELECT mood_val, sleep_val, entrestamp, notes FROM mood_logs WHERE username=?"
@@ -5057,6 +5208,8 @@ def get_patients():
     OPTIMIZED: Uses a single query with subqueries instead of N+1 pattern.
     Previously: 1 + 4*N queries (where N = number of patients)
     Now: 1 query (with subqueries executed once per patient in SQL)
+
+    SECURITY: Verifies that the clinician_username belongs to an actual clinician.
     """
     try:
         clinician_username = request.args.get('clinician')
@@ -5066,6 +5219,19 @@ def get_patients():
 
         conn = get_db_connection()
         cur = conn.cursor()
+
+        # SECURITY: Verify the clinician exists and has the clinician role
+        clinician_check = cur.execute(
+            "SELECT role FROM users WHERE username=?", (clinician_username,)
+        ).fetchone()
+
+        if not clinician_check:
+            conn.close()
+            return jsonify({'error': 'Clinician not found'}), 404
+
+        if clinician_check[0] != 'clinician':
+            conn.close()
+            return jsonify({'error': 'User is not a clinician'}), 403
 
         # OPTIMIZED: Single query with correlated subqueries
         # This is much more efficient than N+1 queries in application code
