@@ -5026,10 +5026,22 @@ def get_insights():
         # Call AI model (pseudo-code, replace with actual call)
         ai_response = TherapistAI(username).get_insight(ai_input)
 
+        # Calculate avg_mood, avg_sleep, and trend safely
+        if moods:
+            avg_mood = sum(m[0] for m in moods) / len(moods)
+            avg_sleep = sum(m[1] for m in moods) / len(moods)
+            trend = 'Improving' if len(moods) > 1 and moods[0][0] > moods[-1][0] else 'Stable'
+        else:
+            avg_mood = None
+            avg_sleep = None
+            trend = 'No data'
         return jsonify({
             'insight': ai_response,
             'mood_data': [{'value': m[0], 'timestamp': m[2]} for m in moods],
             'sleep_data': [{'value': m[1], 'timestamp': m[2]} for m in moods],
+            'avg_mood': avg_mood,
+            'avg_sleep': avg_sleep,
+            'trend': trend,
             'from_date': from_date,
             'to_date': to_date,
             'role': role
