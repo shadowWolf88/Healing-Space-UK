@@ -119,7 +119,8 @@ def handle_exception(e, context: str = 'unknown'):
 
 # ==================== CSRF PROTECTION ====================
 # CSRF Secret key for token generation
-CSRF_SECRET = os.environ.get('CSRF_SECRET', secrets.token_hex(32))
+import secrets as stdlib_secrets
+CSRF_SECRET = os.environ.get('CSRF_SECRET', stdlib_secrets.token_hex(32))
 
 # Endpoints exempt from CSRF (login, registration, public endpoints)
 CSRF_EXEMPT_ENDPOINTS = {
@@ -131,7 +132,7 @@ CSRF_EXEMPT_ENDPOINTS = {
 def generate_csrf_token():
     """Generate a CSRF token for the current session"""
     if 'csrf_token' not in g:
-        g.csrf_token = secrets.token_hex(32)
+        g.csrf_token = stdlib_secrets.token_hex(32)
     return g.csrf_token
 
 def validate_csrf_token(token):
@@ -172,7 +173,7 @@ def csrf_protect():
 @app.route('/api/csrf-token', methods=['GET'])
 def get_csrf_token():
     """Get a CSRF token for subsequent requests"""
-    token = secrets.token_hex(32)
+    token = stdlib_secrets.token_hex(32)
     response = jsonify({'csrf_token': token})
     # Also set as cookie for double-submit pattern
     response.set_cookie('csrf_token', token, httponly=False, samesite='Strict', secure=not DEBUG)
@@ -307,10 +308,10 @@ def get_db_connection(timeout=30.0):
     return conn
 
 # Load secrets
-secrets = SecretsManager(debug=DEBUG)
-GROQ_API_KEY = secrets.get_secret("GROQ_API_KEY") or os.environ.get("GROQ_API_KEY")
+secrets_manager = SecretsManager(debug=DEBUG)
+GROQ_API_KEY = secrets_manager.get_secret("GROQ_API_KEY") or os.environ.get("GROQ_API_KEY")
 API_URL = os.environ.get("API_URL", "https://api.groq.com/openai/v1/chat/completions")
-PIN_SALT = secrets.get_secret("PIN_SALT") or os.environ.get("PIN_SALT") or 'dev_fallback_salt'
+PIN_SALT = secrets_manager.get_secret("PIN_SALT") or os.environ.get("PIN_SALT") or 'dev_fallback_salt'
 
 # Validate critical API key on startup
 _groq_key_warning_shown = False
@@ -827,7 +828,7 @@ class TherapistAI:
     """AI therapy interface - supports Groq API or local trained model"""
 
     def get_insight(self, ai_input):
-        """Generate an insight using the same logic as get_response (for insights endpoint compatibility)."""
+        """Generate a full detailed insight using the same logic as get_response (for insights endpoint compatibility)."""
         return self.get_response(ai_input)
 
     def __init__(self, username=None):
@@ -894,7 +895,6 @@ CONVERSATION STYLE:
 
 AVOID:
 - Long lists of suggestions or coping strategies (unless specifically asked)
-- Repeating phrases like "I hear you" or "That sounds really difficult" every time
 - Overwhelming them with questions
 - Generic responses that could apply to anyone
 - Being preachy or giving unsolicited advice
@@ -5008,28 +5008,46 @@ def get_insights():
         ]
         safety_summary = f"Triggers: {safety[0] if safety else 'None'}, Coping: {safety[1] if safety else 'None'}"
 
-        # Compose AI input
+        # Compose maximally detailed AI input
         if role == 'clinician':
             ai_input = (
-                f"{ai_prompt}\n\n"
+                f"You are a clinical psychologist generating a comprehensive, data-rich summary for another clinician. "
+                f"Include all available patient data, highlight trends, risks, engagement, and make actionable recommendations. "
+                f"Be specific, evidence-based, and reference all app activity.\n\n"
                 f"PATIENT DATA ({from_date or 'start'} to {to_date or 'now'}):\n"
-                f"- Mood Logs:\n" + "\n".join(mood_summary[:15]) + "\n"
-                f"- Chat History (user/AI):\n" + "\n".join(chat_summary[:10]) + "\n"
-                f"- Gratitude Entries:\n" + "\n".join(gratitude_summary[:5]) + "\n"
-                f"- CBT Records:\n" + "\n".join(cbt_summary[:5]) + "\n"
+                f"- Mood Logs (up to 15):\n" + "\n".join(mood_summary[:15]) + "\n"
+                f"- Chat History (user/AI, up to 10):\n" + "\n".join(chat_summary[:10]) + "\n"
+                f"- Gratitude Entries (up to 5):\n" + "\n".join(gratitude_summary[:5]) + "\n"
+                f"- CBT Records (up to 5):\n" + "\n".join(cbt_summary[:5]) + "\n"
                 f"- Safety Plan: {safety_summary}\n"
-                f"Please provide a professional, data-driven clinical insight for the above period."
+                f"\nPlease analyze:\n"
+                f"1. Overall clinical impression, referencing all data sources.\n"
+                f"2. Key concerns, risk factors, and any safety issues.\n"
+                f"3. Notable trends in mood, sleep, habits, and engagement.\n"
+                f"4. Recommendations for clinical action or follow-up.\n"
+                f"5. Progress in self-help activities (gratitude, CBT, etc).\n"
+                f"6. Any missing data or areas needing further assessment.\n"
+                f"Be thorough, concise, and professional."
             )
         else:
             ai_input = (
-                f"{ai_prompt}\n\n"
-                f"Here's your data from {from_date or 'the beginning'} to {to_date or 'now'}:\n"
-                f"- Mood logs: " + ", ".join([f"{m[0]}/10" for m in moods[:7]]) + "\n"
-                f"- Sleep: " + ", ".join([f"{m[1]}h" for m in moods[:7]]) + "\n"
-                f"- Recent gratitude: " + "; ".join([g[0][:40] for g in gratitudes[:3]]) + "\n"
-                f"- CBT: " + "; ".join([c[1][:40] for c in cbt[:2]]) + "\n"
+                f"You are a compassionate therapist writing a detailed, narrative insight for the patient. "
+                f"Summarize all their app activity, highlight progress, strengths, and areas for growth. "
+                f"Use an empathetic, encouraging tone.\n\n"
+                f"YOUR DATA ({from_date or 'the beginning'} to {to_date or 'now'}):\n"
+                f"- Mood logs: " + ", ".join([f"{m[0]}/10" for m in moods[:10]]) + "\n"
+                f"- Sleep: " + ", ".join([f"{m[1]}h" for m in moods[:10]]) + "\n"
+                f"- Recent gratitude: " + "; ".join([g[0][:60] for g in gratitudes[:5]]) + "\n"
+                f"- CBT: " + "; ".join([c[1][:60] for c in cbt[:3]]) + "\n"
                 f"- Safety plan: {safety_summary}\n"
-                f"Write an empathetic, narrative summary to help the user reflect on their progress."
+                f"- Chat highlights: " + "; ".join([c[1][:80] for c in chat_history[:5]]) + "\n"
+                f"\nPlease write a comprehensive, encouraging summary that:\n"
+                f"1. Reflects on their progress and patterns.\n"
+                f"2. Highlights strengths and positive changes.\n"
+                f"3. Gently notes any risks or areas to focus on.\n"
+                f"4. Offers practical, personalized suggestions.\n"
+                f"5. Encourages continued engagement and self-care.\n"
+                f"Make it easy to understand, supportive, and motivating."
             )
 
         # Call AI model (pseudo-code, replace with actual call)
