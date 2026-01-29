@@ -6171,12 +6171,14 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
         
         async function loadPatientCharts() {
             if (!currentPatientData) return;
-            
+
             const fromDate = document.getElementById('patientChartFromDate')?.value;
             const toDate = document.getElementById('patientChartToDate')?.value;
-            
+
             try {
-                let url = `/api/insights?username=${encodeURIComponent(currentPatientData.username)}`;
+                // Build URL with required prompt parameter for clinician view
+                const chartPrompt = encodeURIComponent('Generate a clinical summary of mood and sleep patterns for charting purposes.');
+                let url = `/api/insights?username=${encodeURIComponent(currentPatientData.username)}&prompt=${chartPrompt}&role=clinician`;
                 if (fromDate) url += `&from_date=${fromDate}`;
                 if (toDate) url += `&to_date=${toDate}`;
                 

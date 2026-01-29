@@ -5374,47 +5374,69 @@ def generate_ai_summary():
         
         # Build prompt with comprehensive data
         window_desc = f"since joining ({days_since_join} days)" if days_since_join < 30 else "last 30 days"
-        prompt = f"""You are a clinical psychologist reviewing patient data. Generate a concise professional clinical summary (3-4 paragraphs).
+        prompt = f"""You are an experienced clinical psychologist preparing a comprehensive patient review for a colleague. Generate a detailed, professional clinical summary with clear sections.
 
-    Patient: {patient_name}
-    Known Conditions: {conditions}
+PATIENT INFORMATION:
+- Name: {patient_name}
+- Known Conditions: {conditions}
+- Review Period: {window_desc}
 
-    Data Summary ({window_desc}):
-    - Average Mood: {avg_mood:.1f}/10 (Trend: {mood_trend})
-    - Average Sleep: {avg_sleep:.1f} hours
-    - Average Exercise: {avg_exercise:.1f} minutes
-    - Average Outdoor Time: {avg_outside:.1f} minutes
-    - Average Water Intake: {avg_water:.1f} pints
-    - Safety Alerts: {alert_count}
-    - Gratitude Entries: {gratitude_count}
-    - CBT Exercises Completed: {cbt_count}
+QUANTITATIVE DATA:
+- Average Mood Score: {avg_mood:.1f}/10 (Trend: {mood_trend})
+- Average Sleep Duration: {avg_sleep:.1f} hours/night
+- Average Daily Exercise: {avg_exercise:.1f} minutes
+- Average Outdoor Time: {avg_outside:.1f} minutes
+- Average Water Intake: {avg_water:.1f} pints
+- Total Safety Alerts: {alert_count}
+- Gratitude Journal Entries: {gratitude_count}
+- CBT Exercises Completed: {cbt_count}
+- Total Therapy Sessions: {therapy_sessions}
 
-    Latest Assessments:
-    {chr(10).join([f"- {s[0]}: {s[1]} ({s[2]})" for s in scales]) if scales else "No assessments completed"}
+CLINICAL ASSESSMENTS:
+{chr(10).join([f"- {s[0]}: Score {s[1]} ({s[2]} severity)" for s in scales]) if scales else "No formal assessments completed yet"}
 
-    Recent Therapy Chat Themes (user concerns):
-    {chr(10).join([f"- {msg[0][:100]}" for msg in chat_messages[:5]]) if chat_messages else "No recent therapy sessions"}
+THERAPY SESSION THEMES (Patient's expressed concerns):
+{chr(10).join([f"- \"{msg[0][:150]}\"" for msg in chat_messages[:7]]) if chat_messages else "No therapy sessions recorded"}
 
-    Gratitude Practice:
-    {chr(10).join([f"- {g[0][:80]}" for g in gratitude[:3]]) if gratitude else "No gratitude entries"}
+GRATITUDE PRACTICE ENTRIES:
+{chr(10).join([f"- \"{g[0][:100]}\"" for g in gratitude[:5]]) if gratitude else "Patient has not used gratitude journaling"}
 
-    CBT Work:
-    {chr(10).join([f"- Situation: {c[0][:60]}..." for c in cbt_records[:3]]) if cbt_records else "No CBT exercises"}
+CBT THOUGHT RECORDS:
+{chr(10).join([f"- Situation: {c[0][:80]} | Thought: {c[1][:80]}" for c in cbt_records[:5]]) if cbt_records else "No CBT exercises completed"}
 
-    Clinician Notes:
-    {chr(10).join([f"- {'[KEY] ' if n[1] else ''}{n[0][:100]}" for n in clinician_notes]) if clinician_notes else "No clinician notes yet"}
+PREVIOUS CLINICIAN NOTES:
+{chr(10).join([f"- {'⚠️ FLAGGED: ' if n[1] else ''}{n[0][:150]}" for n in clinician_notes]) if clinician_notes else "No previous clinician notes"}
 
-    Recent Alerts:
-    {chr(10).join([f"- {a[0]}: {a[1]}" for a in alerts[:3]]) if alerts else "No recent alerts"}
+SAFETY ALERTS:
+{chr(10).join([f"- [{a[0]}] {a[1]}" for a in alerts[:5]]) if alerts else "No safety concerns flagged"}
 
-    Please provide:
-    1. Overall clinical impression considering all data sources
-    2. Key concerns or risk factors
-    3. Notable trends in mood, habits, and engagement
-    4. Recommended clinical actions or interventions
-    5. Progress in self-help activities (gratitude, CBT)
+---
 
-    Keep it professional and evidence-based."""
+Please provide a COMPREHENSIVE clinical summary with the following sections:
+
+## 1. CLINICAL IMPRESSION
+Provide an overall assessment of the patient's current mental health status, integrating all available data sources. Comment on presentation, engagement level, and general functioning.
+
+## 2. MOOD & SLEEP ANALYSIS
+Analyze the mood and sleep patterns in detail. Identify any concerning trends, correlations between mood and sleep, and compare to healthy baselines.
+
+## 3. RISK ASSESSMENT
+Evaluate any risk factors present including safety alerts, concerning themes in therapy, low mood patterns, or assessment results indicating elevated risk.
+
+## 4. TREATMENT ENGAGEMENT
+Assess the patient's engagement with therapeutic activities including therapy sessions, CBT exercises, gratitude practice, and self-care habits (exercise, hydration, outdoor time).
+
+## 5. PROGRESS & STRENGTHS
+Highlight positive developments, strengths, protective factors, and areas where the patient is making progress.
+
+## 6. CLINICAL RECOMMENDATIONS
+Provide specific, actionable recommendations for ongoing treatment including:
+- Therapeutic focus areas
+- Suggested interventions
+- Monitoring priorities
+- Any referral considerations
+
+Be thorough, evidence-based, and clinically specific. Reference the actual data provided."""
 
         # Call AI API
         if GROQ_API_KEY and API_URL:
@@ -5428,8 +5450,8 @@ def generate_ai_summary():
                     json={
                         "model": "llama-3.3-70b-versatile",
                         "messages": [{"role": "user", "content": prompt}],
-                        "temperature": 0.3,
-                        "max_tokens": 800
+                        "temperature": 0.4,
+                        "max_tokens": 2000
                     },
                     timeout=30
                 )
