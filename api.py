@@ -5354,7 +5354,7 @@ def generate_ai_summary():
         patient_name = profile[0] if profile else username
         conditions = profile[1] if profile and profile[1] else "Not specified"
         
-        avg_mood = sum(m[0] for m in moods) / len(moods) if moods else 0
+        avg_mood = sum(m[0] or 0 for m in moods) / len(moods) if moods else 0
         avg_sleep = sum(m[1] or 0 for m in moods) / len(moods) if moods else 0
         avg_exercise = sum(m[2] or 0 for m in moods) / len(moods) if moods else 0
         avg_outside = sum(m[3] or 0 for m in moods) / len(moods) if moods else 0
@@ -5497,6 +5497,9 @@ Be thorough, evidence-based, and clinically specific. Reference the actual data 
         }), 200
         
     except Exception as e:
+        import traceback
+        print(f"AI SUMMARY ERROR: {str(e)}")
+        traceback.print_exc()
         return handle_exception(e, request.endpoint or 'unknown')
 
 # ===== CLINICIAN NOTES & PDF EXPORT =====
