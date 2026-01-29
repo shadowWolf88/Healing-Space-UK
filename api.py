@@ -4548,27 +4548,111 @@ def delete_community_post(post_id):
 
 @app.route('/api/community/post/<int:post_id>/reply', methods=['POST'])
 def create_reply(post_id):
-    """Create a reply to a community post"""
+    """Create a reply to a community post with content moderation"""
     try:
         data = request.json
         username = data.get('username')
         message = data.get('message')
-        
+
         if not username or not message:
             return jsonify({'error': 'Username and message required'}), 400
-        
+
+        # CONTENT MODERATION: Check reply before posting
+        moderation_result = content_moderator.moderate(message)
+
+        if not moderation_result['allowed']:
+            log_event(username, 'community', 'reply_blocked', moderation_result['reason'])
+            return jsonify({
+                'error': moderation_result['reason'],
+                'code': 'CONTENT_BLOCKED'
+            }), 400
+
+        sanitized_message = moderation_result['filtered_text']
+
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
             "INSERT INTO community_replies (post_id, username, message) VALUES (?,?,?)",
-            (post_id, username, message)
+            (post_id, username, sanitized_message)
         )
+        reply_id = cur.lastrowid
+
+        # Flag for review if needed
+        if moderation_result['flagged']:
+            cur.execute(
+                "INSERT INTO alerts (username, alert_type, details, status) VALUES (?,?,?,?)",
+                (username, 'content_review', f"Reply {reply_id} to post {post_id}: {moderation_result['flag_reason']}", 'pending_review')
+            )
+            log_event(username, 'community', 'reply_flagged', moderation_result['flag_reason'])
+
         conn.commit()
         conn.close()
-        
-        return jsonify({'success': True}), 201
+
+        return jsonify({'success': True, 'reply_id': reply_id}), 201
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
+
+
+@app.route('/api/community/post/<int:post_id>/report', methods=['POST'])
+def report_community_post(post_id):
+    """Report a community post for moderation review"""
+    try:
+        data = request.json
+        reporter_username = data.get('username')
+        reason = data.get('reason', 'No reason provided')
+
+        if not reporter_username:
+            return jsonify({'error': 'Username required'}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Check if post exists
+        post = cur.execute(
+            "SELECT username, message FROM community_posts WHERE id=?",
+            (post_id,)
+        ).fetchone()
+
+        if not post:
+            conn.close()
+            return jsonify({'error': 'Post not found'}), 404
+
+        post_author = post[0]
+
+        # Don't allow self-reporting
+        if reporter_username == post_author:
+            conn.close()
+            return jsonify({'error': 'Cannot report your own post'}), 400
+
+        # Check if already reported by this user
+        existing_report = cur.execute(
+            "SELECT id FROM alerts WHERE alert_type='post_report' AND details LIKE ? AND details LIKE ?",
+            (f'%post_id:{post_id}%', f'%reporter:{reporter_username}%')
+        ).fetchone()
+
+        if existing_report:
+            conn.close()
+            return jsonify({'error': 'You have already reported this post'}), 409
+
+        # Create report alert
+        report_details = f"post_id:{post_id}|reporter:{reporter_username}|author:{post_author}|reason:{reason}"
+        cur.execute(
+            "INSERT INTO alerts (username, alert_type, details, status) VALUES (?,?,?,?)",
+            (post_author, 'post_report', report_details, 'pending_review')
+        )
+
+        conn.commit()
+        conn.close()
+
+        log_event(reporter_username, 'community', 'post_reported', f"Reported post {post_id}: {reason}")
+
+        return jsonify({
+            'success': True,
+            'message': 'Post has been reported for review'
+        }), 200
+    except Exception as e:
+        return handle_exception(e, request.endpoint or 'unknown')
+
 
 @app.route('/api/community/post/<int:post_id>/replies', methods=['GET'])
 def get_replies(post_id):
