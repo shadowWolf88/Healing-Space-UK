@@ -5258,10 +5258,15 @@ def generate_ai_summary():
         username = data.get('username')
         clinician_username = data.get('clinician_username')
 
+        # Log incoming request for debugging
+        print(f"[AI SUMMARY] Request: username={username}, clinician_username={clinician_username}")
+
         if not username:
+            print("[AI SUMMARY] Error: Username required")
             return jsonify({'error': 'Username required'}), 400
 
         if not clinician_username:
+            print("[AI SUMMARY] Error: Clinician username required")
             return jsonify({'error': 'Clinician username required'}), 400
 
         # Fetch patient data
@@ -5276,13 +5281,15 @@ def generate_ai_summary():
 
         if not approval:
             conn.close()
+            print(f"[AI SUMMARY] Error: Unauthorized access attempt by {clinician_username} for {username}")
             return jsonify({'error': 'Unauthorized: You do not have access to this patient'}), 403
-        
+
         # Get profile and join date
         profile = cur.execute(
             "SELECT full_name, conditions, created_at FROM users WHERE username=?",
             (username,)
         ).fetchone()
+        print(f"[AI SUMMARY] Profile: {profile}")
         join_date = None
         if profile and len(profile) > 2 and profile[2]:
             join_date = profile[2]
@@ -5292,7 +5299,7 @@ def generate_ai_summary():
                 "SELECT entrestamp FROM mood_logs WHERE username=? ORDER BY entrestamp ASC LIMIT 1",
                 (username,)
             ).fetchone()
-            if first_mood:
+            if first_mood and len(first_mood) > 0 and first_mood[0]:
                 join_date = first_mood[0]
         # Calculate days since join
         days_since_join = 30
@@ -5306,64 +5313,68 @@ def generate_ai_summary():
         moods = cur.execute(
             "SELECT mood_val, sleep_val, exercise_mins, outside_mins, water_pints, meds, notes, entrestamp FROM mood_logs WHERE username=? AND entrestamp >= datetime('now', ? || ' days') ORDER BY entrestamp DESC",
             (username, f"-{min(days_since_join,30)}"),
-        ).fetchall()
+        ).fetchall() or []
         alerts = cur.execute(
             "SELECT alert_type, details, created_at FROM alerts WHERE username=? AND created_at >= datetime('now', ? || ' days') ORDER BY created_at DESC",
             (username, f"-{min(days_since_join,30)}"),
-        ).fetchall()
-        
+        ).fetchall() or []
+
         # Get latest assessments
         scales = cur.execute(
             "SELECT scale_name, score, severity FROM clinical_scales WHERE username=? ORDER BY entry_timestamp DESC LIMIT 5",
             (username,)
-        ).fetchall()
-        
+        ).fetchall() or []
+
         # Get recent therapy chat messages (sample themes)
+        # Fix: Accept any session_id for this user (not just _session)
         chat_messages = cur.execute(
-            "SELECT message FROM chat_history WHERE session_id=? AND sender='user' ORDER BY timestamp DESC LIMIT 10",
-            (f"{username}_session",)
-        ).fetchall()
-        
+            "SELECT message FROM chat_history WHERE session_id LIKE ? AND sender='user' ORDER BY timestamp DESC LIMIT 10",
+            (f"{username}_%",)
+        ).fetchall() or []
+
         # Count total therapy sessions
-        therapy_sessions = cur.execute(
+        therapy_sessions_row = cur.execute(
             "SELECT COUNT(DISTINCT session_id) FROM chat_history WHERE session_id LIKE ?",
             (f"{username}_%",)
-        ).fetchone()[0]
-        
+        ).fetchone()
+        therapy_sessions = therapy_sessions_row[0] if therapy_sessions_row and len(therapy_sessions_row) > 0 else 0
+
         # Get gratitude entries
         gratitude = cur.execute(
             "SELECT entry FROM gratitude_logs WHERE username=? ORDER BY entry_timestamp DESC LIMIT 5",
             (username,)
-        ).fetchall()
-        
+        ).fetchall() or []
+
         # Get CBT exercises
         cbt_records = cur.execute(
             "SELECT situation, thought, evidence FROM cbt_records WHERE username=? ORDER BY entry_timestamp DESC LIMIT 5",
             (username,)
-        ).fetchall()
-        
+        ).fetchall() or []
+
         # Get clinician notes (especially highlighted ones)
         clinician_notes = cur.execute(
             "SELECT note_text, is_highlighted FROM clinician_notes WHERE patient_username=? ORDER BY created_at DESC LIMIT 5",
             (username,)
-        ).fetchall()
-        
+        ).fetchall() or []
+
         conn.close()
+        # Log all intermediate results for debugging
+        print(f"[AI SUMMARY] moods: {len(moods)}, alerts: {len(alerts)}, scales: {len(scales)}, chat_messages: {len(chat_messages)}, therapy_sessions: {therapy_sessions}, gratitude: {len(gratitude)}, cbt_records: {len(cbt_records)}, clinician_notes: {len(clinician_notes)}")
         
         # Build context for AI
-        patient_name = profile[0] if profile else username
-        conditions = profile[1] if profile and profile[1] else "Not specified"
-        
-        avg_mood = sum(m[0] or 0 for m in moods) / len(moods) if moods else 0
-        avg_sleep = sum(m[1] or 0 for m in moods) / len(moods) if moods else 0
-        avg_exercise = sum(m[2] or 0 for m in moods) / len(moods) if moods else 0
-        avg_outside = sum(m[3] or 0 for m in moods) / len(moods) if moods else 0
-        avg_water = sum(m[4] or 0 for m in moods) / len(moods) if moods else 0
-        
+        patient_name = profile[0] if profile and len(profile) > 0 and profile[0] else username
+        conditions = profile[1] if profile and len(profile) > 1 and profile[1] else "Not specified"
+
+        avg_mood = sum((m[0] or 0) for m in moods if m and len(m) > 0) / len(moods) if moods else 0
+        avg_sleep = sum((m[1] or 0) for m in moods if m and len(m) > 1) / len(moods) if moods else 0
+        avg_exercise = sum((m[2] or 0) for m in moods if m and len(m) > 2) / len(moods) if moods else 0
+        avg_outside = sum((m[3] or 0) for m in moods if m and len(m) > 3) / len(moods) if moods else 0
+        avg_water = sum((m[4] or 0) for m in moods if m and len(m) > 4) / len(moods) if moods else 0
+
         # Mood trend (recent vs older)
         if len(moods) >= 6:
-            recent_mood = sum(m[0] for m in moods[:3]) / 3
-            older_mood = sum(m[0] for m in moods[-3:]) / 3
+            recent_mood = sum((m[0] or 0) for m in moods[:3] if m and len(m) > 0) / 3
+            older_mood = sum((m[0] or 0) for m in moods[-3:] if m and len(m) > 0) / 3
             mood_trend = "improving" if recent_mood > older_mood else "declining" if recent_mood < older_mood else "stable"
         else:
             mood_trend = "insufficient data"
