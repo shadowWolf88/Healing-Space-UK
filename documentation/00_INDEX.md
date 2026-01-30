@@ -1,9 +1,9 @@
-# 📚 Healing Space - Complete Documentation Index
+# 📚 python-chat-bot - Complete Documentation Index
 
 **Last Updated:** January 17, 2026  
 **Version:** 1.0
 
-This folder contains all documentation for the Healing Space mental health companion app.
+This folder contains all documentation for the python-chat-bot mental health companion app.
 
 ---
 
@@ -985,4 +985,4 @@ crontab -l
 **Last Reviewed:** January 17, 2026  
 **Maintained By:** Development Team
 
-*For the latest updates, check the git repository history.*
+*For the latest updates, check the [python-chat-bot GitHub repository](https://github.com/shadowWolf88/python-chat-bot).* 

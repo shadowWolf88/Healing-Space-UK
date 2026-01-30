@@ -1,4 +1,4 @@
-# Healing Space 🌿
+# python-chat-bot 🌿
 
 A mental health companion application (desktop and web) that combines AI therapy, mood tracking, CBT tools, clinical assessments, gamified self-care, clinician oversight, secure storage, and GDPR-compliant training-data collection.
 
@@ -13,7 +13,7 @@ A mental health companion application (desktop and web) that combines AI therapy
 
 ## What this repository contains
 
-This project provides both a desktop (Tkinter/CustomTkinter) and web (Flask) version of the Healing Space mental health companion. The repository contains:
+This project provides both a desktop (Tkinter/CustomTkinter) and web (Flask) version of the python-chat-bot mental health companion. The repository contains:
 
 - Desktop UI (legacy_desktop/) — full-featured Tkinter desktop application and utilities.
 - Web API (api.py + templates/) — Flask REST API and web UI designed for container/cloud deployment.

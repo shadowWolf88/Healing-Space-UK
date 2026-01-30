@@ -25,7 +25,7 @@ git commit -m "Add deployment configuration for GitHub and Railway"
 
 # 3. Create GitHub repository at https://github.com/new
 # Then push your code:
-git remote add origin https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
+git remote add origin https://github.com/shadowWolf88/python-chat-bot.git
 git branch -M main
 git push -u origin main
 ```

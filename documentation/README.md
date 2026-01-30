@@ -1,6 +1,6 @@
-# 📚 Healing Space - Documentation Folder
+# 📚 python-chat-bot - Documentation Folder
 
-**Complete documentation for the Healing Space mental health companion app.**
+**Complete documentation for the python-chat-bot mental health companion app.**
 
 ---
 
@@ -361,4 +361,4 @@ Before deploying or major changes, ensure you've read:
 
 ---
 
-*For the most up-to-date information, always refer to the git repository.*
+*For the most up-to-date information, always refer to the [python-chat-bot GitHub repository](https://github.com/shadowWolf88/python-chat-bot).* 

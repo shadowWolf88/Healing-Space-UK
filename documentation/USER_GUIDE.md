@@ -1,4 +1,4 @@
-# Healing Space - Complete User Guide
+# python-chat-bot - Complete User Guide
 
 ## Table of Contents
 - [For Patients](#for-patients)

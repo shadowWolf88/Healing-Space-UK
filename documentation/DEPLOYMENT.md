@@ -16,7 +16,7 @@
 
 3. **Push to GitHub**:
    ```bash
-   git remote add origin <your-github-repo-url>
+   git remote add origin https://github.com/shadowWolf88/python-chat-bot.git
    git branch -M main
    git push -u origin main
    ```
