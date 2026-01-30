@@ -9,25 +9,34 @@ input_file = 'VERSION_HISTORY.txt'
 
 entries = []
 with open(input_file, encoding='utf-8') as f:
+    raw_entries = []
     for line in f:
         m = re.match(r"v[0-9a-f]+ \((\d{4}-\d{2}-\d{2})\): (.+)", line.strip())
         if m:
             date, msg = m.groups()
-            # Try to extract a version number from the message, else use '1.0'
-            version_match = re.search(r'(\d+\.\d+(?:\.\d+)?)', msg)
-            version = version_match.group(1) if version_match else '1.0'
             # Use first sentence or up to 80 chars as title
             title = msg.split('.')[0].strip()
             if len(title) > 80:
                 title = title[:77] + '...'
-            # Changes: split by ';' or '|' or keep as one
             changes = [msg.strip()]
-            entries.append({
+            raw_entries.append({
                 'date': date,
-                'version': version,
                 'title': title,
                 'changes': changes
             })
+
+    # Assign version numbers oldest to newest
+    version_major = 1
+    version_minor = 0
+    for entry in reversed(raw_entries):
+        version = f"{version_major}.{version_minor}"
+        version_minor += 1
+        if version_minor >= 10:
+            version_major += 1
+            version_minor = 0
+        entry['version'] = version
+        entries.append(entry)
+    entries.reverse()  # So newest is last in the output
 
 print('const APP_UPDATES = [')
 for entry in entries:
