@@ -1,0 +1,1846 @@
+[
+{
+    date: '2026-01-29',
+    version: 'bb95165',
+    title: 'Phase 6: Fix all Critical (P0) and High (P1) security issues',
+    changes: [
+        'Phase 6: Fix all Critical (P0) and High (P1) security issues'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bda7721',
+    title: 'Phase 6: Fresh security audit - 16 new issues identified',
+    changes: [
+        'Phase 6: Fresh security audit - 16 new issues identified'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6ce1663',
+    title: 'Merge remote changes and resolve VERSION_HISTORY conflict',
+    changes: [
+        'Merge remote changes and resolve VERSION_HISTORY conflict'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+    changes: [
+        'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'c4075fb',
+    title: 'Fix: Add None checks to AI summary prompt string slicing',
+    changes: [
+        'Fix: Add None checks to AI summary prompt string slicing'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '0fc8b4b',
+    title: 'fix: Set Updates tab as default for changelog debug (shows changelog on load)',
+    changes: [
+        'fix: Set Updates tab as default for changelog debug (shows changelog on load)'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'd273911',
+    title: 'Add null safety and error logging to AI summary endpoint',
+    changes: [
+        'Add null safety and error logging to AI summary endpoint'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: 'bb3db19',
+    title: 'Fix: AI summary endpoint - remove non-existent created_at column from users query',
+    changes: [
+        'Fix: AI summary endpoint - remove non-existent created_at column from users query'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '4d49306',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '3707216',
+    title: 'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks',
+    changes: [
+        'Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks'
+    ]
+},
+{
+    date: '2026-01-29',
+    version: '6aaabdc',
+    title: 'fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)',
+   

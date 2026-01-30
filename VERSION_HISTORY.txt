@@ -1,5 +1,16 @@
-vbb3db19 (2026-01-29): Fix: AI summary endpoint - remove non-existent created_at column
-v4d49306 (2026-01-29): Phase 5 Web/Android Audit: Fix pet endpoints, duplicate routes, exception leaks
+vbb95165 (2026-01-29): Phase 6: Fix all Critical (P0) and High (P1) security issues
+vbda7721 (2026-01-29): Phase 6: Fresh security audit - 16 new issues identified
+v6ce1663 (2026-01-29): Merge remote changes and resolve VERSION_HISTORY conflict
+vbb3db19 (2026-01-29): Fix: AI summary endpoint - remove non-existent created_at column from users query
+v4d49306 (2026-01-29): Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks
+v3707216 (2026-01-29): Phase 5: Web/Android audit - Fix pet endpoints, duplicate routes, exception leaks
+v6aaabdc (2026-01-29): fix: Harden /api/professional/ai-summary endpoint (null checks, safe defaults, debug logging, robust fallback)
+vc4075fb (2026-01-29): Fix: Add None checks to AI summary prompt string slicing
+v0fc8b4b (2026-01-29): fix: Set Updates tab as default for changelog debug (shows changelog on load)
+vd273911 (2026-01-29): Add null safety and error logging to AI summary endpoint
+v6fa4f05 (2026-01-29): Enhance AI clinical summary and fix patient charts
+v2728e87 (2026-01-29): Fix: Add missing clinician parameter to patient detail endpoint
+v54fa1b6 (2026-01-29): Update VERSION_HISTORY.txt with today's fixes
 vb5f86ef (2026-01-29): Fix: Clinician dashboard patient data and AI insights
 v39de2f8 (2026-01-29): Update VERSION_HISTORY.txt with recent commits
 v19c7ace (2026-01-29): Fix: loadInsights sends role=clinician for clinician users (enables clinician data/AI insights)

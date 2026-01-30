@@ -22,7 +22,7 @@ from email.mime.multipart import MIMEMultipart
 # --- Pet Table Ensurer ---
 def ensure_pet_table():
     """Ensure the pet table exists in pet_game.db"""
-    conn = sqlite3.connect("pet_game.db")
+    conn = sqlite3.connect(PET_DB_PATH)
     cur = conn.cursor()
     cur.execute("""
         CREATE TABLE IF NOT EXISTS pet (
@@ -316,7 +316,14 @@ def get_db_path():
         return '/app/data/therapist_app.db'
     return 'therapist_app.db'
 
+def get_pet_db_path():
+    """Get pet game database path - use Railway volume if available"""
+    if os.path.exists('/app/data'):
+        return '/app/data/pet_game.db'
+    return 'pet_game.db'
+
 DB_PATH = get_db_path()
+PET_DB_PATH = get_pet_db_path()
 
 # Database connection helper with proper settings for concurrency
 def get_db_connection(timeout=30.0):
@@ -980,7 +987,7 @@ except Exception as e:
 def init_pet_db():
     """Initialize pet game database with required table"""
     try:
-        conn = sqlite3.connect("pet_game.db")
+        conn = sqlite3.connect(PET_DB_PATH)
         cur = conn.cursor()
         cur.execute("""
             CREATE TABLE IF NOT EXISTS pet (
@@ -2821,7 +2828,7 @@ def reward_pet(action, activity_type=None):
     """
     try:
         ensure_pet_table()
-        conn = sqlite3.connect("pet_game.db")
+        conn = sqlite3.connect(PET_DB_PATH)
         cur = conn.cursor()
         pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
         
@@ -3828,7 +3835,7 @@ def pet_status():
         valid, error = verify_pet_user(username)
         if not valid:
             return jsonify({'exists': False, 'error': error}), 200
-        conn = sqlite3.connect("pet_game.db")
+        conn = sqlite3.connect(PET_DB_PATH)
         cur = conn.cursor()
         # Ensure table exists (in case DB was reset)
         cur.execute("""
@@ -3918,7 +3925,7 @@ def pet_create():
             return jsonify({'error': 'Pet name required'}), 400
 
         ensure_pet_table()
-        conn = sqlite3.connect("pet_game.db")
+        conn = sqlite3.connect(PET_DB_PATH)
         cur = conn.cursor()
         cur.execute("DELETE FROM pet")  # Only one pet per user in current schema
         cur.execute("""
@@ -3946,7 +3953,7 @@ def pet_feed():
         if not valid:
             return jsonify({'error': error}), 401
 
-        conn = sqlite3.connect("pet_game.db")
+        conn = sqlite3.connect(PET_DB_PATH)
         cur = conn.cursor()
         pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
         
@@ -3984,7 +3991,7 @@ def pet_reward():
         if not valid:
             return jsonify({'success': False, 'message': error}), 200
 
-        conn = sqlite3.connect("pet_game.db")
+        conn = sqlite3.connect(PET_DB_PATH)
         cur = conn.cursor()
         pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
         
@@ -4095,7 +4102,7 @@ def pet_buy():
         
         item = items[item_id]
         
-        conn = sqlite3.connect("pet_game.db")
+        conn = sqlite3.connect(PET_DB_PATH)
         cur = conn.cursor()
         pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
         
@@ -4154,7 +4161,7 @@ def pet_declutter():
         if not worries or len(worries) == 0:
             return jsonify({'error': 'Please provide at least one worry'}), 400
 
-        conn = sqlite3.connect("pet_game.db")
+        conn = sqlite3.connect(PET_DB_PATH)
         cur = conn.cursor()
         pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
         
@@ -4196,7 +4203,7 @@ def pet_adventure():
         if not valid:
             return jsonify({'error': error}), 401
 
-        conn = sqlite3.connect("pet_game.db")
+        conn = sqlite3.connect(PET_DB_PATH)
         cur = conn.cursor()
         pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
         
@@ -4239,7 +4246,7 @@ def pet_check_return():
         if not valid:
             return jsonify({'error': error}), 401
 
-        conn = sqlite3.connect("pet_game.db")
+        conn = sqlite3.connect(PET_DB_PATH)
         cur = conn.cursor()
         pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
         
@@ -4289,7 +4296,7 @@ def pet_apply_decay():
         if not valid:
             return jsonify({'error': error}), 401
 
-        conn = sqlite3.connect("pet_game.db")
+        conn = sqlite3.connect(PET_DB_PATH)
         cur = conn.cursor()
         pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
         
