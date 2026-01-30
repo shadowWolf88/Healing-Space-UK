@@ -1339,51 +1339,8 @@ def summarize_relaxation_techniques(username, limit=3):
         return "Recent relaxation techniques: " + "; ".join(summary)
     except Exception:
         return None
-"""
-Flask API wrapper for python-chat-bot Therapy App
-Provides REST API endpoints while keeping desktop app intact
-"""
-# Trivial change to trigger Railway deployment
-from flask import Flask, request, jsonify, render_template, send_from_directory, make_response, Response, g
-from flask_cors import CORS
-from functools import wraps
-import sqlite3
-import os
-import json
-import hashlib
-import requests
-from datetime import datetime, timedelta
-import sys
-import secrets
-import smtplib
-import time
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
-# --- Pet Table Ensurer ---
-def ensure_pet_table():
-    """Ensure the pet table exists in pet_game.db"""
-    conn = sqlite3.connect(PET_DB_PATH)
-    cur = conn.cursor()
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS pet (
-            id INTEGER PRIMARY KEY,
-            name TEXT, species TEXT, gender TEXT,
-            hunger INTEGER DEFAULT 70, happiness INTEGER DEFAULT 70,
-            energy INTEGER DEFAULT 70, hygiene INTEGER DEFAULT 80,
-            coins INTEGER DEFAULT 0, xp INTEGER DEFAULT 0,
-            stage TEXT DEFAULT 'Baby', adventure_end REAL DEFAULT 0,
-            last_updated REAL, hat TEXT DEFAULT 'None'
-        )
-    """)
-    conn.commit()
-    conn.close()
-
-# Import existing modules (avoid importing main.py which has tkinter)
-from secrets_manager import SecretsManager
-from audit import log_event
-import fhir_export
-from training_data_manager import TRAINING_DB_PATH
+# Note: Duplicate imports and ensure_pet_table removed (already defined at top of file)
 
 # Import password hashing libraries with fallbacks (same logic as main.py)
 try:
@@ -5760,7 +5717,7 @@ def log_relaxation_session():
 
 # === 3. SLEEP DIARY ===
 @app.route('/api/cbt/sleep-diary', methods=['GET'])
-def get_sleep_diary():
+def get_sleep_diary_list():
     """Get user's sleep diary entries"""
     try:
         username = request.args.get('username')
@@ -5874,8 +5831,8 @@ def get_core_beliefs():
         return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/cbt/core-beliefs', methods=['POST'])
-def create_core_belief():
-    """Create a new core belief worksheet entry"""
+def create_core_belief_alt():
+    """Create a new core belief worksheet entry (alternate endpoint)"""
     try:
         data = request.json
         username = data.get('username')
@@ -6133,42 +6090,6 @@ def get_problem_solving():
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
-@app.route('/api/cbt/problem-solving', methods=['POST'])
-def create_problem_solving():
-    """Create a new problem-solving worksheet"""
-    try:
-        data = request.json
-        username = data.get('username')
-        problem = data.get('problem_description')
-        importance = data.get('problem_importance')
-        solutions = data.get('brainstormed_solutions', '')
-        chosen = data.get('chosen_solution', '')
-        steps = data.get('action_steps', '')
-
-        if not username or not problem:
-            return jsonify({'error': 'Username and problem_description required'}), 400
-
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute(
-            """INSERT INTO problem_solving
-               (username, problem_description, problem_importance, brainstormed_solutions, chosen_solution, action_steps)
-               VALUES (?,?,?,?,?,?)""",
-            (username, problem[:1000], importance, solutions[:2000] if solutions else None,
-             chosen[:500] if chosen else None, steps[:1000] if steps else None)
-        )
-        conn.commit()
-        log_id = cur.lastrowid
-        conn.close()
-
-        update_ai_memory(username)
-        reward_pet('problem_solving', 'cbt')
-        log_event(username, 'api', 'problem_solving', 'Created problem-solving worksheet')
-
-        return jsonify({'success': True, 'id': log_id}), 201
-    except Exception as e:
-        return handle_exception(e, request.endpoint or 'unknown')
-
 @app.route('/api/cbt/problem-solving/<int:problem_id>', methods=['PUT'])
 def update_problem_solving(problem_id):
     """Update a problem-solving worksheet"""
@@ -6251,8 +6172,8 @@ def get_coping_cards():
         return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/cbt/coping-cards', methods=['POST'])
-def create_coping_card():
-    """Create a new coping card"""
+def create_coping_card_alt():
+    """Create a new coping card (alternate endpoint)"""
     try:
         data = request.json
         username = data.get('username')
@@ -6482,47 +6403,6 @@ def get_values():
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
-@app.route('/api/cbt/values', methods=['POST'])
-def create_value():
-    """Create a new value entry"""
-    try:
-        data = request.json
-        username = data.get('username')
-        value_name = data.get('value_name')
-        description = data.get('value_description', '')
-        importance = data.get('importance_rating')
-        alignment = data.get('current_alignment')
-        life_area = data.get('life_area', '')
-        goals = data.get('related_goals', '')
-
-        if not username or not value_name:
-            return jsonify({'error': 'Username and value_name required'}), 400
-
-        if importance and (importance < 1 or importance > 10):
-            return jsonify({'error': 'Importance rating must be between 1-10'}), 400
-
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute(
-            """INSERT INTO values_clarification
-               (username, value_name, value_description, importance_rating, current_alignment, life_area, related_goals)
-               VALUES (?,?,?,?,?,?,?)""",
-            (username, value_name[:100], description[:500] if description else None,
-             importance, alignment, life_area[:100] if life_area else None,
-             goals[:500] if goals else None)
-        )
-        conn.commit()
-        log_id = cur.lastrowid
-        conn.close()
-
-        update_ai_memory(username)
-        reward_pet('values', 'cbt')
-        log_event(username, 'api', 'values', 'Created value entry')
-
-        return jsonify({'success': True, 'id': log_id}), 201
-    except Exception as e:
-        return handle_exception(e, request.endpoint or 'unknown')
-
 @app.route('/api/cbt/values/<int:value_id>', methods=['PUT'])
 def update_value(value_id):
     """Update a value entry"""
@@ -6625,42 +6505,6 @@ def get_goals():
 
         conn.close()
         return jsonify({'goals': result}), 200
-    except Exception as e:
-        return handle_exception(e, request.endpoint or 'unknown')
-
-@app.route('/api/cbt/goals', methods=['POST'])
-def create_goal():
-    """Create a new goal"""
-    try:
-        data = request.json
-        username = data.get('username')
-        title = data.get('goal_title')
-        description = data.get('goal_description', '')
-        goal_type = data.get('goal_type', 'personal')  # personal, health, career, relationship, etc.
-        target_date = data.get('target_date')
-        related_value_id = data.get('related_value_id')
-
-        if not username or not title:
-            return jsonify({'error': 'Username and goal_title required'}), 400
-
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute(
-            """INSERT INTO goals
-               (username, goal_title, goal_description, goal_type, target_date, related_value_id)
-               VALUES (?,?,?,?,?,?)""",
-            (username, title[:200], description[:1000] if description else None,
-             goal_type, target_date, related_value_id)
-        )
-        conn.commit()
-        log_id = cur.lastrowid
-        conn.close()
-
-        update_ai_memory(username)
-        reward_pet('goal', 'cbt')
-        log_event(username, 'api', 'goal_created', f'Created goal: {title[:50]}')
-
-        return jsonify({'success': True, 'id': log_id}), 201
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
