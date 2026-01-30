@@ -1,0 +1,13 @@
+<h4>Urge Surfing Timer</h4>
+<p>Start a timer and track an urge until it passes.</p>
+<div id="urgeSurfingTimer">
+  <button class="btn" onclick="startUrgeSurfingTimer()">Start Timer</button>
+  <div id="urgeTimerDisplay"></div>
+  <form id="urgeSurfingForm" style="margin-top:10px;">
+    <label>Notes (optional):</label><br>
+    <textarea name="notes"></textarea><br>
+    <button type="button" class="btn" onclick="saveUrgeSurfing()">Save</button>
+    <button type="button" class="btn btn-secondary" onclick="resetUrgeSurfing()">Reset</button>
+  </form>
+  <div id="urgeSurfingStatus"></div>
+</div>

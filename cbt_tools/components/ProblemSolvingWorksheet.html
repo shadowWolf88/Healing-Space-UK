@@ -1,0 +1,15 @@
+<h4>Problem-Solving Worksheet</h4>
+<p>Work through a current problem step-by-step.</p>
+<form id="problemSolvingForm">
+  <label>Describe the problem:</label><br>
+  <textarea name="problem" required></textarea><br>
+  <label>List possible solutions:</label><br>
+  <textarea name="solutions" placeholder="Separate each solution with a new line"></textarea><br>
+  <label>Best solution to try:</label><br>
+  <input type="text" name="chosen_solution"><br>
+  <label>Action plan (next step):</label><br>
+  <input type="text" name="action_plan"><br>
+  <button type="button" class="btn" onclick="saveProblemSolving()">Save</button>
+  <button type="button" class="btn btn-secondary" onclick="resetProblemSolving()">Reset</button>
+</form>
+<div id="problemSolvingStatus"></div>

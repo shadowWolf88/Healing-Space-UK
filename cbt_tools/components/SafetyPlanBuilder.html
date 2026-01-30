@@ -1,0 +1,17 @@
+<h4>Safety Plan Builder</h4>
+<p>Create a step-by-step plan for difficult moments.</p>
+<form id="safetyPlanForm">
+  <label>Warning signs:</label><br>
+  <textarea name="warning_signs"></textarea><br>
+  <label>Internal coping strategies:</label><br>
+  <textarea name="internal_coping"></textarea><br>
+  <label>People/places for distraction:</label><br>
+  <textarea name="distractions"></textarea><br>
+  <label>People to contact for help:</label><br>
+  <textarea name="contacts"></textarea><br>
+  <label>Professional resources:</label><br>
+  <textarea name="resources"></textarea><br>
+  <button type="button" class="btn" onclick="saveSafetyPlan()">Save</button>
+  <button type="button" class="btn btn-secondary" onclick="resetSafetyPlan()">Reset</button>
+</form>
+<div id="safetyPlanStatus"></div>

@@ -1,0 +1,13 @@
+<h4>Exposure Hierarchy Builder</h4>
+<p>Create a list of feared situations, rate them, and pick one to work on.</p>
+<form id="exposureHierarchyForm">
+  <label>Feared situations (one per line):</label><br>
+  <textarea name="situations" rows="4"></textarea><br>
+  <label>Pick one to work on:</label><br>
+  <input type="text" name="chosen_situation"><br>
+  <label>Distress rating (0-10):</label><br>
+  <input type="number" min="0" max="10" name="distress_rating"><br>
+  <button type="button" class="btn" onclick="saveExposureHierarchy()">Save</button>
+  <button type="button" class="btn btn-secondary" onclick="resetExposureHierarchy()">Reset</button>
+</form>
+<div id="exposureHierarchyStatus"></div>

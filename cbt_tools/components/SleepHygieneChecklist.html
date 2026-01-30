@@ -1,0 +1,13 @@
+<h4>Sleep Hygiene Checklist</h4>
+<p>Review and check off healthy sleep habits.</p>
+<form id="sleepHygieneForm">
+  <label><input type="checkbox" name="habit" value="consistent_bedtime"> Go to bed at a consistent time</label><br>
+  <label><input type="checkbox" name="habit" value="no_screens"> Avoid screens before bed</label><br>
+  <label><input type="checkbox" name="habit" value="cool_dark_room"> Sleep in a cool, dark room</label><br>
+  <label><input type="checkbox" name="habit" value="no_caffeine_evening"> No caffeine in the evening</label><br>
+  <label><input type="checkbox" name="habit" value="relaxing_routine"> Have a relaxing bedtime routine</label><br>
+  <label><input type="checkbox" name="habit" value="limit_naps"> Limit daytime naps</label><br>
+  <button type="button" class="btn" onclick="saveSleepHygiene()">Save</button>
+  <button type="button" class="btn btn-secondary" onclick="resetSleepHygiene()">Reset</button>
+</form>
+<div id="sleepHygieneStatus"></div>

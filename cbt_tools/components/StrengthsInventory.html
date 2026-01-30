@@ -1,0 +1,11 @@
+<h4>Strengths Inventory</h4>
+<p>List your strengths and how you’ve used them recently.</p>
+<form id="strengthsInventoryForm">
+  <label>Strengths (comma separated):</label><br>
+  <input type="text" name="strengths"><br>
+  <label>How have you used these strengths?</label><br>
+  <textarea name="usage"></textarea><br>
+  <button type="button" class="btn" onclick="saveStrengthsInventory()">Save</button>
+  <button type="button" class="btn btn-secondary" onclick="resetStrengthsInventory()">Reset</button>
+</form>
+<div id="strengthsInventoryStatus"></div>

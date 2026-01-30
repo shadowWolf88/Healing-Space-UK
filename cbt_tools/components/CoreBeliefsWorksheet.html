@@ -1,0 +1,15 @@
+<h4>Core Beliefs Worksheet</h4>
+<p>Explore and challenge a core belief.</p>
+<form id="coreBeliefsForm">
+  <label>What is a core belief you want to examine?</label><br>
+  <input type="text" name="belief" required><br>
+  <label>Evidence for this belief:</label><br>
+  <textarea name="evidence_for"></textarea><br>
+  <label>Evidence against this belief:</label><br>
+  <textarea name="evidence_against"></textarea><br>
+  <label>Alternative, more balanced belief:</label><br>
+  <input type="text" name="alternative"><br>
+  <button type="button" class="btn" onclick="saveCoreBeliefs()">Save</button>
+  <button type="button" class="btn btn-secondary" onclick="resetCoreBeliefs()">Reset</button>
+</form>
+<div id="coreBeliefsStatus"></div>

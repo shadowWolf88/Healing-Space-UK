@@ -1,0 +1,13 @@
+<h4>Activity Scheduling</h4>
+<p>Plan a pleasurable or meaningful activity for the week.</p>
+<form id="activitySchedulerForm">
+  <label>Activity:</label><br>
+  <input type="text" name="activity" required><br>
+  <label>Date:</label><br>
+  <input type="date" name="date" required><br>
+  <label>Notes (optional):</label><br>
+  <textarea name="notes"></textarea><br>
+  <button type="button" class="btn" onclick="saveActivityScheduler()">Save</button>
+  <button type="button" class="btn btn-secondary" onclick="resetActivityScheduler()">Reset</button>
+</form>
+<div id="activitySchedulerStatus"></div>

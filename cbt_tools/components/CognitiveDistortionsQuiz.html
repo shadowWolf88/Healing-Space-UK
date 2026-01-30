@@ -1,0 +1,22 @@
+<h4>Cognitive Distortions Quiz</h4>
+<p>Tick any thinking patterns you notice:</p>
+<form id="distortionsQuizForm">
+  <label><input type="checkbox" name="distortion" value="all_or_nothing"> All-or-nothing thinking</label><br>
+  <label><input type="checkbox" name="distortion" value="catastrophizing"> Catastrophizing</label><br>
+  <label><input type="checkbox" name="distortion" value="mind_reading"> Mind reading</label><br>
+  <label><input type="checkbox" name="distortion" value="fortune_telling"> Fortune telling</label><br>
+  <label><input type="checkbox" name="distortion" value="should_statements"> Should statements</label><br>
+  <label><input type="checkbox" name="distortion" value="labeling"> Labeling</label><br>
+  <label><input type="checkbox" name="distortion" value="personalization"> Personalization</label><br>
+  <div class="form-group">
+    <label>Mood rating (1-10, optional):</label>
+    <input type="number" min="1" max="10" name="mood_rating">
+  </div>
+  <div class="form-group">
+    <label>Notes (optional):</label>
+    <textarea name="notes"></textarea>
+  </div>
+  <button type="button" class="btn" onclick="saveDistortionsQuiz()">Save</button>
+  <button type="button" class="btn btn-secondary" onclick="resetDistortionsQuiz()">Reset</button>
+</form>
+<div id="distortionsQuizStatus"></div>

@@ -3480,32 +3480,131 @@
             
             <!-- CBT Tools Tab -->
             <div id="cbtTab" class="tab-content">
-                <h3>Cognitive Behavioral Therapy Tools</h3>
-                <p style="color: #666; margin-bottom: 20px;">Challenge negative thoughts and build healthier thinking patterns.</p>
-                
-                <div class="cbt-container">
-                    <div class="form-group">
-                        <label>What situation triggered this thought?</label>
-                        <input type="text" id="cbtSituation" placeholder="e.g., Received critical feedback at work">
-                    </div>
-                    <div class="form-group">
-                        <label>What automatic thought came to mind?</label>
-                        <textarea id="cbtThought" placeholder="e.g., I'm terrible at my job and everyone thinks so"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>What evidence challenges this thought?</label>
-                        <textarea id="cbtEvidence" placeholder="e.g., I received positive feedback last week, my manager praised my recent project"></textarea>
-                    </div>
-                    <button class="btn" onclick="saveCBT()">Save Thought Record</button>
-                    <div id="cbtMessage" class="hidden"></div>
-                    
-                    <hr style="margin: 20px 0;">
-                    
-                    <h4>Breathing Exercise</h4>
-                    <p style="color: #666; margin-bottom: 10px;">Follow the guided 4-7-8 breathing technique.</p>
-                    <button class="btn" onclick="startBreathing()">Start Breathing Exercise</button>
-                    <div id="breathingDisplay" class="hidden" style="text-align: center; padding: 40px; font-size: 24px; font-weight: bold;"></div>
-                </div>
+                                <h3>Cognitive Behavioral Therapy Tools</h3>
+                                <p style="color: #666; margin-bottom: 20px;">Select a CBT tool below to get started. Your progress is saved for each tool.</p>
+                                <div id="cbtToolsDashboard" class="cbt-tools-dashboard" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-bottom: 30px;"></div>
+                                <div id="cbtToolLoader" class="cbt-tool-loader" style="min-height: 320px;"></div>
+                                <div id="cbtToolMessage" class="hidden"></div>
+                                <script>
+                                // --- CBT Tools Dashboard & Loader ---
+                                const CBT_TOOLS = [
+                                    { id: 'CognitiveDistortionsQuiz', name: 'Cognitive Distortions Quiz', icon: '🧩' },
+                                    { id: 'CoreBeliefsWorksheet', name: 'Core Beliefs Worksheet', icon: '🧠' },
+                                    { id: 'ThoughtDefusionExercise', name: 'Thought Defusion Exercise', icon: '🌬️' },
+                                    { id: 'IfThenCopingPlan', name: 'If-Then Coping Plan', icon: '🔗' },
+                                    { id: 'CopingSkillsSelector', name: 'Coping Skills Selector', icon: '🛠️' },
+                                    { id: 'SelfCompassionLetter', name: 'Self-Compassion Letter', icon: '💌' },
+                                    { id: 'ProblemSolvingWorksheet', name: 'Problem Solving Worksheet', icon: '📝' },
+                                    { id: 'ExposureHierarchyBuilder', name: 'Exposure Hierarchy Builder', icon: '🏔️' },
+                                    { id: 'RelaxationAudioPlayer', name: 'Relaxation Audio Player', icon: '🎧' },
+                                    { id: 'UrgeSurfingTimer', name: 'Urge Surfing Timer', icon: '🏄' },
+                                    { id: 'ValuesCardSort', name: 'Values Card Sort', icon: '🃏' },
+                                    { id: 'StrengthsInventory', name: 'Strengths Inventory', icon: '💪' },
+                                    { id: 'SleepHygieneChecklist', name: 'Sleep Hygiene Checklist', icon: '😴' },
+                                    { id: 'SafetyPlanBuilder', name: 'Safety Plan Builder', icon: '🦺' },
+                                    { id: 'ActivityScheduler', name: 'Activity Scheduler', icon: '📅' }
+                                ];
+
+                                function renderCBTToolsDashboard() {
+                                    const dash = document.getElementById('cbtToolsDashboard');
+                                    dash.innerHTML = CBT_TOOLS.map(tool => `
+                                        <button class="cbt-tool-btn" style="padding: 22px 10px; border-radius: 14px; border: 2px solid var(--border-color); background: var(--bg-card); font-size: 18px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 10px; cursor: pointer; transition: box-shadow .2s; box-shadow: 0 2px 8px var(--shadow-color);" onclick="loadCBTTool('${tool.id}')">
+                                            <span style="font-size: 2.2em;">${tool.icon}</span>
+                                            <span>${tool.name}</span>
+                                        </button>
+                                    `).join('');
+                                }
+
+                                async function loadCBTTool(toolId) {
+                                    const loader = document.getElementById('cbtToolLoader');
+                                    loader.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:40px;">Loading...</div>';
+                                    try {
+                                        const resp = await fetch(`/cbt_tools/components/${toolId}.html?_t=${Date.now()}`);
+                                        if (!resp.ok) throw new Error('Failed to load tool');
+                                        let html = await resp.text();
+                                        // Inject Save/Load buttons if not present
+                                        html += `
+                                            <div style='margin-top:30px; display:flex; gap:12px;'>
+                                                <button class='btn' onclick="saveCBTToolData('${toolId}')">💾 Save</button>
+                                                <button class='btn btn-secondary' onclick="loadCBTToolData('${toolId}')">⟳ Load</button>
+                                                <span id='cbtToolSaveStatus' style='margin-left:15px; color:var(--success-color); display:none;'></span>
+                                            </div>
+                                        `;
+                                        loader.innerHTML = html;
+                                        // Auto-load data on tool open
+                                        setTimeout(() => loadCBTToolData(toolId), 100);
+                                    } catch (e) {
+                                        loader.innerHTML = `<div style='color:var(--danger-color); padding:40px;'>Error loading tool: ${e.message}</div>`;
+                                    }
+                                }
+
+                                // Save tool data (collects all inputs/textareas in the tool loader)
+                                async function saveCBTToolData(toolId) {
+                                    const loader = document.getElementById('cbtToolLoader');
+                                    const inputs = loader.querySelectorAll('input, textarea, select');
+                                    const data = {};
+                                    inputs.forEach(el => {
+                                        if (el.type === 'checkbox' || el.type === 'radio') {
+                                            data[el.id || el.name] = el.checked;
+                                        } else {
+                                            data[el.id || el.name] = el.value;
+                                        }
+                                    });
+                                    try {
+                                        const resp = await fetch('/cbt_tools/save', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ tool_type: toolId, data })
+                                        });
+                                        if (!resp.ok) throw new Error('Save failed');
+                                        showCBTToolStatus('Saved!', true);
+                                    } catch (e) {
+                                        showCBTToolStatus('Save error', false);
+                                    }
+                                }
+
+                                // Load tool data (populates all inputs/textareas in the tool loader)
+                                async function loadCBTToolData(toolId) {
+                                    const loader = document.getElementById('cbtToolLoader');
+                                    try {
+                                        const resp = await fetch(`/cbt_tools/load?tool_type=${encodeURIComponent(toolId)}`);
+                                        if (!resp.ok) throw new Error('No saved data');
+                                        const result = await resp.json();
+                                        if (result && result.data) {
+                                            Object.entries(result.data).forEach(([key, value]) => {
+                                                const el = loader.querySelector(`#${key}, [name='${key}']`);
+                                                if (el) {
+                                                    if (el.type === 'checkbox' || el.type === 'radio') {
+                                                        el.checked = !!value;
+                                                    } else {
+                                                        el.value = value;
+                                                    }
+                                                }
+                                            });
+                                            showCBTToolStatus('Loaded!', true);
+                                        } else {
+                                            showCBTToolStatus('No saved data', false);
+                                        }
+                                    } catch (e) {
+                                        showCBTToolStatus('No saved data', false);
+                                    }
+                                }
+
+                                function showCBTToolStatus(msg, success) {
+                                    const status = document.getElementById('cbtToolSaveStatus');
+                                    if (!status) return;
+                                    status.textContent = msg;
+                                    status.style.color = success ? 'var(--success-color)' : 'var(--danger-color)';
+                                    status.style.display = 'inline';
+                                    setTimeout(() => { status.style.display = 'none'; }, 2000);
+                                }
+
+                                // Render dashboard on tab show
+                                document.addEventListener('DOMContentLoaded', () => {
+                                    if (document.getElementById('cbtToolsDashboard')) renderCBTToolsDashboard();
+                                });
+                                // Optionally, re-render on tab switch if needed
+                                </script>
             </div>
             
             <!-- Pet Game Tab -->
@@ -4881,6 +4980,57 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             'You can handle whatever comes your way.',
             'You are enough just as you are.',
             'You have the power to create change.'
+            'You are growing stronger every day.',
+            'You deserve peace and happiness.',
+            'You are allowed to take things one step at a time.',
+            'Your efforts matter.',
+            'You are learning and evolving.',
+            'You have survived difficult days before.',
+            'You are doing the best you can right now.',
+            'Your voice deserves to be heard.',
+            'You are resilient and brave.',
+            'You are not defined by your mistakes.',
+            'You deserve kindness, especially from yourself.',
+            'Your future holds new possibilities.',
+            'You are allowed to rest without guilt.',
+            'You are worthy of care and compassion.',
+            'You have the power to change your story.',
+            'You are capable of healing.',
+            'Your thoughts do not control you.',
+            'You can choose progress over perfection.',
+            'You are allowed to ask for help.',
+            'You matter more than you realize.',
+            'You bring light into the world.',
+            'You are becoming the person you need.',
+            'You deserve patience and understanding.',
+            'You are safe in this moment.',
+            'You can face today with courage.',
+            'Your struggles do not make you weak.',
+            'You are worthy of feeling proud of yourself.',
+            'You are allowed to grow at your own pace.',
+            'You have inner strength you haven’t fully discovered yet.',
+            'You are not alone in this journey.',
+            'You deserve a future full of hope.',
+            'You are capable of positive change.',
+            'You can learn from hard moments.',
+            'You deserve to feel calm and secure.',
+            'You are more than your fears.',
+            'You are building a better tomorrow.',
+            'You have control over your choices.',
+            'You are allowed to feel and still move forward.',
+            'You deserve to be treated with respect.',
+            'You are stronger than yesterday.',
+            'You are worthy of good things.',
+            'You are allowed to set boundaries.',
+            'You can trust yourself.',
+            'You are healing even when it feels slow.',
+            'You deserve to feel at peace with who you are.',
+            'You are brave for trying.',
+            'You are becoming more confident each day.',
+            'You are allowed to take up space.',
+            'You deserve a life filled with meaning.',
+            'You are enough, exactly as you are right now.',
+
         ];
         function showAffirmationModal() {
             const affirmation = POSITIVE_AFFIRMATIONS[Math.floor(Math.random() * POSITIVE_AFFIRMATIONS.length)];
