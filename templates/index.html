@@ -527,6 +527,235 @@
             color: var(--text-muted);
         }
 
+        /* ========== HOME TAB STYLES ========== */
+
+        /* Home Welcome Card */
+        .home-welcome-card {
+            background: var(--accent-gradient);
+            color: white;
+            text-align: center;
+            padding: 30px;
+        }
+
+        .home-welcome-card h2 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .last-login-text {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .home-version-info {
+            margin-top: 10px;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .motivational-quote {
+            margin-top: 20px;
+            font-style: italic;
+            font-size: 16px;
+            padding: 15px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 10px;
+        }
+
+        /* Daily Tasks */
+        .home-tasks-card h3 {
+            margin-bottom: 15px;
+        }
+
+        .daily-progress {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .progress-bar-container {
+            flex: 1;
+            height: 12px;
+            background: var(--bg-input);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--accent-gradient);
+            transition: width 0.3s ease;
+            border-radius: 6px;
+        }
+
+        .progress-text {
+            font-weight: 600;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        .daily-tasks-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .daily-task-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            background: var(--bg-input);
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .daily-task-item:hover {
+            background: var(--bg-hover);
+        }
+
+        .daily-task-item.completed {
+            opacity: 0.7;
+        }
+
+        .daily-task-item.completed .task-label {
+            text-decoration: line-through;
+        }
+
+        .task-checkbox {
+            font-size: 18px;
+        }
+
+        .task-label {
+            flex: 1;
+            color: var(--text-primary);
+        }
+
+        .streak-display {
+            margin-top: 20px;
+            padding: 15px;
+            background: linear-gradient(135deg, #f39c12, #e74c3c);
+            color: white;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 18px;
+        }
+
+        .streak-icon {
+            margin-right: 5px;
+        }
+
+        .streak-count {
+            font-size: 32px;
+            font-weight: bold;
+        }
+
+        /* Quick Navigation */
+        .home-quick-nav h3 {
+            margin-bottom: 15px;
+        }
+
+        .quick-nav-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+        }
+
+        .quick-nav-btn {
+            padding: 20px 15px;
+            background: var(--bg-input);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+            color: var(--text-primary);
+            font-family: inherit;
+        }
+
+        .quick-nav-btn:hover {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+        }
+
+        /* Help Links */
+        .home-help-card h3 {
+            margin-bottom: 15px;
+        }
+
+        .help-links {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .help-link {
+            padding: 12px 20px;
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        .help-link:hover {
+            background: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        .quick-tips-content ul {
+            list-style-type: disc;
+        }
+
+        /* Home Pet Card */
+        .home-pet-card h3 {
+            margin-bottom: 15px;
+        }
+
+        /* Home Feedback Card */
+        .home-feedback-card h3 {
+            margin-bottom: 15px;
+        }
+
+        .home-feedback-card .form-group {
+            margin-bottom: 15px;
+        }
+
+        /* Home Safety Card */
+        .home-safety-card {
+            border: 2px solid var(--danger-color);
+        }
+
+        .home-safety-card p {
+            margin: 8px 0;
+        }
+
+        /* Dark Mode Specific for Home */
+        [data-theme="dark"] .home-welcome-card {
+            background: var(--accent-gradient);
+        }
+
+        [data-theme="dark"] .motivational-quote {
+            background: rgba(0,0,0,0.2);
+        }
+
+        [data-theme="dark"] .quick-nav-btn:hover {
+            background: var(--accent-color);
+        }
+
+        [data-theme="dark"] .streak-display {
+            background: linear-gradient(135deg, #f39c12, #e74c3c);
+        }
+
+        /* ========== END HOME TAB STYLES ========== */
+
         /* Clinician info box */
         .clinician-info-box {
             padding: 20px;
@@ -2908,7 +3137,8 @@
         
         <div class="app-content">
             <div class="sidebar">
-                <button class="tab-btn active" onclick="switchTab('therapy', this)">🤖 AI Therapy</button>
+                <button class="tab-btn active" onclick="switchTab('home', this)">🏠 Home</button>
+                <button class="tab-btn" onclick="switchTab('therapy', this)">🤖 AI Therapy</button>
                 <button class="tab-btn" onclick="switchTab('mood', this)">📊 Mood & Habits</button>
                 <button class="tab-btn" onclick="switchTab('gratitude', this)">🙏 Gratitude</button>
                 <button class="tab-btn" onclick="switchTab('cbt', this)">🧠 CBT Tools</button>
@@ -2934,6 +3164,142 @@
             </div>
             
             <div class="main-content">
+            <!-- Home Tab -->
+            <div id="homeTab" class="tab-content active">
+                <!-- Welcome Section -->
+                <div class="card home-welcome-card">
+                    <div class="welcome-header">
+                        <h2 id="homeWelcomeMessage">Welcome!</h2>
+                        <p class="last-login-text" id="homeLastLogin">Loading...</p>
+                    </div>
+                    <div class="home-version-info">
+                        <span class="app-version">Healing Space UK v2.1.0</span>
+                    </div>
+                    <div class="motivational-quote" id="homeMotivationalQuote">
+                        Every day is a fresh start. You're doing great!
+                    </div>
+                </div>
+
+                <!-- Daily Tasks Section -->
+                <div class="card home-tasks-card" style="margin-top: 20px;">
+                    <h3>Today's Wellness Tasks</h3>
+                    <div class="daily-progress">
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill" id="dailyProgressBar" style="width: 0%"></div>
+                        </div>
+                        <span class="progress-text" id="dailyProgressText">0/6 completed</span>
+                    </div>
+                    <div id="dailyTasksList" class="daily-tasks-list">
+                        <!-- Tasks rendered dynamically -->
+                    </div>
+                    <div class="streak-display" id="streakDisplay">
+                        <span class="streak-icon">🔥</span>
+                        <span class="streak-count" id="streakCount">0</span> day streak
+                    </div>
+                </div>
+
+                <!-- Quick Navigation Section -->
+                <div class="card home-quick-nav" style="margin-top: 20px;">
+                    <h3>Quick Access</h3>
+                    <div class="quick-nav-grid">
+                        <button class="quick-nav-btn" onclick="switchTab('therapy', document.querySelector('[onclick*=&quot;therapy&quot;]'))">
+                            🤖 AI Therapy
+                        </button>
+                        <button class="quick-nav-btn" onclick="switchTab('mood', document.querySelector('[onclick*=&quot;mood&quot;]'))">
+                            📊 Log Mood
+                        </button>
+                        <button class="quick-nav-btn" onclick="switchTab('pet', document.querySelector('[onclick*=&quot;pet&quot;]'))">
+                            🐶 My Pet
+                        </button>
+                        <button class="quick-nav-btn" onclick="switchTab('gratitude', document.querySelector('[onclick*=&quot;gratitude&quot;]'))">
+                            🙏 Gratitude
+                        </button>
+                        <button class="quick-nav-btn" onclick="switchTab('cbt', document.querySelector('[onclick*=&quot;cbt&quot;]'))">
+                            🧠 CBT Tools
+                        </button>
+                        <button class="quick-nav-btn" onclick="switchTab('clinical', document.querySelector('[onclick*=&quot;clinical&quot;]'))">
+                            📋 Assessments
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Help & Documentation Section -->
+                <div class="card home-help-card" style="margin-top: 20px;">
+                    <h3>Help & Getting Started</h3>
+                    <div class="help-links">
+                        <button class="help-link" onclick="showQuickTips()">
+                            💡 Quick Tips
+                        </button>
+                        <button class="help-link" onclick="switchTab('updates', document.querySelector('[onclick*=&quot;updates&quot;]'))">
+                            🆕 What's New
+                        </button>
+                        <button class="help-link" onclick="switchTab('safety', document.querySelector('[onclick*=&quot;safety&quot;]'))">
+                            🆘 Safety Plan
+                        </button>
+                    </div>
+                    <div id="quickTipsPanel" class="quick-tips-content" style="display: none; margin-top: 15px;">
+                        <div class="card" style="background: var(--bg-secondary);">
+                            <p><strong>Getting Started:</strong></p>
+                            <ul style="margin-left: 20px; margin-top: 10px; line-height: 1.8;">
+                                <li>Log your mood daily to track patterns</li>
+                                <li>Chat with AI Therapy when you need support</li>
+                                <li>Complete daily tasks to earn pet rewards</li>
+                                <li>Use CBT tools for structured exercises</li>
+                                <li>Check on your virtual pet regularly</li>
+                                <li>Build your streak for bonus rewards!</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pet Status Mini Card -->
+                <div class="card home-pet-card" style="margin-top: 20px;" id="homePetCard">
+                    <h3>🐾 Your Pet</h3>
+                    <div id="homePetStatus" style="display: flex; align-items: center; gap: 20px;">
+                        <span id="homePetEmoji" style="font-size: 48px;">🐾</span>
+                        <div>
+                            <p><strong id="homePetName">No pet yet</strong></p>
+                            <p style="color: var(--text-secondary);">🪙 <span id="homePetCoins">0</span> coins | ⭐ <span id="homePetXP">0</span> XP</p>
+                        </div>
+                        <button class="btn btn-secondary" onclick="switchTab('pet', document.querySelector('[onclick*=&quot;pet&quot;]'))" style="margin-left: auto;">
+                            Visit Pet
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Developer Feedback Section -->
+                <div class="card home-feedback-card" style="margin-top: 20px;">
+                    <h3>Send Feedback to Developers</h3>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="feedbackCategory" class="themed-input">
+                            <option value="bug">🐛 Bug Report</option>
+                            <option value="feature">💡 Feature Request</option>
+                            <option value="improvement">✨ Improvement Suggestion</option>
+                            <option value="other">📝 Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Your Message</label>
+                        <textarea id="feedbackMessage" class="themed-textarea" rows="4"
+                                  placeholder="Share your feedback, report issues, or suggest improvements..."></textarea>
+                    </div>
+                    <button class="btn" onclick="submitFeedback()">Send Feedback</button>
+                    <p id="feedbackStatus" style="margin-top: 10px; display: none;"></p>
+                </div>
+
+                <!-- Safety & Crisis Resources (Always Visible) -->
+                <div class="card crisis-resources-box home-safety-card" style="margin-top: 20px;">
+                    <h4 class="crisis-title">🆘 Need Immediate Help?</h4>
+                    <p><strong>Samaritans:</strong> Call 116 123 (24/7 free)</p>
+                    <p><strong>Crisis Text Line:</strong> Text SHOUT to 85258</p>
+                    <p><strong>NHS Crisis:</strong> Call 111 (option 2)</p>
+                    <button class="btn btn-secondary" style="margin-top: 15px;" onclick="switchTab('safety', document.querySelector('[onclick*=&quot;safety&quot;]'))">
+                        View Full Safety Plan
+                    </button>
+                </div>
+            </div>
+
             <!-- Therapy Chat Tab -->
             <div id="therapyTab" class="tab-content">
                 <h3 id="therapyChatTitle">Your Therapy Session</h3>
@@ -4240,6 +4606,288 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
         let tempLoginData = null; // Store login data for disclaimer flow
 
         const speciesEmojis = {Dog: '🐶', Cat: '🐱', Rabbit: '🐰', Fox: '🦊', Panda: '🐼', Penguin: '🐧'};
+
+        // ========== HOME TAB CONSTANTS AND FUNCTIONS ==========
+
+        const DAILY_TASK_TYPES = [
+            { type: 'log_mood', label: '📊 Log your mood', icon: '📊' },
+            { type: 'practice_gratitude', label: '🙏 Write gratitude entry', icon: '🙏' },
+            { type: 'check_pet', label: '🐶 Check on your pet', icon: '🐶' },
+            { type: 'breathing_exercise', label: '🌬️ Do a breathing exercise', icon: '🌬️' },
+            { type: 'therapy_session', label: '🤖 Chat with AI therapy', icon: '🤖' },
+            { type: 'read_resource', label: '📚 Read a wellness resource', icon: '📚' }
+        ];
+
+        const MOTIVATIONAL_QUOTES = [
+            "Every day is a fresh start. You're doing great! 🌟",
+            "Small steps lead to big changes. Keep going! 💪",
+            "Your mental health matters. We're here for you. 💙",
+            "Progress, not perfection. You're on the right path. 🌈",
+            "Taking time for yourself is a sign of strength. ✨",
+            "You've got this. One moment at a time. 🌻",
+            "Be kind to yourself today. You deserve it. 💜",
+            "Every breath is a new beginning. 🌊",
+            "You are stronger than you know. 🦋",
+            "Today is full of possibilities. 🌅"
+        ];
+
+        async function loadHomeTabData() {
+            try {
+                const response = await fetch(`/api/home/data?username=${encodeURIComponent(currentUser)}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    renderHomeTab(data);
+                } else {
+                    // Show static content on error
+                    renderHomeTabStatic();
+                }
+            } catch (error) {
+                console.error('Error loading home data:', error);
+                renderHomeTabStatic();
+            }
+        }
+
+        function renderHomeTab(data) {
+            // Welcome message
+            const welcomeEl = document.getElementById('homeWelcomeMessage');
+            const lastLoginEl = document.getElementById('homeLastLogin');
+
+            if (welcomeEl) {
+                welcomeEl.textContent = `Welcome back, ${currentUser}!`;
+            }
+
+            if (lastLoginEl) {
+                if (data.last_login) {
+                    const lastDate = new Date(data.last_login);
+                    lastLoginEl.textContent = `Last visit: ${lastDate.toLocaleDateString('en-GB', {
+                        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                    })}`;
+                } else {
+                    lastLoginEl.textContent = "Welcome to Healing Space UK!";
+                }
+            }
+
+            // Motivational quote
+            const quoteEl = document.getElementById('homeMotivationalQuote');
+            if (quoteEl) {
+                quoteEl.textContent = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+            }
+
+            // Daily tasks
+            const completedTasks = data.daily_tasks || [];
+            renderDailyTasks(completedTasks);
+
+            // Streak
+            const streakEl = document.getElementById('streakCount');
+            if (streakEl && data.streak) {
+                streakEl.textContent = data.streak.current || 0;
+            }
+
+            // Pet info
+            if (data.pet) {
+                const petNameEl = document.getElementById('homePetName');
+                const petCoinsEl = document.getElementById('homePetCoins');
+                const petXPEl = document.getElementById('homePetXP');
+                const petEmojiEl = document.getElementById('homePetEmoji');
+
+                if (petNameEl) petNameEl.textContent = data.pet.name || 'Your Pet';
+                if (petCoinsEl) petCoinsEl.textContent = data.pet.coins || 0;
+                if (petXPEl) petXPEl.textContent = data.pet.xp || 0;
+                // Pet emoji would need species info - use generic for now
+                if (petEmojiEl) petEmojiEl.textContent = '🐾';
+            }
+        }
+
+        function renderHomeTabStatic() {
+            // Render static content when API fails
+            const welcomeEl = document.getElementById('homeWelcomeMessage');
+            if (welcomeEl) {
+                welcomeEl.textContent = `Welcome, ${currentUser}!`;
+            }
+
+            const lastLoginEl = document.getElementById('homeLastLogin');
+            if (lastLoginEl) {
+                lastLoginEl.textContent = "Ready to start your wellness journey?";
+            }
+
+            const quoteEl = document.getElementById('homeMotivationalQuote');
+            if (quoteEl) {
+                quoteEl.textContent = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+            }
+
+            renderDailyTasks([]);
+        }
+
+        function renderDailyTasks(completedTasks) {
+            const container = document.getElementById('dailyTasksList');
+            if (!container) return;
+
+            const completedTypes = completedTasks.map(t => t.task_type);
+            const completedCount = completedTypes.length;
+
+            // Update progress bar
+            const progressBar = document.getElementById('dailyProgressBar');
+            const progressText = document.getElementById('dailyProgressText');
+            const percentage = (completedCount / DAILY_TASK_TYPES.length) * 100;
+
+            if (progressBar) progressBar.style.width = `${percentage}%`;
+            if (progressText) progressText.textContent = `${completedCount}/${DAILY_TASK_TYPES.length} completed`;
+
+            // Render task list
+            container.innerHTML = DAILY_TASK_TYPES.map(task => {
+                const isCompleted = completedTypes.includes(task.type);
+                return `
+                    <div class="daily-task-item ${isCompleted ? 'completed' : ''}" onclick="navigateToTask('${task.type}')">
+                        <span class="task-checkbox">${isCompleted ? '✅' : '⬜'}</span>
+                        <span class="task-label">${task.label}</span>
+                    </div>
+                `;
+            }).join('');
+
+            // Check for daily completion celebration
+            if (completedCount === DAILY_TASK_TYPES.length) {
+                showDailyCompletionCelebration();
+            }
+        }
+
+        function navigateToTask(taskType) {
+            // Navigate to the appropriate tab based on task type
+            const taskTabMap = {
+                'log_mood': 'mood',
+                'practice_gratitude': 'gratitude',
+                'check_pet': 'pet',
+                'breathing_exercise': 'cbt',
+                'therapy_session': 'therapy',
+                'read_resource': 'updates'
+            };
+
+            const tabName = taskTabMap[taskType];
+            if (tabName) {
+                const tabBtn = document.querySelector(`[onclick*="${tabName}"]`);
+                switchTab(tabName, tabBtn);
+
+                // Mark read_resource as complete when clicking on it
+                if (taskType === 'read_resource') {
+                    markDailyTaskComplete('read_resource');
+                }
+            }
+        }
+
+        async function markDailyTaskComplete(taskType) {
+            try {
+                const response = await fetch('/api/daily-tasks/complete', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({
+                        task_type: taskType,
+                        username: currentUser
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // Refresh home tab if on home tab
+                    if (document.getElementById('homeTab').classList.contains('active')) {
+                        loadHomeTabData();
+                    }
+
+                    if (data.bonus_awarded) {
+                        showDailyCompletionCelebration();
+                    }
+                }
+            } catch (error) {
+                console.error('Error marking task complete:', error);
+            }
+        }
+
+        function showDailyCompletionCelebration() {
+            // Show celebration for completing all daily tasks
+            const streakDisplay = document.getElementById('streakDisplay');
+            if (streakDisplay) {
+                streakDisplay.innerHTML = `
+                    <span class="streak-icon">🎉</span>
+                    All tasks complete! +50 coins, +100 XP
+                    <br><span style="font-size: 14px; margin-top: 5px; display: block;">
+                        🔥 <span class="streak-count" id="streakCount">0</span> day streak
+                    </span>
+                `;
+                streakDisplay.style.background = 'linear-gradient(135deg, #27ae60, #2ecc71)';
+
+                // Reload to get updated streak
+                setTimeout(() => loadHomeTabData(), 1000);
+            }
+        }
+
+        async function submitFeedback() {
+            const category = document.getElementById('feedbackCategory').value;
+            const message = document.getElementById('feedbackMessage').value.trim();
+            const statusEl = document.getElementById('feedbackStatus');
+
+            if (!message) {
+                if (statusEl) {
+                    statusEl.textContent = '⚠️ Please enter a message';
+                    statusEl.style.display = 'block';
+                    statusEl.style.color = 'var(--warning-color)';
+                }
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({
+                        category,
+                        message,
+                        username: currentUser
+                    })
+                });
+
+                if (response.ok) {
+                    if (statusEl) {
+                        statusEl.textContent = '✅ Thank you for your feedback!';
+                        statusEl.style.display = 'block';
+                        statusEl.style.color = 'var(--success-color)';
+                    }
+                    document.getElementById('feedbackMessage').value = '';
+
+                    // Hide success message after 3 seconds
+                    setTimeout(() => {
+                        if (statusEl) statusEl.style.display = 'none';
+                    }, 3000);
+                } else {
+                    const data = await response.json();
+                    if (statusEl) {
+                        statusEl.textContent = '❌ ' + (data.error || 'Error submitting feedback');
+                        statusEl.style.display = 'block';
+                        statusEl.style.color = 'var(--danger-color)';
+                    }
+                }
+            } catch (error) {
+                console.error('Feedback error:', error);
+                if (statusEl) {
+                    statusEl.textContent = '❌ Connection error. Please try again.';
+                    statusEl.style.display = 'block';
+                    statusEl.style.color = 'var(--danger-color)';
+                }
+            }
+        }
+
+        function showQuickTips() {
+            const panel = document.getElementById('quickTipsPanel');
+            if (panel) {
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+            }
+        }
+
+        // ========== END HOME TAB FUNCTIONS ==========
 
         // ========== CHANGELOG - Add new updates at the TOP ==========
         const APP_UPDATES = [

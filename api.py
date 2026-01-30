@@ -2272,6 +2272,42 @@ def init_db():
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )''')
 
+    # ==================== HOME TAB TABLES ====================
+
+    # Feedback table - User feedback to developers
+    cursor.execute('''CREATE TABLE IF NOT EXISTS feedback (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL,
+        role TEXT DEFAULT 'user',
+        category TEXT NOT NULL,
+        message TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        resolved_at DATETIME,
+        admin_notes TEXT
+    )''')
+
+    # Daily tasks tracking - Track completion of daily wellness tasks
+    cursor.execute('''CREATE TABLE IF NOT EXISTS daily_tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL,
+        task_type TEXT NOT NULL,
+        completed INTEGER DEFAULT 0,
+        completed_at DATETIME,
+        task_date DATE DEFAULT (date('now')),
+        UNIQUE(username, task_type, task_date)
+    )''')
+
+    # Daily streaks - Track user engagement streaks
+    cursor.execute('''CREATE TABLE IF NOT EXISTS daily_streaks (
+        username TEXT PRIMARY KEY,
+        current_streak INTEGER DEFAULT 0,
+        longest_streak INTEGER DEFAULT 0,
+        last_complete_date DATE,
+        total_bonus_coins INTEGER DEFAULT 0,
+        total_bonus_xp INTEGER DEFAULT 0
+    )''')
+
     # Add email and phone columns if they don't exist
     try:
         cursor.execute("ALTER TABLE users ADD COLUMN email TEXT")
@@ -2429,6 +2465,14 @@ def init_db():
 
     # Verification codes
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_verification_codes_identifier ON verification_codes(identifier)')
+
+    # Feedback
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_feedback_username ON feedback(username)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_feedback_status ON feedback(status)')
+
+    # Daily tasks
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_daily_tasks_username ON daily_tasks(username)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_daily_tasks_username_date ON daily_tasks(username, task_date)')
 
     conn.commit()
     conn.close()
@@ -4830,9 +4874,12 @@ def therapy_chat():
         except Exception as e:
             # Don't break the chat if training collection fails
             print(f"Training data collection error: {e}")
-        
+
+        # Mark daily task as complete
+        mark_daily_task_complete(username, 'therapy_session')
+
         log_event(username, 'api', 'therapy_chat', 'Chat message sent')
-        
+
         return jsonify({
             'success': True,
             'response': response,
@@ -5413,7 +5460,10 @@ def log_mood():
         
         # Reward pet for self-care activity
         reward_pet('mood')
-        
+
+        # Mark daily task as complete
+        mark_daily_task_complete(username, 'log_mood')
+
         log_event(username, 'api', 'mood_logged', f'Mood: {mood_val}')
         
         return jsonify({
@@ -5494,7 +5544,10 @@ def log_gratitude():
         
         # Reward pet for self-care activity
         reward_pet('gratitude')
-        
+
+        # Mark daily task as complete
+        mark_daily_task_complete(username, 'practice_gratitude')
+
         log_event(username, 'api', 'gratitude_logged', 'Gratitude entry added, AI memory updated')
         
         return jsonify({
@@ -5573,6 +5626,10 @@ def log_breathing_exercise():
 
         update_ai_memory(username)
         reward_pet('breathing', 'cbt')
+
+        # Mark daily task as complete
+        mark_daily_task_complete(username, 'breathing_exercise')
+
         log_event(username, 'api', 'breathing_exercise', f'Completed {exercise_type} breathing exercise')
 
         return jsonify({'success': True, 'id': log_id}), 201
@@ -10631,6 +10688,327 @@ def search_patients():
         
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
+
+# ==================== HOME TAB ENDPOINTS ====================
+
+@app.route('/api/home/data', methods=['GET'])
+def get_home_data():
+    """Get consolidated home tab data including welcome info, tasks, and streaks"""
+    try:
+        username = request.args.get('username') or get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Get last login
+        user = cur.execute("SELECT last_login FROM users WHERE username=?", (username,)).fetchone()
+        last_login = user[0] if user else None
+
+        # Get today's completed tasks
+        today = datetime.now().strftime('%Y-%m-%d')
+        tasks = cur.execute(
+            "SELECT task_type, completed_at FROM daily_tasks WHERE username=? AND task_date=? AND completed=1",
+            (username, today)
+        ).fetchall()
+
+        # Get streak info
+        streak = cur.execute(
+            "SELECT current_streak, longest_streak, last_complete_date FROM daily_streaks WHERE username=?",
+            (username,)
+        ).fetchone()
+
+        # Get pet info for quick display
+        pet_conn = sqlite3.connect(PET_DB_PATH)
+        pet_cur = pet_conn.cursor()
+        pet = pet_cur.execute("SELECT name, coins, xp, stage FROM pet WHERE id=?", (username,)).fetchone()
+        pet_conn.close()
+
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'last_login': last_login,
+            'daily_tasks': [{'task_type': t[0], 'completed_at': t[1]} for t in tasks],
+            'streak': {
+                'current': streak[0] if streak else 0,
+                'longest': streak[1] if streak else 0,
+                'last_complete': streak[2] if streak else None
+            },
+            'pet': {
+                'name': pet[0] if pet else None,
+                'coins': pet[1] if pet else 0,
+                'xp': pet[2] if pet else 0,
+                'stage': pet[3] if pet else None
+            } if pet else None
+        }), 200
+
+    except Exception as e:
+        return handle_exception(e, 'get_home_data')
+
+
+@app.route('/api/feedback', methods=['POST'])
+def submit_feedback():
+    """Submit user feedback to developers"""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        data = request.json
+        category = data.get('category')
+        message = data.get('message', '').strip()
+
+        if not category or not message:
+            return jsonify({'error': 'Category and message are required'}), 400
+
+        if len(message) > 5000:
+            return jsonify({'error': 'Message too long (max 5000 characters)'}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Get user role
+        user = cur.execute("SELECT role FROM users WHERE username=?", (username,)).fetchone()
+        role = user[0] if user else 'user'
+
+        cur.execute(
+            "INSERT INTO feedback (username, role, category, message) VALUES (?, ?, ?, ?)",
+            (username, role, category, message)
+        )
+        conn.commit()
+
+        log_event(username, 'api', 'feedback_submitted', f'Category: {category}')
+        conn.close()
+
+        return jsonify({'success': True, 'message': 'Feedback submitted successfully'}), 201
+
+    except Exception as e:
+        return handle_exception(e, 'submit_feedback')
+
+
+@app.route('/api/feedback', methods=['GET'])
+def get_user_feedback():
+    """Get feedback history for the authenticated user"""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        feedback = cur.execute(
+            "SELECT id, category, message, status, created_at FROM feedback WHERE username=? ORDER BY created_at DESC LIMIT 50",
+            (username,)
+        ).fetchall()
+
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'feedback': [
+                {'id': f[0], 'category': f[1], 'message': f[2], 'status': f[3], 'created_at': f[4]}
+                for f in feedback
+            ]
+        }), 200
+
+    except Exception as e:
+        return handle_exception(e, 'get_user_feedback')
+
+
+@app.route('/api/daily-tasks/complete', methods=['POST'])
+def complete_daily_task():
+    """Mark a daily task as complete"""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        data = request.json
+        task_type = data.get('task_type')
+
+        valid_tasks = ['log_mood', 'practice_gratitude', 'check_pet', 'breathing_exercise', 'therapy_session', 'read_resource']
+        if not task_type or task_type not in valid_tasks:
+            return jsonify({'error': f'Invalid task type. Must be one of: {", ".join(valid_tasks)}'}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+        today = datetime.now().strftime('%Y-%m-%d')
+
+        # Check if already completed today
+        existing = cur.execute(
+            "SELECT id FROM daily_tasks WHERE username=? AND task_type=? AND task_date=?",
+            (username, task_type, today)
+        ).fetchone()
+
+        if existing:
+            # Update existing record
+            cur.execute(
+                "UPDATE daily_tasks SET completed=1, completed_at=datetime('now') WHERE id=?",
+                (existing[0],)
+            )
+        else:
+            # Insert new record
+            cur.execute(
+                "INSERT INTO daily_tasks (username, task_type, completed, completed_at, task_date) VALUES (?, ?, 1, datetime('now'), ?)",
+                (username, task_type, today)
+            )
+
+        # Check if all tasks completed today
+        completed_count = cur.execute(
+            "SELECT COUNT(DISTINCT task_type) FROM daily_tasks WHERE username=? AND task_date=? AND completed=1",
+            (username, today)
+        ).fetchone()[0]
+
+        bonus_awarded = False
+        if completed_count >= 6:  # All 6 tasks completed
+            bonus_awarded = award_daily_completion_bonus(username, cur, today)
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'task_type': task_type,
+            'completed_count': completed_count,
+            'total_tasks': 6,
+            'bonus_awarded': bonus_awarded
+        }), 200
+
+    except Exception as e:
+        return handle_exception(e, 'complete_daily_task')
+
+
+def award_daily_completion_bonus(username, cursor, today):
+    """Award bonus for completing all daily tasks"""
+    try:
+        # Check streak record
+        streak = cursor.execute(
+            "SELECT current_streak, longest_streak, last_complete_date FROM daily_streaks WHERE username=?",
+            (username,)
+        ).fetchone()
+
+        yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+
+        if streak:
+            last_date = streak[2]
+
+            if last_date == today:
+                return False  # Already awarded today
+
+            if last_date == yesterday:
+                new_streak = streak[0] + 1
+            else:
+                new_streak = 1
+
+            cursor.execute('''
+                UPDATE daily_streaks
+                SET current_streak=?, last_complete_date=?,
+                    longest_streak=MAX(longest_streak, ?),
+                    total_bonus_coins=total_bonus_coins+50,
+                    total_bonus_xp=total_bonus_xp+100
+                WHERE username=?
+            ''', (new_streak, today, new_streak, username))
+        else:
+            cursor.execute('''
+                INSERT INTO daily_streaks (username, current_streak, longest_streak, last_complete_date, total_bonus_coins, total_bonus_xp)
+                VALUES (?, 1, 1, ?, 50, 100)
+            ''', (username, today))
+
+        # Award pet bonus (50 coins, 100 XP, +10 happiness)
+        try:
+            pet_conn = sqlite3.connect(PET_DB_PATH)
+            pet_cur = pet_conn.cursor()
+            pet_cur.execute('''
+                UPDATE pet SET coins=coins+50, xp=xp+100, happiness=MIN(100, happiness+10)
+                WHERE id=?
+            ''', (username,))
+            pet_conn.commit()
+            pet_conn.close()
+        except Exception:
+            pass  # Pet bonus is optional
+
+        log_event(username, 'daily', 'daily_bonus_awarded', f'Streak updated, +50 coins, +100 XP')
+        return True
+
+    except Exception as e:
+        print(f"Error awarding daily bonus: {e}")
+        return False
+
+
+@app.route('/api/daily-tasks/streak', methods=['GET'])
+def get_daily_streak():
+    """Get streak information for the authenticated user"""
+    try:
+        username = request.args.get('username') or get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        streak = cur.execute(
+            "SELECT current_streak, longest_streak, last_complete_date, total_bonus_coins, total_bonus_xp FROM daily_streaks WHERE username=?",
+            (username,)
+        ).fetchone()
+
+        conn.close()
+
+        if streak:
+            return jsonify({
+                'success': True,
+                'current_streak': streak[0],
+                'longest_streak': streak[1],
+                'last_complete_date': streak[2],
+                'total_bonus_coins': streak[3],
+                'total_bonus_xp': streak[4]
+            }), 200
+        else:
+            return jsonify({
+                'success': True,
+                'current_streak': 0,
+                'longest_streak': 0,
+                'last_complete_date': None,
+                'total_bonus_coins': 0,
+                'total_bonus_xp': 0
+            }), 200
+
+    except Exception as e:
+        return handle_exception(e, 'get_daily_streak')
+
+
+def mark_daily_task_complete(username, task_type):
+    """Helper function to mark a daily task as complete (called from other endpoints)"""
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        today = datetime.now().strftime('%Y-%m-%d')
+
+        # Use INSERT OR REPLACE to handle duplicates
+        cur.execute('''
+            INSERT INTO daily_tasks (username, task_type, completed, completed_at, task_date)
+            VALUES (?, ?, 1, datetime('now'), ?)
+            ON CONFLICT(username, task_type, task_date) DO UPDATE SET completed=1, completed_at=datetime('now')
+        ''', (username, task_type, today))
+
+        # Check if all tasks completed
+        completed_count = cur.execute(
+            "SELECT COUNT(DISTINCT task_type) FROM daily_tasks WHERE username=? AND task_date=? AND completed=1",
+            (username, today)
+        ).fetchone()[0]
+
+        if completed_count >= 6:
+            award_daily_completion_bonus(username, cur, today)
+
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        print(f"Error marking daily task: {e}")
+        return False
+
 
 @app.errorhandler(404)
 def not_found(e):
