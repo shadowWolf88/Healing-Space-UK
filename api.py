@@ -649,7 +649,12 @@ def init_db():
     cursor.execute('''CREATE TABLE IF NOT EXISTS clinical_scales
                       (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, scale_name TEXT, score INTEGER, severity TEXT, entry_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS community_posts
-                      (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, message TEXT, likes INTEGER DEFAULT 0, entry_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+                      (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, message TEXT, likes INTEGER DEFAULT 0, category TEXT DEFAULT 'general', entry_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    # Add category column if it doesn't exist (migration for existing DBs)
+    try:
+        cursor.execute("ALTER TABLE community_posts ADD COLUMN category TEXT DEFAULT 'general'")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
     cursor.execute('''CREATE TABLE IF NOT EXISTS community_likes
                       (id INTEGER PRIMARY KEY AUTOINCREMENT, post_id INTEGER, username TEXT, reaction_type TEXT DEFAULT 'like', timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE(post_id, username, reaction_type))''')
     # Add reaction_type column if it doesn't exist (migration for existing DBs)
@@ -4633,15 +4638,31 @@ def submit_gad7():
 # === COMMUNITY SUPPORT BOARD ===
 @app.route('/api/community/posts', methods=['GET'])
 def get_community_posts():
-    """Get recent community posts with reaction counts"""
+    """Get recent community posts with reaction counts and replies inline"""
     try:
         username = request.args.get('username', '')  # Optional - to check user's reactions
+        category = request.args.get('category', '')  # Optional - filter by category
+
+        # Valid categories for reference
+        VALID_CATEGORIES = [
+            'anxiety', 'depression', 'relationships', 'intrusive-thoughts',
+            'grief', 'work-stress', 'self-esteem', 'trauma', 'addiction',
+            'sleep', 'motivation', 'general', 'celebration', 'question'
+        ]
 
         conn = get_db_connection()
         cur = conn.cursor()
-        posts = cur.execute(
-            "SELECT id, username, message, likes, entry_timestamp FROM community_posts ORDER BY entry_timestamp DESC LIMIT 20"
-        ).fetchall()
+
+        # Build query with optional category filter
+        if category and category in VALID_CATEGORIES:
+            posts = cur.execute(
+                "SELECT id, username, message, likes, entry_timestamp, category FROM community_posts WHERE category=? ORDER BY entry_timestamp DESC LIMIT 50",
+                (category,)
+            ).fetchall()
+        else:
+            posts = cur.execute(
+                "SELECT id, username, message, likes, entry_timestamp, category FROM community_posts ORDER BY entry_timestamp DESC LIMIT 50"
+            ).fetchall()
 
         post_list = []
         for p in posts:
@@ -4663,6 +4684,20 @@ def get_community_posts():
                 ).fetchall()
                 user_reactions = [r[0] for r in user_reacts]
 
+            # Get replies inline
+            replies = cur.execute(
+                "SELECT id, username, message, timestamp FROM community_replies WHERE post_id=? ORDER BY timestamp ASC",
+                (post_id,)
+            ).fetchall()
+            reply_list = [
+                {
+                    'id': r[0],
+                    'username': r[1],
+                    'message': r[2],
+                    'timestamp': r[3]
+                } for r in replies
+            ]
+
             post_list.append({
                 'id': post_id,
                 'username': p[1],
@@ -4671,11 +4706,14 @@ def get_community_posts():
                 'reactions': reaction_counts,  # Breakdown by type
                 'user_reactions': user_reactions,  # What current user reacted with
                 'timestamp': p[4],
+                'category': p[5] or 'general',
+                'replies': reply_list,
+                'reply_count': len(reply_list),
                 'liked_by_user': 'like' in user_reactions  # Backwards compatible
             })
 
         conn.close()
-        return jsonify({'posts': post_list}), 200
+        return jsonify({'posts': post_list, 'categories': VALID_CATEGORIES}), 200
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
@@ -4686,9 +4724,20 @@ def create_community_post():
         data = request.json
         username = data.get('username')
         message = data.get('message')
+        category = data.get('category')
+
+        # Valid categories
+        VALID_CATEGORIES = [
+            'anxiety', 'depression', 'relationships', 'intrusive-thoughts',
+            'grief', 'work-stress', 'self-esteem', 'trauma', 'addiction',
+            'sleep', 'motivation', 'general', 'celebration', 'question'
+        ]
 
         if not username or not message:
             return jsonify({'error': 'Username and message required'}), 400
+
+        if not category or category not in VALID_CATEGORIES:
+            return jsonify({'error': 'Please select a valid category', 'valid_categories': VALID_CATEGORIES}), 400
 
         # INPUT VALIDATION: Length limits to prevent abuse
         MAX_POST_LENGTH = 2000
@@ -4697,12 +4746,12 @@ def create_community_post():
 
         if len(username) > 50:
             return jsonify({'error': 'Username and message required'}), 400
-        
+
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO community_posts (username, message) VALUES (?,?)",
-            (username, message)
+            "INSERT INTO community_posts (username, message, category) VALUES (?,?,?)",
+            (username, message, category)
         )
         conn.commit()
         conn.close()
