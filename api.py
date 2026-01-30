@@ -137,6 +137,71 @@ def handle_exception(e, context: str = 'unknown'):
         'code': 'INTERNAL_ERROR'
     }), 500
 
+# ==================== CONTENT MODERATION ====================
+class ContentModerator:
+    """Simple content moderation for community posts and replies"""
+
+    # Words/phrases that should be blocked entirely
+    BLOCKED_PATTERNS = [
+        # Slurs and hate speech (add as needed)
+        # Keeping minimal for now - expand based on needs
+    ]
+
+    # Words to filter/mask (replace with asterisks)
+    FILTER_WORDS = []
+
+    def __init__(self):
+        pass
+
+    def moderate(self, text):
+        """
+        Check text for inappropriate content.
+        Returns dict with 'allowed', 'reason', and 'filtered_text'.
+        """
+        if not text or not text.strip():
+            return {
+                'allowed': False,
+                'reason': 'Empty message not allowed',
+                'filtered_text': ''
+            }
+
+        text = text.strip()
+
+        # Check message length (reasonable limits)
+        if len(text) > 2000:
+            return {
+                'allowed': False,
+                'reason': 'Message too long (max 2000 characters)',
+                'filtered_text': text[:2000]
+            }
+
+        # Check for blocked patterns
+        text_lower = text.lower()
+        for pattern in self.BLOCKED_PATTERNS:
+            if pattern.lower() in text_lower:
+                return {
+                    'allowed': False,
+                    'reason': 'Message contains inappropriate content',
+                    'filtered_text': ''
+                }
+
+        # Filter/mask certain words if needed
+        filtered_text = text
+        for word in self.FILTER_WORDS:
+            # Case-insensitive replacement with asterisks
+            import re
+            pattern = re.compile(re.escape(word), re.IGNORECASE)
+            filtered_text = pattern.sub('*' * len(word), filtered_text)
+
+        return {
+            'allowed': True,
+            'reason': None,
+            'filtered_text': filtered_text
+        }
+
+# Create global moderator instance
+content_moderator = ContentModerator()
+
 # ==================== CSRF PROTECTION ====================
 # CSRF Secret key for token generation
 import secrets as stdlib_secrets
