@@ -886,6 +886,472 @@
             background: #c0392b;
         }
 
+        /* Discord-style Community Layout */
+        .community-discord-layout {
+            display: flex;
+            height: calc(100vh - 200px);
+            min-height: 500px;
+            background: #36393f;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .community-sidebar {
+            width: 240px;
+            background: #2f3136;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .community-sidebar-header {
+            padding: 16px;
+            border-bottom: 1px solid #202225;
+            background: #2f3136;
+        }
+
+        .community-sidebar-header h3 {
+            color: #fff;
+            font-size: 16px;
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .channel-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px;
+        }
+
+        .channel-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            margin: 2px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #8e9297;
+            transition: all 0.15s ease;
+        }
+
+        .channel-item:hover {
+            background: #393c43;
+            color: #dcddde;
+        }
+
+        .channel-item.active {
+            background: #393c43;
+            color: #fff;
+        }
+
+        .channel-item .channel-emoji {
+            font-size: 18px;
+            margin-right: 8px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .channel-item .channel-name {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .channel-item .unread-badge {
+            background: #ed4245;
+            color: white;
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .community-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #36393f;
+        }
+
+        .community-channel-header {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid #202225;
+            background: #36393f;
+        }
+
+        .community-channel-header .channel-icon {
+            font-size: 24px;
+            margin-right: 12px;
+        }
+
+        .community-channel-header .channel-info h3 {
+            color: #fff;
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .community-channel-header .channel-info p {
+            color: #8e9297;
+            margin: 4px 0 0 0;
+            font-size: 12px;
+        }
+
+        .community-posts-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .welcome-message {
+            text-align: center;
+            padding: 60px 20px;
+            color: #8e9297;
+        }
+
+        .welcome-message .welcome-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+
+        .welcome-message h2 {
+            color: #fff;
+            margin: 0 0 12px 0;
+        }
+
+        .welcome-message p {
+            max-width: 400px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+
+        .community-input-area {
+            padding: 16px;
+            background: #40444b;
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .community-input-area textarea {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: #40444b;
+            color: #dcddde;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+        }
+
+        .community-input-area textarea::placeholder {
+            color: #72767d;
+        }
+
+        .community-input-area .btn {
+            padding: 10px 20px;
+            white-space: nowrap;
+        }
+
+        /* Discord-style Post Card */
+        .discord-post {
+            display: flex;
+            padding: 12px 16px;
+            margin-bottom: 4px;
+            border-radius: 4px;
+            transition: background 0.1s;
+        }
+
+        .discord-post:hover {
+            background: #32353b;
+        }
+
+        .discord-post.pinned {
+            background: rgba(250, 166, 26, 0.1);
+            border-left: 3px solid #faa61a;
+        }
+
+        .discord-post-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 16px;
+            margin-right: 16px;
+            flex-shrink: 0;
+        }
+
+        .discord-post-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .discord-post-header {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-bottom: 4px;
+            flex-wrap: wrap;
+        }
+
+        .discord-post-username {
+            color: #fff;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .discord-post-time {
+            color: #72767d;
+            font-size: 12px;
+        }
+
+        .discord-post-pinned-badge {
+            background: #faa61a;
+            color: #000;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        .discord-post-message {
+            color: #dcddde;
+            line-height: 1.5;
+            font-size: 14px;
+            word-wrap: break-word;
+        }
+
+        .discord-post-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+
+        .discord-reaction-btn {
+            background: #4f545c;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #dcddde;
+            transition: all 0.15s;
+        }
+
+        .discord-reaction-btn:hover {
+            background: #5d6269;
+        }
+
+        .discord-reaction-btn.active {
+            background: rgba(88, 101, 242, 0.3);
+            border: 1px solid #5865f2;
+        }
+
+        .discord-thread-btn {
+            background: none;
+            border: none;
+            color: #72767d;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 4px 8px;
+        }
+
+        .discord-thread-btn:hover {
+            color: #dcddde;
+        }
+
+        .discord-post-admin-actions {
+            margin-left: auto;
+        }
+
+        .discord-admin-btn {
+            background: none;
+            border: none;
+            color: #72767d;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 4px;
+        }
+
+        .discord-admin-btn:hover {
+            color: #dcddde;
+        }
+
+        .discord-admin-btn.pin-btn.pinned {
+            color: #faa61a;
+        }
+
+        /* Thread Modal */
+        .thread-modal {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 420px;
+            height: 100%;
+            background: #2f3136;
+            box-shadow: -4px 0 20px rgba(0,0,0,0.3);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .thread-modal-content {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .thread-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid #202225;
+        }
+
+        .thread-header h3 {
+            color: #fff;
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .thread-close-btn {
+            background: none;
+            border: none;
+            color: #8e9297;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .thread-close-btn:hover {
+            color: #fff;
+        }
+
+        .thread-original-post {
+            padding: 16px;
+            border-bottom: 1px solid #202225;
+        }
+
+        .thread-replies {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .thread-reply {
+            display: flex;
+            padding: 8px 0;
+        }
+
+        .thread-reply-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 12px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .thread-reply-content {
+            flex: 1;
+        }
+
+        .thread-reply-header {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .thread-reply-username {
+            color: #fff;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .thread-reply-time {
+            color: #72767d;
+            font-size: 11px;
+        }
+
+        .thread-reply-message {
+            color: #dcddde;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .thread-reply-input {
+            padding: 16px;
+            border-top: 1px solid #202225;
+            display: flex;
+            gap: 10px;
+        }
+
+        .thread-reply-input textarea {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            background: #40444b;
+            color: #dcddde;
+            font-size: 14px;
+            resize: none;
+        }
+
+        .thread-reply-input .btn {
+            padding: 10px 16px;
+        }
+
+        /* Responsive for mobile */
+        @media (max-width: 768px) {
+            .community-discord-layout {
+                flex-direction: column;
+                height: auto;
+                min-height: calc(100vh - 150px);
+            }
+
+            .community-sidebar {
+                width: 100%;
+                max-height: 200px;
+            }
+
+            .channel-list {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px;
+                padding: 8px;
+            }
+
+            .channel-item {
+                padding: 6px 10px;
+                margin: 0;
+            }
+
+            .channel-item .channel-name {
+                font-size: 12px;
+            }
+
+            .thread-modal {
+                width: 100%;
+            }
+        }
+
         .patient-card {
             background: white;
             padding: 20px;
@@ -2224,59 +2690,63 @@
             
             <!-- Community Support Tab -->
             <div id="communityTab" class="tab-content">
-                <h3>Community Support Board</h3>
-                <p style="color: #666; margin-bottom: 20px;">Connect with others on their mental health journey.</p>
-                
-                <div class="card">
-                    <h4>Share Your Message</h4>
-                    <div style="margin-bottom: 10px;">
-                        <label for="communityCategory" style="font-weight: 600; display: block; margin-bottom: 5px;">Category <span style="color: #e74c3c;">*</span></label>
-                        <select id="communityCategory" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #e0e0e0; font-size: 14px;">
-                            <option value="">-- Select a category --</option>
-                            <option value="anxiety">😰 Anxiety</option>
-                            <option value="depression">😔 Depression</option>
-                            <option value="relationships">💑 Relationships</option>
-                            <option value="intrusive-thoughts">🧠 Intrusive Thoughts</option>
-                            <option value="grief">💔 Grief & Loss</option>
-                            <option value="work-stress">💼 Work Stress</option>
-                            <option value="self-esteem">🪞 Self-Esteem</option>
-                            <option value="trauma">🩹 Trauma</option>
-                            <option value="addiction">🔗 Addiction</option>
-                            <option value="sleep">😴 Sleep Issues</option>
-                            <option value="motivation">⚡ Motivation</option>
-                            <option value="celebration">🎉 Celebration</option>
-                            <option value="question">❓ Question</option>
-                            <option value="general">💬 General</option>
-                        </select>
+                <!-- Discord-style Community Layout -->
+                <div class="community-discord-layout">
+                    <!-- Channel Sidebar -->
+                    <div class="community-sidebar">
+                        <div class="community-sidebar-header">
+                            <h3>Channels</h3>
+                        </div>
+                        <div id="communityChannelList" class="channel-list">
+                            <!-- Channels loaded dynamically -->
+                        </div>
                     </div>
-                    <textarea id="communityMessage" rows="4" style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e0e0e0; margin-bottom: 10px;" placeholder="Share encouragement, hope, or ask for support..."></textarea>
-                    <button class="btn" onclick="postCommunity()">Post Message</button>
+
+                    <!-- Main Content Area -->
+                    <div class="community-main">
+                        <!-- Channel Header -->
+                        <div class="community-channel-header" id="communityChannelHeader">
+                            <span class="channel-icon">💬</span>
+                            <div class="channel-info">
+                                <h3 id="currentChannelName">Select a Channel</h3>
+                                <p id="currentChannelDesc">Choose a channel from the sidebar to view posts</p>
+                            </div>
+                        </div>
+
+                        <!-- Posts Area -->
+                        <div class="community-posts-area" id="communityPostsArea">
+                            <div class="welcome-message">
+                                <div class="welcome-icon">👋</div>
+                                <h2>Welcome to the Community</h2>
+                                <p>Select a channel from the sidebar to start connecting with others on their mental health journey.</p>
+                            </div>
+                        </div>
+
+                        <!-- Message Input (shown when channel selected) -->
+                        <div class="community-input-area" id="communityInputArea" style="display: none;">
+                            <textarea id="communityMessage" rows="2" placeholder="Share your thoughts..."></textarea>
+                            <button class="btn" onclick="postCommunity()">Post</button>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="card" style="margin-top: 20px;">
-                    <h4>Community Feed</h4>
-                    <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
-                        <select id="communityFilter" onchange="loadCommunity()" style="padding: 8px 12px; border-radius: 8px; border: 2px solid #e0e0e0; font-size: 14px;">
-                            <option value="">All Categories</option>
-                            <option value="anxiety">😰 Anxiety</option>
-                            <option value="depression">😔 Depression</option>
-                            <option value="relationships">💑 Relationships</option>
-                            <option value="intrusive-thoughts">🧠 Intrusive Thoughts</option>
-                            <option value="grief">💔 Grief & Loss</option>
-                            <option value="work-stress">💼 Work Stress</option>
-                            <option value="self-esteem">🪞 Self-Esteem</option>
-                            <option value="trauma">🩹 Trauma</option>
-                            <option value="addiction">🔗 Addiction</option>
-                            <option value="sleep">😴 Sleep Issues</option>
-                            <option value="motivation">⚡ Motivation</option>
-                            <option value="celebration">🎉 Celebration</option>
-                            <option value="question">❓ Question</option>
-                            <option value="general">💬 General</option>
-                        </select>
-                        <span id="communityAutoRefresh" style="font-size: 12px; color: #888;">Auto-refreshing...</span>
-                    </div>
-                    <div id="communityPosts">
-                        <p style="text-align: center; color: #999;">Loading community posts...</p>
+                <!-- Thread Modal -->
+                <div id="threadModal" class="thread-modal" style="display: none;">
+                    <div class="thread-modal-content">
+                        <div class="thread-header">
+                            <h3>Thread</h3>
+                            <button onclick="closeThreadModal()" class="thread-close-btn">&times;</button>
+                        </div>
+                        <div class="thread-original-post" id="threadOriginalPost">
+                            <!-- Original post content -->
+                        </div>
+                        <div class="thread-replies" id="threadReplies">
+                            <!-- Replies -->
+                        </div>
+                        <div class="thread-reply-input">
+                            <textarea id="threadReplyInput" rows="2" placeholder="Reply to this thread..."></textarea>
+                            <button class="btn" onclick="postThreadReply()">Reply</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -4292,9 +4762,9 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 switchClinicalTab('overview', document.getElementById('overviewSubtabBtn'));
             }
 
-            // Load community feed and start auto-refresh when switching to community tab
+            // Load community channels and start auto-refresh when switching to community tab
             if (tabName === 'community') {
-                loadCommunity();
+                initCommunity();
                 startCommunityAutoRefresh();
             } else {
                 // Stop auto-refresh when leaving community tab
@@ -5569,143 +6039,294 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             setTimeout(() => el.classList.add('hidden'), 5000);
         }
         
-        // Community Functions
+        // Community Functions - Discord-style
         let communityRefreshInterval = null;
-        const CATEGORY_LABELS = {
-            'anxiety': '😰 Anxiety',
-            'depression': '😔 Depression',
-            'relationships': '💑 Relationships',
-            'intrusive-thoughts': '🧠 Intrusive Thoughts',
-            'grief': '💔 Grief & Loss',
-            'work-stress': '💼 Work Stress',
-            'self-esteem': '🪞 Self-Esteem',
-            'trauma': '🩹 Trauma',
-            'addiction': '🔗 Addiction',
-            'sleep': '😴 Sleep Issues',
-            'motivation': '⚡ Motivation',
-            'celebration': '🎉 Celebration',
-            'question': '❓ Question',
-            'general': '💬 General'
+        let currentChannel = null;
+        let currentThreadPostId = null;
+
+        const CHANNEL_INFO = {
+            'anxiety': { emoji: '😰', name: 'Anxiety', description: 'Discuss anxiety and coping strategies' },
+            'depression': { emoji: '😔', name: 'Depression', description: 'Support for depression' },
+            'relationships': { emoji: '💑', name: 'Relationships', description: 'Relationship advice and support' },
+            'intrusive-thoughts': { emoji: '🧠', name: 'Intrusive Thoughts', description: 'Managing unwanted thoughts' },
+            'grief': { emoji: '💔', name: 'Grief & Loss', description: 'Coping with loss' },
+            'work-stress': { emoji: '💼', name: 'Work Stress', description: 'Workplace mental health' },
+            'self-esteem': { emoji: '🪞', name: 'Self-Esteem', description: 'Building confidence' },
+            'trauma': { emoji: '🩹', name: 'Trauma', description: 'Trauma support and healing' },
+            'addiction': { emoji: '🔗', name: 'Addiction', description: 'Recovery support' },
+            'sleep': { emoji: '😴', name: 'Sleep Issues', description: 'Better sleep habits' },
+            'motivation': { emoji: '⚡', name: 'Motivation', description: 'Finding motivation' },
+            'general': { emoji: '💬', name: 'General', description: 'General discussion' },
+            'celebration': { emoji: '🎉', name: 'Celebrations', description: 'Share your wins!' },
+            'question': { emoji: '❓', name: 'Questions', description: 'Ask the community' }
         };
 
-        async function loadCommunity(showLoading = true) {
-            const postsDiv = document.getElementById('communityPosts');
-            const filterSelect = document.getElementById('communityFilter');
-            const category = filterSelect ? filterSelect.value : '';
+        async function loadChannels() {
+            try {
+                const response = await fetch(`/api/community/channels?username=${encodeURIComponent(currentUser)}`);
+                const data = await response.json();
+
+                if (response.ok && data.channels) {
+                    const channelList = document.getElementById('communityChannelList');
+                    channelList.innerHTML = data.channels.map(channel => `
+                        <div class="channel-item ${currentChannel === channel.id ? 'active' : ''}"
+                             onclick="selectChannel('${channel.id}')"
+                             id="channel-${channel.id}">
+                            <span class="channel-emoji">${channel.emoji}</span>
+                            <span class="channel-name">${channel.name}</span>
+                            ${channel.unread_count > 0 ? `<span class="unread-badge">${channel.unread_count}</span>` : ''}
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Load channels error:', error);
+            }
+        }
+
+        async function selectChannel(channelId) {
+            currentChannel = channelId;
+            const info = CHANNEL_INFO[channelId] || { emoji: '💬', name: channelId, description: '' };
+
+            // Update channel header
+            document.getElementById('currentChannelName').textContent = info.name;
+            document.getElementById('currentChannelDesc').textContent = info.description;
+            document.querySelector('.community-channel-header .channel-icon').textContent = info.emoji;
+
+            // Show input area
+            document.getElementById('communityInputArea').style.display = 'flex';
+
+            // Update active state in sidebar
+            document.querySelectorAll('.channel-item').forEach(el => el.classList.remove('active'));
+            const activeChannel = document.getElementById(`channel-${channelId}`);
+            if (activeChannel) {
+                activeChannel.classList.add('active');
+                // Remove unread badge
+                const badge = activeChannel.querySelector('.unread-badge');
+                if (badge) badge.remove();
+            }
+
+            // Load posts for this channel
+            await loadChannelPosts(channelId);
+        }
+
+        async function loadChannelPosts(channelId, showLoading = true) {
+            const postsArea = document.getElementById('communityPostsArea');
 
             if (showLoading) {
-                postsDiv.innerHTML = '<div style="text-align: center; padding: 20px;"><div class="loading" style="margin: 0 auto;"></div></div>';
+                postsArea.innerHTML = '<div style="text-align: center; padding: 40px;"><div class="loading" style="margin: 0 auto;"></div></div>';
             }
 
             try {
-                let url = `/api/community/posts?username=${encodeURIComponent(currentUser)}`;
-                if (category) {
-                    url += `&category=${encodeURIComponent(category)}`;
-                }
-
-                const response = await fetch(url);
+                const response = await fetch(`/api/community/posts?username=${encodeURIComponent(currentUser)}&category=${encodeURIComponent(channelId)}`);
                 const data = await response.json();
 
                 if (response.ok && data.posts && data.posts.length > 0) {
-                    const html = data.posts.map(post => {
-                        const reactions = post.reactions || {};
-                        const userReactions = post.user_reactions || [];
-                        const replies = post.replies || [];
-                        const categoryLabel = CATEGORY_LABELS[post.category] || CATEGORY_LABELS['general'];
-
-                        // Build replies HTML inline
-                        let repliesHtml = '';
-                        if (replies.length > 0) {
-                            repliesHtml = replies.map(reply => `
-                                <div class="reply-item">
-                                    <div style="font-size: 12px; color: #666; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center;">
-                                        <span><strong>${sanitizeHTML(reply.username)}</strong> • ${new Date(reply.timestamp).toLocaleString()}</span>
-                                        ${reply.username === currentUser ? `<button onclick="deleteReply(${reply.id}, ${post.id})" class="reply-delete-btn">Delete</button>` : ''}
-                                    </div>
-                                    <div style="font-size: 14px;">${sanitizeWithLineBreaks(reply.message)}</div>
-                                </div>
-                            `).join('');
-                        }
-
-                        return `
-                        <div class="community-post" id="post-${post.id}">
-                            <div class="post-header">
-                                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                                    <strong>${sanitizeHTML(post.username)}</strong>
-                                    <span class="category-badge" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px;">${categoryLabel}</span>
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 10px;">
-                                    <span>${new Date(post.timestamp).toLocaleString()}</span>
-                                    ${post.username === currentUser ? `<button onclick="deletePost(${post.id})" style="background: #e74c3c; color: white; border: none; padding: 4px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">Delete</button>` : ''}
-                                </div>
-                            </div>
-                            <div class="post-message">${sanitizeWithLineBreaks(post.message)}</div>
-                            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; font-size: 14px;">
-                                <button onclick="reactToPost(${post.id}, 'like')" class="reaction-btn ${userReactions.includes('like') ? 'active' : ''}" title="Like">
-                                    👍 ${reactions.like || 0}
-                                </button>
-                                <button onclick="reactToPost(${post.id}, 'heart')" class="reaction-btn ${userReactions.includes('heart') ? 'active' : ''}" title="Love">
-                                    ❤️ ${reactions.heart || 0}
-                                </button>
-                                <button onclick="reactToPost(${post.id}, 'hug')" class="reaction-btn ${userReactions.includes('hug') ? 'active' : ''}" title="Hug">
-                                    🤗 ${reactions.hug || 0}
-                                </button>
-                                <button onclick="reactToPost(${post.id}, 'support')" class="reaction-btn ${userReactions.includes('support') ? 'active' : ''}" title="Support">
-                                    💪 ${reactions.support || 0}
-                                </button>
-                                <button onclick="reactToPost(${post.id}, 'celebrate')" class="reaction-btn ${userReactions.includes('celebrate') ? 'active' : ''}" title="Celebrate">
-                                    🎉 ${reactions.celebrate || 0}
-                                </button>
-                                <span style="color: #888; margin-left: 10px;">💬 ${replies.length} ${replies.length === 1 ? 'reply' : 'replies'}</span>
-                            </div>
-                            <div class="replies-section" style="margin-top: 15px; padding-left: 20px; border-left: 3px solid #e0e0e0;">
-                                ${repliesHtml}
-                                <div style="margin-top: ${replies.length > 0 ? '15px' : '0'};">
-                                    <textarea id="reply-input-${post.id}" rows="2" style="width: 100%; padding: 8px; border-radius: 6px; border: 2px solid #e0e0e0; margin-bottom: 8px;" placeholder="Write a reply..."></textarea>
-                                    <button onclick="postReply(${post.id})" class="btn" style="padding: 8px 16px; font-size: 13px;">Post Reply</button>
-                                </div>
-                            </div>
-                        </div>
-                    `}).join('');
-                    postsDiv.innerHTML = html;
+                    postsArea.innerHTML = data.posts.map(post => renderDiscordPost(post)).join('');
                 } else {
-                    const filterMsg = category ? ` in "${CATEGORY_LABELS[category] || category}"` : '';
-                    postsDiv.innerHTML = `<p style="text-align: center; color: #999;">No posts${filterMsg} yet. Be the first to share!</p>`;
+                    const info = CHANNEL_INFO[channelId] || { name: channelId };
+                    postsArea.innerHTML = `
+                        <div class="welcome-message">
+                            <div class="welcome-icon">✨</div>
+                            <h2>Welcome to #${info.name}</h2>
+                            <p>This is the start of the ${info.name} channel. Be the first to share something!</p>
+                        </div>
+                    `;
                 }
             } catch (error) {
-                postsDiv.innerHTML = '<p style="text-align: center; color: #dc3545;">Error loading posts</p>';
-                console.error('Community load error:', error);
+                postsArea.innerHTML = '<div style="text-align: center; color: #ed4245; padding: 40px;">Error loading posts</div>';
+                console.error('Load posts error:', error);
             }
         }
 
-        function startCommunityAutoRefresh() {
-            if (communityRefreshInterval) {
-                clearInterval(communityRefreshInterval);
-            }
-            // Auto-refresh every 30 seconds without showing loading spinner
-            communityRefreshInterval = setInterval(() => {
-                loadCommunity(false);
-            }, 30000);
+        function renderDiscordPost(post) {
+            const reactions = post.reactions || {};
+            const userReactions = post.user_reactions || [];
+            const replies = post.replies || [];
+            const initial = (post.username || 'U').charAt(0).toUpperCase();
+            const isClinician = currentUserRole === 'clinician';
+
+            return `
+                <div class="discord-post ${post.is_pinned ? 'pinned' : ''}" id="post-${post.id}">
+                    <div class="discord-post-avatar">${initial}</div>
+                    <div class="discord-post-content">
+                        <div class="discord-post-header">
+                            <span class="discord-post-username">${sanitizeHTML(post.username)}</span>
+                            <span class="discord-post-time">${formatRelativeTime(post.timestamp)}</span>
+                            ${post.is_pinned ? '<span class="discord-post-pinned-badge">PINNED</span>' : ''}
+                        </div>
+                        <div class="discord-post-message">${sanitizeWithLineBreaks(post.message)}</div>
+                        <div class="discord-post-actions">
+                            <button onclick="reactToPost(${post.id}, 'like')" class="discord-reaction-btn ${userReactions.includes('like') ? 'active' : ''}">
+                                👍 ${reactions.like || 0}
+                            </button>
+                            <button onclick="reactToPost(${post.id}, 'heart')" class="discord-reaction-btn ${userReactions.includes('heart') ? 'active' : ''}">
+                                ❤️ ${reactions.heart || 0}
+                            </button>
+                            <button onclick="reactToPost(${post.id}, 'hug')" class="discord-reaction-btn ${userReactions.includes('hug') ? 'active' : ''}">
+                                🤗 ${reactions.hug || 0}
+                            </button>
+                            <button onclick="reactToPost(${post.id}, 'support')" class="discord-reaction-btn ${userReactions.includes('support') ? 'active' : ''}">
+                                💪 ${reactions.support || 0}
+                            </button>
+                            <button onclick="openThread(${post.id})" class="discord-thread-btn">
+                                💬 ${replies.length} ${replies.length === 1 ? 'reply' : 'replies'}
+                            </button>
+                            <div class="discord-post-admin-actions">
+                                ${post.username === currentUser ? `<button onclick="deletePost(${post.id})" class="discord-admin-btn" title="Delete">🗑️</button>` : ''}
+                                ${isClinician ? `<button onclick="togglePin(${post.id}, ${!post.is_pinned})" class="discord-admin-btn pin-btn ${post.is_pinned ? 'pinned' : ''}" title="${post.is_pinned ? 'Unpin' : 'Pin'}">📌</button>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
-        function stopCommunityAutoRefresh() {
-            if (communityRefreshInterval) {
-                clearInterval(communityRefreshInterval);
-                communityRefreshInterval = null;
+        function formatRelativeTime(timestamp) {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+            const minutes = Math.floor(diff / 60000);
+            const hours = Math.floor(diff / 3600000);
+            const days = Math.floor(diff / 86400000);
+
+            if (minutes < 1) return 'Just now';
+            if (minutes < 60) return `${minutes}m ago`;
+            if (hours < 24) return `${hours}h ago`;
+            if (days < 7) return `${days}d ago`;
+            return date.toLocaleDateString();
+        }
+
+        async function openThread(postId) {
+            currentThreadPostId = postId;
+            const modal = document.getElementById('threadModal');
+            modal.style.display = 'flex';
+
+            // Load the post and its replies
+            try {
+                const response = await fetch(`/api/community/posts?username=${encodeURIComponent(currentUser)}&category=${encodeURIComponent(currentChannel)}`);
+                const data = await response.json();
+
+                if (response.ok && data.posts) {
+                    const post = data.posts.find(p => p.id === postId);
+                    if (post) {
+                        // Render original post
+                        const initial = (post.username || 'U').charAt(0).toUpperCase();
+                        document.getElementById('threadOriginalPost').innerHTML = `
+                            <div class="discord-post" style="padding: 0;">
+                                <div class="discord-post-avatar">${initial}</div>
+                                <div class="discord-post-content">
+                                    <div class="discord-post-header">
+                                        <span class="discord-post-username">${sanitizeHTML(post.username)}</span>
+                                        <span class="discord-post-time">${formatRelativeTime(post.timestamp)}</span>
+                                    </div>
+                                    <div class="discord-post-message">${sanitizeWithLineBreaks(post.message)}</div>
+                                </div>
+                            </div>
+                        `;
+
+                        // Render replies
+                        const replies = post.replies || [];
+                        if (replies.length > 0) {
+                            document.getElementById('threadReplies').innerHTML = replies.map(reply => {
+                                const replyInitial = (reply.username || 'U').charAt(0).toUpperCase();
+                                return `
+                                    <div class="thread-reply">
+                                        <div class="thread-reply-avatar">${replyInitial}</div>
+                                        <div class="thread-reply-content">
+                                            <div class="thread-reply-header">
+                                                <span class="thread-reply-username">${sanitizeHTML(reply.username)}</span>
+                                                <span class="thread-reply-time">${formatRelativeTime(reply.timestamp)}</span>
+                                                ${reply.username === currentUser ? `<button onclick="deleteReply(${reply.id}, ${postId})" class="discord-admin-btn" style="margin-left: auto;">🗑️</button>` : ''}
+                                            </div>
+                                            <div class="thread-reply-message">${sanitizeWithLineBreaks(reply.message)}</div>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('');
+                        } else {
+                            document.getElementById('threadReplies').innerHTML = '<div style="text-align: center; color: #72767d; padding: 20px;">No replies yet. Start the conversation!</div>';
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Open thread error:', error);
             }
         }
-        
-        async function postCommunity() {
-            const message = document.getElementById('communityMessage').value.trim();
-            const category = document.getElementById('communityCategory').value;
 
-            if (!category) {
-                alert('Please select a category for your post');
+        function closeThreadModal() {
+            document.getElementById('threadModal').style.display = 'none';
+            currentThreadPostId = null;
+        }
+
+        async function postThreadReply() {
+            if (!currentThreadPostId) return;
+
+            const input = document.getElementById('threadReplyInput');
+            const message = input.value.trim();
+
+            if (!message) {
+                alert('Please write a reply');
                 return;
             }
 
+            try {
+                const response = await fetch(`/api/community/post/${currentThreadPostId}/reply`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({ username: currentUser, message })
+                });
+
+                if (response.ok) {
+                    input.value = '';
+                    // Refresh thread view
+                    openThread(currentThreadPostId);
+                    // Refresh main posts area
+                    loadChannelPosts(currentChannel, false);
+                } else {
+                    const data = await response.json();
+                    alert(data.error || 'Error posting reply');
+                }
+            } catch (error) {
+                alert('Connection error');
+                console.error('Reply error:', error);
+            }
+        }
+
+        async function togglePin(postId, pin) {
+            try {
+                const response = await fetch(`/api/community/post/${postId}/pin`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({ username: currentUser, pin })
+                });
+
+                if (response.ok) {
+                    loadChannelPosts(currentChannel, false);
+                } else {
+                    const data = await response.json();
+                    alert(data.error || 'Error pinning post');
+                }
+            } catch (error) {
+                console.error('Pin error:', error);
+            }
+        }
+
+        async function postCommunity() {
+            if (!currentChannel) {
+                alert('Please select a channel first');
+                return;
+            }
+
+            const message = document.getElementById('communityMessage').value.trim();
+
             if (!message) {
-                alert('Please write a message before posting');
+                alert('Please write a message');
                 return;
             }
 
@@ -5713,13 +6334,12 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 const response = await fetch('/api/community/post', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ username: currentUser, message, category })
+                    body: JSON.stringify({ username: currentUser, message, category: currentChannel })
                 });
 
                 if (response.ok) {
                     document.getElementById('communityMessage').value = '';
-                    document.getElementById('communityCategory').value = '';
-                    loadCommunity();
+                    loadChannelPosts(currentChannel, false);
                 } else {
                     const data = await response.json();
                     alert(data.error || 'Error posting message');
@@ -5729,7 +6349,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 console.error('Post error:', error);
             }
         }
-        
+
         async function reactToPost(postId, reactionType) {
             try {
                 const response = await fetch(`/api/community/post/${postId}/react`, {
@@ -5742,20 +6362,13 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 });
 
                 if (response.ok) {
-                    loadCommunity(false); // Refresh without loading spinner
-                } else {
-                    alert('Error adding reaction');
+                    loadChannelPosts(currentChannel, false);
                 }
             } catch (error) {
                 console.error('Reaction error:', error);
             }
         }
 
-        // Backwards compatible likePost function
-        async function likePost(postId) {
-            await reactToPost(postId, 'like');
-        }
-        
         async function deletePost(postId) {
             if (!confirm('Are you sure you want to delete this post?')) {
                 return;
@@ -5769,17 +6382,14 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 });
 
                 if (response.ok) {
-                    loadCommunity(false); // Refresh without loading spinner
+                    loadChannelPosts(currentChannel, false);
                 } else {
                     alert('Error deleting post. You can only delete your own posts.');
                 }
             } catch (error) {
-                alert('Connection error');
                 console.error('Delete error:', error);
             }
         }
-        
-        // toggleReplies and loadReplies removed - replies now shown inline by default
 
         async function deleteReply(replyId, postId) {
             if (!confirm('Are you sure you want to delete this reply?')) {
@@ -5797,46 +6407,46 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 });
 
                 if (response.ok) {
-                    loadCommunity(false); // Refresh feed without loading spinner
+                    // Refresh thread if open
+                    if (currentThreadPostId === postId) {
+                        openThread(postId);
+                    }
+                    loadChannelPosts(currentChannel, false);
                 } else {
                     const data = await response.json();
                     alert(data.error || 'Error deleting reply');
                 }
             } catch (error) {
-                alert('Connection error');
                 console.error('Delete reply error:', error);
             }
         }
 
-        async function postReply(postId) {
-            const replyInput = document.getElementById(`reply-input-${postId}`);
-            const message = replyInput.value.trim();
-
-            if (!message) {
-                alert('Please write a reply before posting');
-                return;
+        function startCommunityAutoRefresh() {
+            if (communityRefreshInterval) {
+                clearInterval(communityRefreshInterval);
             }
-
-            try {
-                const response = await fetch(`/api/community/post/${postId}/reply`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': csrfToken
-                    },
-                    body: JSON.stringify({ username: currentUser, message })
-                });
-
-                if (response.ok) {
-                    replyInput.value = '';
-                    loadCommunity(false); // Refresh entire feed to show new reply
-                } else {
-                    const data = await response.json();
-                    alert(data.error || 'Error posting reply');
+            // Refresh channels and posts every 30 seconds
+            communityRefreshInterval = setInterval(() => {
+                loadChannels();
+                if (currentChannel) {
+                    loadChannelPosts(currentChannel, false);
                 }
-            } catch (error) {
-                alert('Connection error');
-                console.error('Reply error:', error);
+            }, 30000);
+        }
+
+        function stopCommunityAutoRefresh() {
+            if (communityRefreshInterval) {
+                clearInterval(communityRefreshInterval);
+                communityRefreshInterval = null;
+            }
+        }
+
+        // Initialize community when tab is opened
+        async function initCommunity() {
+            await loadChannels();
+            // Auto-select general channel if none selected
+            if (!currentChannel) {
+                selectChannel('general');
             }
         }
         

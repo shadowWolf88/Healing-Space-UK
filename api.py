@@ -649,12 +649,20 @@ def init_db():
     cursor.execute('''CREATE TABLE IF NOT EXISTS clinical_scales
                       (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, scale_name TEXT, score INTEGER, severity TEXT, entry_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS community_posts
-                      (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, message TEXT, likes INTEGER DEFAULT 0, category TEXT DEFAULT 'general', entry_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+                      (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, message TEXT, likes INTEGER DEFAULT 0, category TEXT DEFAULT 'general', is_pinned INTEGER DEFAULT 0, entry_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
     # Add category column if it doesn't exist (migration for existing DBs)
     try:
         cursor.execute("ALTER TABLE community_posts ADD COLUMN category TEXT DEFAULT 'general'")
     except sqlite3.OperationalError:
         pass  # Column already exists
+    # Add is_pinned column if it doesn't exist (migration for existing DBs)
+    try:
+        cursor.execute("ALTER TABLE community_posts ADD COLUMN is_pinned INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    # Table to track last read timestamp per user per channel for unread indicators
+    cursor.execute('''CREATE TABLE IF NOT EXISTS community_channel_reads
+                      (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT, channel TEXT, last_read DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE(username, channel))''')
     cursor.execute('''CREATE TABLE IF NOT EXISTS community_likes
                       (id INTEGER PRIMARY KEY AUTOINCREMENT, post_id INTEGER, username TEXT, reaction_type TEXT DEFAULT 'like', timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, UNIQUE(post_id, username, reaction_type))''')
     # Add reaction_type column if it doesn't exist (migration for existing DBs)
@@ -4641,7 +4649,7 @@ def get_community_posts():
     """Get recent community posts with reaction counts and replies inline"""
     try:
         username = request.args.get('username', '')  # Optional - to check user's reactions
-        category = request.args.get('category', '')  # Optional - filter by category
+        category = request.args.get('category', '')  # Optional - filter by category (required for channel view)
 
         # Valid categories for reference
         VALID_CATEGORIES = [
@@ -4653,15 +4661,22 @@ def get_community_posts():
         conn = get_db_connection()
         cur = conn.cursor()
 
-        # Build query with optional category filter
+        # Build query with optional category filter - pinned posts first, then by timestamp
         if category and category in VALID_CATEGORIES:
             posts = cur.execute(
-                "SELECT id, username, message, likes, entry_timestamp, category FROM community_posts WHERE category=? ORDER BY entry_timestamp DESC LIMIT 50",
+                "SELECT id, username, message, likes, entry_timestamp, category, is_pinned FROM community_posts WHERE category=? ORDER BY is_pinned DESC, entry_timestamp DESC LIMIT 100",
                 (category,)
             ).fetchall()
+            # Mark channel as read for this user
+            if username:
+                cur.execute(
+                    "INSERT OR REPLACE INTO community_channel_reads (username, channel, last_read) VALUES (?, ?, CURRENT_TIMESTAMP)",
+                    (username, category)
+                )
+                conn.commit()
         else:
             posts = cur.execute(
-                "SELECT id, username, message, likes, entry_timestamp, category FROM community_posts ORDER BY entry_timestamp DESC LIMIT 50"
+                "SELECT id, username, message, likes, entry_timestamp, category, is_pinned FROM community_posts ORDER BY is_pinned DESC, entry_timestamp DESC LIMIT 100"
             ).fetchall()
 
         post_list = []
@@ -4707,6 +4722,7 @@ def get_community_posts():
                 'user_reactions': user_reactions,  # What current user reacted with
                 'timestamp': p[4],
                 'category': p[5] or 'general',
+                'is_pinned': bool(p[6]) if len(p) > 6 else False,
                 'replies': reply_list,
                 'reply_count': len(reply_list),
                 'liked_by_user': 'like' in user_reactions  # Backwards compatible
@@ -4714,6 +4730,116 @@ def get_community_posts():
 
         conn.close()
         return jsonify({'posts': post_list, 'categories': VALID_CATEGORIES}), 200
+    except Exception as e:
+        return handle_exception(e, request.endpoint or 'unknown')
+
+@app.route('/api/community/channels', methods=['GET'])
+def get_community_channels():
+    """Get all channels with post counts and unread indicators"""
+    try:
+        username = request.args.get('username', '')
+
+        VALID_CATEGORIES = [
+            'anxiety', 'depression', 'relationships', 'intrusive-thoughts',
+            'grief', 'work-stress', 'self-esteem', 'trauma', 'addiction',
+            'sleep', 'motivation', 'general', 'celebration', 'question'
+        ]
+
+        CATEGORY_INFO = {
+            'anxiety': {'emoji': '😰', 'name': 'Anxiety', 'description': 'Discuss anxiety and coping strategies'},
+            'depression': {'emoji': '😔', 'name': 'Depression', 'description': 'Support for depression'},
+            'relationships': {'emoji': '💑', 'name': 'Relationships', 'description': 'Relationship advice and support'},
+            'intrusive-thoughts': {'emoji': '🧠', 'name': 'Intrusive Thoughts', 'description': 'Managing unwanted thoughts'},
+            'grief': {'emoji': '💔', 'name': 'Grief & Loss', 'description': 'Coping with loss'},
+            'work-stress': {'emoji': '💼', 'name': 'Work Stress', 'description': 'Workplace mental health'},
+            'self-esteem': {'emoji': '🪞', 'name': 'Self-Esteem', 'description': 'Building confidence'},
+            'trauma': {'emoji': '🩹', 'name': 'Trauma', 'description': 'Trauma support and healing'},
+            'addiction': {'emoji': '🔗', 'name': 'Addiction', 'description': 'Recovery support'},
+            'sleep': {'emoji': '😴', 'name': 'Sleep Issues', 'description': 'Better sleep habits'},
+            'motivation': {'emoji': '⚡', 'name': 'Motivation', 'description': 'Finding motivation'},
+            'general': {'emoji': '💬', 'name': 'General', 'description': 'General discussion'},
+            'celebration': {'emoji': '🎉', 'name': 'Celebrations', 'description': 'Share your wins!'},
+            'question': {'emoji': '❓', 'name': 'Questions', 'description': 'Ask the community'}
+        }
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        channels = []
+        for cat in VALID_CATEGORIES:
+            info = CATEGORY_INFO.get(cat, {'emoji': '💬', 'name': cat.title(), 'description': ''})
+
+            # Get post count for this channel
+            count = cur.execute(
+                "SELECT COUNT(*) FROM community_posts WHERE category=?", (cat,)
+            ).fetchone()[0]
+
+            # Get latest post timestamp
+            latest = cur.execute(
+                "SELECT MAX(entry_timestamp) FROM community_posts WHERE category=?", (cat,)
+            ).fetchone()[0]
+
+            # Check for unread posts
+            unread_count = 0
+            if username and latest:
+                last_read = cur.execute(
+                    "SELECT last_read FROM community_channel_reads WHERE username=? AND channel=?",
+                    (username, cat)
+                ).fetchone()
+                if last_read:
+                    unread = cur.execute(
+                        "SELECT COUNT(*) FROM community_posts WHERE category=? AND entry_timestamp > ?",
+                        (cat, last_read[0])
+                    ).fetchone()[0]
+                    unread_count = unread
+                else:
+                    # Never visited - all posts are unread (max 10 shown)
+                    unread_count = min(count, 10)
+
+            channels.append({
+                'id': cat,
+                'emoji': info['emoji'],
+                'name': info['name'],
+                'description': info['description'],
+                'post_count': count,
+                'latest_post': latest,
+                'unread_count': unread_count
+            })
+
+        conn.close()
+        return jsonify({'channels': channels}), 200
+    except Exception as e:
+        return handle_exception(e, request.endpoint or 'unknown')
+
+@app.route('/api/community/post/<int:post_id>/pin', methods=['POST'])
+def pin_community_post(post_id):
+    """Pin or unpin a community post (clinicians only)"""
+    try:
+        data = request.json
+        username = data.get('username')
+        pin = data.get('pin', True)  # True to pin, False to unpin
+
+        if not username:
+            return jsonify({'error': 'Username required'}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Check if user is a clinician
+        user = cur.execute("SELECT role FROM users WHERE username=?", (username,)).fetchone()
+        if not user or user[0] != 'clinician':
+            conn.close()
+            return jsonify({'error': 'Only clinicians can pin posts'}), 403
+
+        # Update pin status
+        cur.execute(
+            "UPDATE community_posts SET is_pinned=? WHERE id=?",
+            (1 if pin else 0, post_id)
+        )
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True, 'pinned': pin}), 200
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
