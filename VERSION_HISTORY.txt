@@ -1,3 +1,11 @@
+vaaba963 (2026-01-30): feat: add reply deletion and multiple reaction emojis
+vb6e0611 (2026-01-30): fix: add missing flagged/flag_reason to ContentModerator
+vc8ccb96 (2026-01-30): fix: pet database persistence and content moderator
+vee84710 (2026-01-30): fix:PT3 ensure pet table exists before all pet DB access (robust pet features after Railway reset)
+vbf369e9 (2026-01-30): fix:PT2 ensure pet table exists before all pet DB access (robust pet features after Railway reset)
+v85dd8de (2026-01-29): fix: ensure pet table exists before all pet DB access (robust pet features after Railway reset)
+vc152d81 (2026-01-29): Update audit.md - Phase 6 complete (88% resolution rate)
+va5987b8 (2026-01-29): Phase 6: Fix Medium (P2) security and code quality issues
 vbb95165 (2026-01-29): Phase 6: Fix all Critical (P0) and High (P1) security issues
 vbda7721 (2026-01-29): Phase 6: Fresh security audit - 16 new issues identified
 v6ce1663 (2026-01-29): Merge remote changes and resolve VERSION_HISTORY conflict
