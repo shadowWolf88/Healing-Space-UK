@@ -156,13 +156,15 @@ class ContentModerator:
     def moderate(self, text):
         """
         Check text for inappropriate content.
-        Returns dict with 'allowed', 'reason', and 'filtered_text'.
+        Returns dict with 'allowed', 'reason', 'filtered_text', 'flagged', 'flag_reason'.
         """
         if not text or not text.strip():
             return {
                 'allowed': False,
                 'reason': 'Empty message not allowed',
-                'filtered_text': ''
+                'filtered_text': '',
+                'flagged': False,
+                'flag_reason': None
             }
 
         text = text.strip()
@@ -172,7 +174,9 @@ class ContentModerator:
             return {
                 'allowed': False,
                 'reason': 'Message too long (max 2000 characters)',
-                'filtered_text': text[:2000]
+                'filtered_text': text[:2000],
+                'flagged': False,
+                'flag_reason': None
             }
 
         # Check for blocked patterns
@@ -182,7 +186,9 @@ class ContentModerator:
                 return {
                     'allowed': False,
                     'reason': 'Message contains inappropriate content',
-                    'filtered_text': ''
+                    'filtered_text': '',
+                    'flagged': True,
+                    'flag_reason': 'Blocked content detected'
                 }
 
         # Filter/mask certain words if needed
@@ -196,7 +202,9 @@ class ContentModerator:
         return {
             'allowed': True,
             'reason': None,
-            'filtered_text': filtered_text
+            'filtered_text': filtered_text,
+            'flagged': False,
+            'flag_reason': None
         }
 
 # Create global moderator instance
