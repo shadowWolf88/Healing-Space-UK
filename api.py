@@ -1401,12 +1401,8 @@ except Exception:
     bcrypt = None
     HAS_BCRYPT = False
 
-app = Flask(__name__, static_folder='static', template_folder='templates')
-
-# Initialize with same settings as main app
-DEBUG = os.environ.get('DEBUG', '').lower() in ('1', 'true', 'yes')
-
 # ==================== CORS CONFIGURATION ====================
+# Note: Flask app already initialized at top of file (line 58)
 # Restrict CORS origins in production for security
 # In DEBUG mode, allow all origins for local development
 ALLOWED_ORIGINS = os.environ.get('ALLOWED_ORIGINS', '').split(',') if os.environ.get('ALLOWED_ORIGINS') else None
@@ -2308,6 +2304,18 @@ def init_db():
         total_bonus_xp INTEGER DEFAULT 0
     )''')
 
+    # CBT Tools Dashboard entries - Store data from CBT tool components
+    cursor.execute('''CREATE TABLE IF NOT EXISTS cbt_tool_entries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL,
+        tool_type TEXT NOT NULL,
+        data TEXT NOT NULL,
+        mood_rating INTEGER,
+        notes TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )''')
+
     # Add email and phone columns if they don't exist
     try:
         cursor.execute("ALTER TABLE users ADD COLUMN email TEXT")
@@ -2473,6 +2481,10 @@ def init_db():
     # Daily tasks
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_daily_tasks_username ON daily_tasks(username)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_daily_tasks_username_date ON daily_tasks(username, task_date)')
+
+    # CBT tool entries
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_cbt_tool_entries_username ON cbt_tool_entries(username)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_cbt_tool_entries_tool_type ON cbt_tool_entries(username, tool_type)')
 
     conn.commit()
     conn.close()
@@ -4540,7 +4552,13 @@ def update_ai_memory(username):
             "SELECT entry FROM gratitude_logs WHERE username=? ORDER BY entry_timestamp DESC LIMIT 3",
             (username,)
         ).fetchall()
-        
+
+        # Get CBT Dashboard tool entries
+        recent_cbt_tools = cur.execute(
+            "SELECT tool_type, mood_rating, notes, created_at FROM cbt_tool_entries WHERE username=? ORDER BY created_at DESC LIMIT 5",
+            (username,)
+        ).fetchall()
+
         # Build memory summary
         memory_parts = []
         
@@ -4572,7 +4590,35 @@ def update_ai_memory(username):
         
         if recent_gratitude:
             memory_parts.append(f"Practicing gratitude: {len(recent_gratitude)} recent entries")
-        
+
+        if recent_cbt_tools:
+            # Format CBT tool names for readability
+            tool_type_map = {
+                'cognitive-distortions': 'Cognitive Distortions Quiz',
+                'core-beliefs': 'Core Beliefs Worksheet',
+                'thought-defusion': 'Thought Defusion Exercise',
+                'if-then-coping': 'If-Then Coping Plan',
+                'coping-skills': 'Coping Skills Selector',
+                'self-compassion': 'Self-Compassion Letter',
+                'problem-solving': 'Problem Solving Worksheet',
+                'exposure-hierarchy': 'Exposure Hierarchy Builder',
+                'relaxation-audio': 'Relaxation Audio',
+                'urge-surfing': 'Urge Surfing Timer',
+                'values-card': 'Values Card Sort',
+                'strengths-inventory': 'Strengths Inventory',
+                'sleep-hygiene': 'Sleep Hygiene Checklist',
+                'safety-plan': 'Safety Plan Builder',
+                'activity-scheduler': 'Activity Scheduler'
+            }
+            # Get unique tools used
+            tools_used = list(set(t[0] for t in recent_cbt_tools))
+            tool_names = [tool_type_map.get(t, t.replace('-', ' ').title()) for t in tools_used[:3]]
+            memory_parts.append(f"CBT Tools used: {', '.join(tool_names)} ({len(recent_cbt_tools)} recent entries)")
+            # Include latest mood rating if available
+            latest_with_mood = next((t for t in recent_cbt_tools if t[1] is not None), None)
+            if latest_with_mood:
+                memory_parts.append(f"Latest CBT tool mood: {latest_with_mood[1]}/10")
+
         memory_summary = "; ".join(memory_parts) if memory_parts else "New user, no activity yet"
         
         # Update or insert memory
@@ -11016,6 +11062,191 @@ def mark_daily_task_complete(username, task_type):
     except Exception as e:
         print(f"Error marking daily task: {e}")
         return False
+
+
+# ==================== CBT TOOLS DASHBOARD ENDPOINTS ====================
+
+@app.route('/cbt_tools/components/<path:filename>')
+def serve_cbt_tool_component(filename):
+    """Serve CBT tool HTML component files"""
+    try:
+        # Security: only allow .html files from the components directory
+        if not filename.endswith('.html'):
+            return jsonify({'error': 'Invalid file type'}), 400
+
+        # Sanitize filename to prevent directory traversal
+        safe_filename = os.path.basename(filename)
+        component_path = os.path.join(os.path.dirname(__file__), 'cbt_tools', 'components', safe_filename)
+
+        if not os.path.exists(component_path):
+            return jsonify({'error': f'Component not found: {safe_filename}'}), 404
+
+        with open(component_path, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+
+        return Response(html_content, mimetype='text/html')
+
+    except Exception as e:
+        print(f"Error serving CBT component: {e}")
+        return jsonify({'error': 'Failed to load component'}), 500
+
+
+@app.route('/api/cbt-tools/save', methods=['POST'])
+def save_cbt_tool_entry():
+    """Save CBT tool data entry"""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            # Fall back to request data for compatibility
+            username = request.json.get('username')
+
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        data = request.json
+        tool_type = data.get('tool_type')
+        entry_data = json.dumps(data.get('data', {}))
+        mood_rating = data.get('mood_rating')
+        notes = data.get('notes', '')
+
+        if not tool_type:
+            return jsonify({'error': 'tool_type is required'}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Check if entry exists for this user and tool
+        existing = cur.execute(
+            "SELECT id FROM cbt_tool_entries WHERE username=? AND tool_type=?",
+            (username, tool_type)
+        ).fetchone()
+
+        if existing:
+            # Update existing entry
+            cur.execute('''
+                UPDATE cbt_tool_entries
+                SET data=?, mood_rating=?, notes=?, updated_at=datetime('now')
+                WHERE id=?
+            ''', (entry_data, mood_rating, notes, existing[0]))
+        else:
+            # Insert new entry
+            cur.execute('''
+                INSERT INTO cbt_tool_entries (username, tool_type, data, mood_rating, notes)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (username, tool_type, entry_data, mood_rating, notes))
+
+        conn.commit()
+        entry_id = existing[0] if existing else cur.lastrowid
+        conn.close()
+
+        # Update AI memory with CBT activity
+        try:
+            update_ai_memory(username)
+        except Exception as e:
+            print(f"AI memory update error (non-critical): {e}")
+
+        # Reward pet for CBT activity
+        try:
+            reward_pet('cbt', 'cbt')
+        except Exception as e:
+            print(f"Pet reward error (non-critical): {e}")
+
+        log_event(username, 'cbt', 'tool_saved', f'Tool: {tool_type}')
+
+        return jsonify({'success': True, 'id': entry_id}), 200
+
+    except Exception as e:
+        return handle_exception(e, 'save_cbt_tool_entry')
+
+
+@app.route('/api/cbt-tools/load', methods=['GET'])
+def load_cbt_tool_entry():
+    """Load saved CBT tool data"""
+    try:
+        username = request.args.get('username') or get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        tool_type = request.args.get('tool_type')
+        if not tool_type:
+            return jsonify({'error': 'tool_type is required'}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        row = cur.execute('''
+            SELECT id, data, mood_rating, notes, created_at, updated_at
+            FROM cbt_tool_entries
+            WHERE username=? AND tool_type=?
+            ORDER BY updated_at DESC
+            LIMIT 1
+        ''', (username, tool_type)).fetchone()
+
+        conn.close()
+
+        if row:
+            return jsonify({
+                'success': True,
+                'id': row[0],
+                'data': json.loads(row[1]) if row[1] else {},
+                'mood_rating': row[2],
+                'notes': row[3],
+                'created_at': row[4],
+                'updated_at': row[5]
+            }), 200
+        else:
+            return jsonify({'success': True, 'data': None}), 200
+
+    except Exception as e:
+        return handle_exception(e, 'load_cbt_tool_entry')
+
+
+@app.route('/api/cbt-tools/history', methods=['GET'])
+def get_cbt_tool_history():
+    """Get history of CBT tool entries for a user"""
+    try:
+        username = request.args.get('username') or get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        tool_type = request.args.get('tool_type')  # Optional filter
+        limit = int(request.args.get('limit', 20))
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        if tool_type:
+            rows = cur.execute('''
+                SELECT id, tool_type, data, mood_rating, notes, created_at
+                FROM cbt_tool_entries
+                WHERE username=? AND tool_type=?
+                ORDER BY created_at DESC
+                LIMIT ?
+            ''', (username, tool_type, limit)).fetchall()
+        else:
+            rows = cur.execute('''
+                SELECT id, tool_type, data, mood_rating, notes, created_at
+                FROM cbt_tool_entries
+                WHERE username=?
+                ORDER BY created_at DESC
+                LIMIT ?
+            ''', (username, limit)).fetchall()
+
+        conn.close()
+
+        entries = [{
+            'id': r[0],
+            'tool_type': r[1],
+            'data': json.loads(r[2]) if r[2] else {},
+            'mood_rating': r[3],
+            'notes': r[4],
+            'created_at': r[5]
+        } for r in rows]
+
+        return jsonify({'success': True, 'entries': entries}), 200
+
+    except Exception as e:
+        return handle_exception(e, 'get_cbt_tool_history')
 
 
 @app.errorhandler(404)
