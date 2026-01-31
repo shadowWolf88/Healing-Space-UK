@@ -2662,11 +2662,31 @@ You're here to help them explore their thoughts and feelings, not to solve every
             
             response = requests.post(API_URL, headers=self.headers, json=payload, timeout=30)
             response.raise_for_status()
-            
-            return response.json()["choices"][0]["message"]["content"]
+            data = response.json()
+
+            # Validate response structure
+            if not data.get("choices") or len(data["choices"]) == 0:
+                raise ValueError("Empty response from AI - no choices returned")
+
+            if not data["choices"][0].get("message") or not data["choices"][0]["message"].get("content"):
+                raise ValueError("Malformed response from AI - missing message content")
+
+            return data["choices"][0]["message"]["content"]
+
+        except requests.Timeout:
+            print(f"[AI ERROR] Request timeout after 30s")
+            return "I'm taking longer than usual to respond. Please try again."
+        except requests.ConnectionError as e:
+            print(f"[AI ERROR] Connection error: {str(e)}")
+            return "I'm unable to reach the AI service. Please check your connection and try again."
+        except (json.JSONDecodeError, KeyError, IndexError, ValueError) as e:
+            print(f"[AI ERROR] Response parsing error: {str(e)}")
+            log_event('ai', 'error', 'malformed_response', str(e))
+            return "I received an unexpected response format. Please try again."
         except Exception as e:
-            print(f"[AI ERROR] {str(e)}")  # Log for debugging
-            return "I apologize, but I'm having trouble connecting right now. Please try again in a moment."
+            print(f"[AI ERROR] Unexpected error: {str(e)}")  # Log for debugging
+            log_event('ai', 'error', 'unknown_error', str(e))
+            return "I apologize, but I'm having trouble right now. Please try again in a moment."
 
 
 # Crisis resources text
@@ -2828,7 +2848,7 @@ def init_pet_db():
         cur = conn.cursor()
         cur.execute("""
             CREATE TABLE IF NOT EXISTS pet (
-                id INTEGER PRIMARY KEY,
+                id TEXT PRIMARY KEY,
                 name TEXT, species TEXT, gender TEXT,
                 hunger INTEGER DEFAULT 70, happiness INTEGER DEFAULT 70,
                 energy INTEGER DEFAULT 70, hygiene INTEGER DEFAULT 80,
@@ -6794,7 +6814,7 @@ def pet_status():
         # Ensure table exists (in case DB was reset)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS pet (
-                id INTEGER PRIMARY KEY,
+                id TEXT PRIMARY KEY,
                 name TEXT, species TEXT, gender TEXT,
                 hunger INTEGER DEFAULT 70, happiness INTEGER DEFAULT 70,
                 energy INTEGER DEFAULT 70, hygiene INTEGER DEFAULT 80,
