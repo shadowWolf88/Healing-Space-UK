@@ -3939,7 +3939,7 @@
                                     { id: 'SelfCompassionLetter', name: 'Self-Compassion Letter', icon: '💌' },
                                     { id: 'ProblemSolvingWorksheet', name: 'Problem Solving Worksheet', icon: '📝' },
                                     { id: 'ExposureHierarchyBuilder', name: 'Exposure Hierarchy Builder', icon: '🏔️' },
-                                    { id: 'RelaxationAudioPlayer', name: 'Relaxation Audio Player', icon: '🎧' },
+                                    { id: 'RelaxationAudioPlayer', name: 'Guided Breathing Exercise', icon: '🧘' },
                                     { id: 'UrgeSurfingTimer', name: 'Urge Surfing Timer', icon: '🏄' },
                                     { id: 'ValuesCardSort', name: 'Values Card Sort', icon: '🃏' },
                                     { id: 'StrengthsInventory', name: 'Strengths Inventory', icon: '💪' },
@@ -4015,7 +4015,10 @@
                                     const loader = document.getElementById('cbtToolLoader');
                                     try {
                                         const resp = await fetch(`/api/cbt-tools/load?tool_type=${encodeURIComponent(toolId)}`);
-                                        if (!resp.ok) throw new Error('No saved data');
+                                        if (!resp.ok) {
+                                            // Silently fail on auto-load if no saved data exists (404)
+                                            return;
+                                        }
                                         const result = await resp.json();
                                         if (result && result.data) {
                                             Object.entries(result.data).forEach(([key, value]) => {
@@ -4029,11 +4032,9 @@
                                                 }
                                             });
                                             showCBTToolStatus('Loaded!', true);
-                                        } else {
-                                            showCBTToolStatus('No saved data', false);
                                         }
                                     } catch (e) {
-                                        showCBTToolStatus('No saved data', false);
+                                        // Silently fail on auto-load - no saved data is normal
                                     }
                                 }
 
@@ -4094,7 +4095,7 @@
                                     'SelfCompassionLetter': ['💌 Your pet sends you love!', '🐧 Your kindness to yourself warms my heart!'],
                                     'ProblemSolvingWorksheet': ['📝 Your pet admires your problem-solving!', '🐶 You are tackling this like a champion!'],
                                     'ExposureHierarchyBuilder': ['🏔️ Your pet is climbing with you!', '🦊 Brave steps = happy pet!'],
-                                    'RelaxationAudioPlayer': ['🎧 Your pet feels so relaxed!', '🐱 Ahhhh, peaceful vibes!'],
+                                    'RelaxationAudioPlayer': ['🧘 Your pet is breathing with you!', '🐱 Deep breaths = peaceful vibes!'],
                                     'UrgeSurfingTimer': ['🏄 Your pet is riding the waves with you!', '🐰 Surf is up! You are doing great!'],
                                     'ValuesCardSort': ['🃏 Your pet values you!', '🐼 Your values shine bright!'],
                                     'StrengthsInventory': ['💪 Your pet sees your strength!', '🐧 You are stronger than you think!'],
