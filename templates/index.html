@@ -2471,6 +2471,212 @@
             color: var(--text-secondary);
             box-shadow: 0 2px 8px var(--shadow-color);
         }
+
+        /* ========== PHASE 1 GAMIFICATION STYLES ========== */
+
+        /* Emoji Mood Selector */
+        .emoji-mood-selector {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 20px 0;
+        }
+
+        .emoji-mood-btn {
+            font-size: 3em;
+            padding: 15px;
+            border: 3px solid transparent;
+            background: var(--bg-input);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 4px 12px var(--shadow-color);
+            width: 90px;
+            height: 90px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .emoji-mood-btn:hover {
+            transform: scale(1.15) rotate(5deg);
+            box-shadow: 0 8px 20px var(--shadow-color);
+        }
+
+        .emoji-mood-btn.selected {
+            border-color: var(--accent-color);
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-gradient));
+            transform: scale(1.2);
+            animation: bounceIn 0.5s;
+        }
+
+        .emoji-mood-label {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        /* Confetti Container */
+        .confetti-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+            overflow: hidden;
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            animation: confettiFall 3s linear forwards;
+        }
+
+        @keyframes confettiFall {
+            0% {
+                transform: translateY(-10vh) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0;
+            }
+        }
+
+        /* Success Animation */
+        .success-popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background: linear-gradient(135deg, var(--success-color), #2ecc71);
+            color: white;
+            padding: 40px 60px;
+            border-radius: 20px;
+            font-size: 2em;
+            font-weight: bold;
+            z-index: 10000;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: successPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes successPop {
+            0% {
+                transform: translate(-50%, -50%) scale(0) rotate(-180deg);
+                opacity: 0;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.2) rotate(0deg);
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1) rotate(0deg);
+                opacity: 1;
+            }
+        }
+
+        /* Pet Reward Message */
+        .pet-reward-message {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 9998;
+            animation: slideInRight 0.5s, slideOutRight 0.5s 3s forwards;
+            max-width: 350px;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOutRight {
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); }
+            50% { transform: scale(1.05); }
+            70% { transform: scale(0.9); }
+            100% { transform: scale(1); }
+        }
+
+        /* Step Indicator for Progressive Disclosure */
+        .step-indicator {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin: 30px 0;
+        }
+
+        .step-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--border-color);
+            transition: all 0.3s;
+        }
+
+        .step-dot.active {
+            background: var(--accent-color);
+            transform: scale(1.5);
+        }
+
+        .step-dot.completed {
+            background: var(--success-color);
+        }
+
+        /* Smooth transitions for progressive forms */
+        .progressive-step {
+            opacity: 0;
+            transform: translateX(50px);
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .progressive-step.active {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Enhanced CBT Tool Buttons */
+        .cbt-tool-btn {
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+        }
+
+        .cbt-tool-btn:hover {
+            transform: translateY(-8px) !important;
+            box-shadow: 0 12px 28px var(--shadow-color) !important;
+        }
+
+        .cbt-tool-btn:active {
+            transform: translateY(-2px) !important;
+        }
+
+        /* Mood Emoji Group */
+        .mood-emoji-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
     </style>
 </head>
 <body>
@@ -3603,6 +3809,140 @@
                                 document.addEventListener('DOMContentLoaded', () => {
                                     if (document.getElementById('cbtToolsDashboard')) renderCBTToolsDashboard();
                                 });
+
+                                // ========== PHASE 1 GAMIFICATION FUNCTIONS ==========
+
+                                // Confetti Animation
+                                function triggerConfetti() {
+                                    const container = document.createElement('div');
+                                    container.className = 'confetti-container';
+                                    document.body.appendChild(container);
+
+                                    const colors = ['#667eea', '#764ba2', '#f39c12', '#e74c3c', '#27ae60', '#3498db'];
+                                    const confettiCount = 50;
+
+                                    for (let i = 0; i < confettiCount; i++) {
+                                        const confetti = document.createElement('div');
+                                        confetti.className = 'confetti';
+                                        confetti.style.left = Math.random() * 100 + '%';
+                                        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                                        confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                                        confetti.style.animationDuration = (Math.random() * 1 + 2) + 's';
+                                        container.appendChild(confetti);
+                                    }
+
+                                    setTimeout(() => container.remove(), 3000);
+                                }
+
+                                // Success Popup
+                                function showSuccessPopup(message = '🎉 Great Work!') {
+                                    const popup = document.createElement('div');
+                                    popup.className = 'success-popup';
+                                    popup.textContent = message;
+                                    document.body.appendChild(popup);
+                                    setTimeout(() => popup.remove(), 2000);
+                                }
+
+                                // Pet Reward Message
+                                const PET_MESSAGES = {
+                                    'CognitiveDistortionsQuiz': ['🧩 Your pet is impressed by your detective work!', '🐶 Woof! You caught those tricky thoughts!'],
+                                    'CoreBeliefsWorksheet': ['🧠 Your pet feels your growth!', '🐱 Purr-fect self-reflection!'],
+                                    'ThoughtDefusionExercise': ['🌬️ Your pet breathes easier with you!', '🐰 Hop hop! Those thoughts are floating away!'],
+                                    'IfThenCopingPlan': ['🔗 Your pet loves your planning skills!', '🦊 Smart planning = happy pet!'],
+                                    'CopingSkillsSelector': ['🛠️ Your pet is proud of your toolkit!', '🐼 Awesome coping skills!'],
+                                    'SelfCompassionLetter': ['💌 Your pet sends you love!', '🐧 Your kindness to yourself warms my heart!'],
+                                    'ProblemSolvingWorksheet': ['📝 Your pet admires your problem-solving!', '🐶 You are tackling this like a champion!'],
+                                    'ExposureHierarchyBuilder': ['🏔️ Your pet is climbing with you!', '🦊 Brave steps = happy pet!'],
+                                    'RelaxationAudioPlayer': ['🎧 Your pet feels so relaxed!', '🐱 Ahhhh, peaceful vibes!'],
+                                    'UrgeSurfingTimer': ['🏄 Your pet is riding the waves with you!', '🐰 Surf is up! You are doing great!'],
+                                    'ValuesCardSort': ['🃏 Your pet values you!', '🐼 Your values shine bright!'],
+                                    'StrengthsInventory': ['💪 Your pet sees your strength!', '🐧 You are stronger than you think!'],
+                                    'SleepHygieneChecklist': ['😴 Your pet is getting sleepy too!', '🐶 Sweet dreams coming your way!'],
+                                    'SafetyPlanBuilder': ['🦺 Your pet feels safer with you!', '🦊 Safety first! Great job!'],
+                                    'ActivityScheduler': ['📅 Your pet loves your planning!', '🐱 Scheduled fun = happy times!']
+                                };
+
+                                function showPetReward(toolId) {
+                                    const messages = PET_MESSAGES[toolId] || ['🐶 Your pet is proud of you!', '✨ Keep up the great work!'];
+                                    const message = messages[Math.floor(Math.random() * messages.length)];
+
+                                    const petMsg = document.createElement('div');
+                                    petMsg.className = 'pet-reward-message';
+                                    petMsg.innerHTML = `
+                                        <div style="font-size: 1.2em; font-weight: bold; margin-bottom: 8px;">${message}</div>
+                                        <div style="font-size: 0.9em; opacity: 0.9;">+10 XP • +5 Coins</div>
+                                    `;
+                                    document.body.appendChild(petMsg);
+                                    setTimeout(() => petMsg.remove(), 3500);
+                                }
+
+                                // Create Emoji Mood Selector
+                                function createEmojiMoodSelector(containerId, onSelectCallback) {
+                                    const moods = [
+                                        { emoji: '😰', value: 1, label: 'Very Anxious' },
+                                        { emoji: '😟', value: 3, label: 'Anxious' },
+                                        { emoji: '😐', value: 5, label: 'Neutral' },
+                                        { emoji: '🙂', value: 7, label: 'Good' },
+                                        { emoji: '😊', value: 10, label: 'Great' }
+                                    ];
+
+                                    const container = document.getElementById(containerId);
+                                    if (!container) return;
+
+                                    container.innerHTML = `
+                                        <div class="emoji-mood-selector">
+                                            ${moods.map(mood => `
+                                                <div class="mood-emoji-group">
+                                                    <button type="button" class="emoji-mood-btn" data-mood="${mood.value}" onclick="selectEmojiMood(this, ${mood.value}, '${containerId}')">
+                                                        ${mood.emoji}
+                                                    </button>
+                                                    <div class="emoji-mood-label">${mood.label}</div>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                        <input type="hidden" id="${containerId}_value" name="${containerId}_value" />
+                                    `;
+                                }
+
+                                function selectEmojiMood(btn, value, containerId) {
+                                    // Remove selected class from all buttons in this container
+                                    const container = document.getElementById(containerId);
+                                    container.querySelectorAll('.emoji-mood-btn').forEach(b => b.classList.remove('selected'));
+
+                                    // Add selected class to clicked button
+                                    btn.classList.add('selected');
+
+                                    // Store value in hidden input
+                                    const hiddenInput = document.getElementById(containerId + '_value');
+                                    if (hiddenInput) hiddenInput.value = value;
+                                }
+
+                                // Enhanced Save with Gamification
+                                const originalSaveCBTToolData = saveCBTToolData;
+                                saveCBTToolData = async function(toolId) {
+                                    try {
+                                        await originalSaveCBTToolData(toolId);
+
+                                        // Trigger celebrations!
+                                        triggerConfetti();
+                                        showSuccessPopup('🎉 Saved!');
+                                        showPetReward(toolId);
+
+                                        // Try to trigger pet reward on backend
+                                        try {
+                                            await fetch('/api/pet/reward', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ action: 'cbt_tool_complete', tool_type: toolId })
+                                            });
+                                        } catch (e) {
+                                            console.log('Pet reward optional feature not available');
+                                        }
+                                    } catch (e) {
+                                        console.error('Save error:', e);
+                                    }
+                                };
+
                                 // Optionally, re-render on tab switch if needed
                                 </script>
             </div>
