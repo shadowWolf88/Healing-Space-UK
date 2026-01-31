@@ -1,0 +1,79 @@
+<div style="max-width: 700px; margin: 0 auto;">
+    <h4 style="text-align: center; font-size: 1.8em; margin-bottom: 10px;">🙏 Gratitude Journal</h4>
+    <p style="text-align: center; color: var(--text-secondary); margin-bottom: 30px;">Reflect on what you're grateful for to boost well-being and positivity</p>
+
+    <form id="gratitudeJournalForm">
+        <!-- Before Mood -->
+        <div class="form-group" style="margin-bottom: 25px;">
+            <label style="font-weight: 600; margin-bottom: 15px; display: block; text-align: center;">How are you feeling right now?</label>
+            <div id="gratitudeJournalMoodBefore"></div>
+        </div>
+
+        <!-- Gratitude Prompts -->
+        <div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); padding: 20px; border-radius: 15px; margin-bottom: 25px;">
+            <h5 style="margin-bottom: 15px;">💡 Gratitude prompts to inspire you:</h5>
+            <ul style="margin: 0; padding-left: 20px; color: var(--text-secondary); line-height: 1.8;">
+                <li>What made you smile today?</li>
+                <li>Who are you thankful for in your life?</li>
+                <li>What small comfort did you enjoy today?</li>
+                <li>What challenge helped you grow?</li>
+                <li>What natural beauty did you notice?</li>
+            </ul>
+        </div>
+
+        <!-- Gratitude Entry -->
+        <div class="form-group" style="margin-bottom: 25px;">
+            <label style="font-weight: 600; margin-bottom: 10px; display: block;">What are you grateful for today? ✨</label>
+            <textarea name="gratitude_entry" rows="6" required style="width: 100%; padding: 15px; border-radius: 10px; border: 2px solid var(--border-color); background: var(--bg-input); color: var(--text-primary); font-size: 1em; line-height: 1.6;" placeholder="I'm grateful for...&#10;&#10;Take your time and be specific. The more detail you add, the more meaningful this practice becomes."></textarea>
+        </div>
+
+        <!-- Quick Gratitude List (Optional) -->
+        <div class="form-group" style="margin-bottom: 25px;">
+            <label style="font-weight: 600; margin-bottom: 10px; display: block;">Three quick things (optional) 📝</label>
+            <input type="text" name="gratitude_1" style="width: 100%; padding: 12px; border-radius: 10px; border: 2px solid var(--border-color); background: var(--bg-input); color: var(--text-primary); margin-bottom: 8px;" placeholder="1. Something small...">
+            <input type="text" name="gratitude_2" style="width: 100%; padding: 12px; border-radius: 10px; border: 2px solid var(--border-color); background: var(--bg-input); color: var(--text-primary); margin-bottom: 8px;" placeholder="2. Someone who helped you...">
+            <input type="text" name="gratitude_3" style="width: 100%; padding: 12px; border-radius: 10px; border: 2px solid var(--border-color); background: var(--bg-input); color: var(--text-primary);" placeholder="3. A moment of joy...">
+        </div>
+
+        <!-- After Mood -->
+        <div class="form-group" style="margin-bottom: 25px;">
+            <label style="font-weight: 600; margin-bottom: 15px; display: block; text-align: center;">How do you feel after this reflection? 🌟</label>
+            <div id="gratitudeJournalMoodAfter"></div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 12px;">
+            <button type="button" class="btn btn-secondary" onclick="resetGratitudeJournal()" style="flex: 1;">🔄 Reset</button>
+            <button type="button" class="btn" onclick="saveGratitudeJournal()" style="flex: 2; background: var(--success-color); font-size: 1.1em;">💾 Save Entry</button>
+        </div>
+    </form>
+    <div id="gratitudeJournalStatus"></div>
+</div>
+
+<script>
+function saveGratitudeJournal() {
+    saveCBTToolData('GratitudeJournal');
+}
+
+function resetGratitudeJournal() {
+    document.getElementById('gratitudeJournalForm').reset();
+    const beforeBtns = document.querySelectorAll('#gratitudeJournalMoodBefore .emoji-mood-btn');
+    const afterBtns = document.querySelectorAll('#gratitudeJournalMoodAfter .emoji-mood-btn');
+    beforeBtns.forEach(btn => btn.classList.remove('selected'));
+    afterBtns.forEach(btn => btn.classList.remove('selected'));
+}
+
+// Initialize mood selectors
+setTimeout(() => {
+    if (document.getElementById('gratitudeJournalMoodBefore') && !document.querySelector('#gratitudeJournalMoodBefore .emoji-mood-selector')) {
+        createEmojiMoodSelector('gratitudeJournalMoodBefore');
+        const beforeInput = document.getElementById('gratitudeJournalMoodBefore_value');
+        if (beforeInput) beforeInput.name = 'mood_before_value';
+    }
+    if (document.getElementById('gratitudeJournalMoodAfter') && !document.querySelector('#gratitudeJournalMoodAfter .emoji-mood-selector')) {
+        createEmojiMoodSelector('gratitudeJournalMoodAfter');
+        const afterInput = document.getElementById('gratitudeJournalMoodAfter_value');
+        if (afterInput) afterInput.name = 'mood_rating';
+    }
+}, 100);
+</script>
