@@ -3584,46 +3584,24 @@
             <div class="sidebar">
                 <button class="tab-btn active" onclick="switchTab('home', this)">🏠 Home</button>
                 <button class="tab-btn" onclick="switchTab('therapy', this)">🤖 AI Therapy</button>
-                <button class="tab-btn" onclick="switchTab('mood', this)">📊 Daily Tracking</button>
+                <button class="tab-btn" onclick="switchTab('mood', this)">📊 Mood & Habits</button>
+                <button class="tab-btn" onclick="switchTab('gratitude', this)">🙏 Gratitude</button>
                 <button class="tab-btn" onclick="switchTab('cbt', this)">🧠 CBT Tools</button>
                 <button class="tab-btn" onclick="switchTab('pet', this)">🐶 My Pet</button>
-
-                <!-- More Dropdown Menu -->
-                <div style="position: relative; width: 100%;">
-                    <button class="tab-btn" id="moreMenuBtn" onclick="toggleMoreMenu(event)" style="width: 100%; position: relative;">
-                        📋 More ▼
-                        <span id="moreMenuBadge" style="display:none; position:absolute; top:8px; right:12px; background:#e74c3c; color:white; padding:2px 6px; border-radius:10px; font-size:11px; min-width:18px; text-align:center;">0</span>
-                    </button>
-                    <div id="moreMenuDropdown" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--bg-card); border:2px solid var(--border-color); border-radius:8px; box-shadow:0 4px 12px var(--shadow-color); z-index:1000; margin-top:5px;">
-                        <button class="tab-btn" onclick="switchTab('community', this); toggleMoreMenu();" style="width:100%; text-align:left; border:none; border-radius:0; border-bottom:1px solid var(--border-color);">
-                            👥 Community & Support
-                        </button>
-                        <button class="tab-btn" id="messagesTabBtnDropdown" onclick="switchTab('messages', this); toggleMoreMenu();" style="width:100%; text-align:left; border:none; border-radius:0; border-bottom:1px solid var(--border-color); position:relative;">
-                            📬 Messages
-                            <span id="messagesBadge" style="display:none; position:absolute; top:50%; right:12px; transform:translateY(-50%); background:#e74c3c; color:white; padding:2px 6px; border-radius:10px; font-size:11px;">0</span>
-                        </button>
-                        <button class="tab-btn" onclick="switchTab('appointments', this); toggleMoreMenu();" style="width:100%; text-align:left; border:none; border-radius:0; border-bottom:1px solid var(--border-color); position:relative;">
-                            📅 Appointments
-                            <span id="appointmentBadge" style="display:none; position:absolute; top:50%; right:12px; transform:translateY(-50%); background:#e74c3c; color:white; padding:2px 6px; border-radius:10px; font-size:11px;">!</span>
-                        </button>
-                        <button class="tab-btn" onclick="switchTab('insights', this); toggleMoreMenu();" style="width:100%; text-align:left; border:none; border-radius:0; border-bottom:1px solid var(--border-color);">
-                            💡 Progress & Insights
-                        </button>
-                        <button class="tab-btn" onclick="switchTab('clinical', this); toggleMoreMenu();" style="width:100%; text-align:left; border:none; border-radius:0; border-bottom:1px solid var(--border-color);">
-                            📋 Assessments
-                        </button>
-                        <button class="tab-btn" onclick="switchTab('history', this); toggleMoreMenu();" style="width:100%; text-align:left; border:none; border-radius:0; border-bottom:1px solid var(--border-color);">
-                            📈 History
-                        </button>
-                        <button class="tab-btn" onclick="switchTab('aboutme', this); toggleMoreMenu();" style="width:100%; text-align:left; border:none; border-radius:0; border-bottom:1px solid var(--border-color);">
-                            ⚙️ Settings
-                        </button>
-                        <button class="tab-btn" onclick="switchTab('updates', this); toggleMoreMenu();" style="width:100%; text-align:left; border:none; border-radius:0; border-top-left-radius:0; border-top-right-radius:0; border-bottom-left-radius:6px; border-bottom-right-radius:6px;">
-                            🆕 Updates
-                        </button>
-                    </div>
-                </div>
-
+                <button class="tab-btn" onclick="switchTab('clinical', this)">📋 Assessments</button>
+                <button class="tab-btn" onclick="switchTab('community', this)">👥 Community</button>
+                <button class="tab-btn" id="messagesTabBtn" onclick="switchTab('messages', this)">
+                    📬 Messages
+                    <span id="messagesBadge" style="background: #e74c3c; color: white; border-radius: 10px; padding: 2px 6px; font-size: 11px; margin-left: 5px; display: none;"></span>
+                </button>
+                <button class="tab-btn" onclick="switchTab('insights', this)">💡 Insights</button>
+                <button class="tab-btn" onclick="switchTab('appointments', this)">
+                    📅 Appointments
+                    <span id="appointmentBadge" style="background: #e74c3c; color: white; border-radius: 10px; padding: 2px 6px; font-size: 11px; margin-left: 5px; display: none;">!</span>
+                </button>
+                <button class="tab-btn" onclick="switchTab('aboutme', this)">👤 About Me</button>
+                <button class="tab-btn" onclick="switchTab('history', this)">📈 History</button>
+                <button class="tab-btn" onclick="switchTab('updates', this)">🆕 Updates</button>
                 <button class="tab-btn" id="professionalTabBtn" onclick="switchTab('professional', this)" style="display:none;">👨‍⚕️ Professional</button>
                 <button class="tab-btn" id="developerTabBtn" onclick="switchTab('developer', this)" style="display:none;">⚙️ Developer</button>
             </div>
@@ -3676,7 +3654,7 @@
                         <button class="quick-nav-btn" onclick="switchTab('pet', document.querySelector('[onclick*=&quot;pet&quot;]'))">
                             🐶 My Pet
                         </button>
-                        <button class="quick-nav-btn" onclick="switchTab('cbt', document.querySelector('[onclick*=&quot;cbt&quot;]')); setTimeout(() => loadCBTTool('GratitudeJournal'), 200);">
+                        <button class="quick-nav-btn" onclick="switchTab('gratitude', document.querySelector('[onclick*=&quot;gratitude&quot;]'))">
                             🙏 Gratitude
                         </button>
                         <button class="quick-nav-btn" onclick="switchTab('cbt', document.querySelector('[onclick*=&quot;cbt&quot;]'))">
@@ -3930,6 +3908,19 @@
                 <div id="moodMessage" class="hidden"></div>
             </div>
             
+            <!-- Gratitude Journal Tab -->
+            <div id="gratitudeTab" class="tab-content">
+                <h3>Gratitude Journal</h3>
+                <p style="color: #666; margin-bottom: 20px;">What are you grateful for today?</p>
+                
+                <div class="form-group">
+                    <textarea id="gratitudeEntry" placeholder="Write about something you're grateful for today..."></textarea>
+                </div>
+                
+                <button class="btn" onclick="logGratitude()">Save Entry</button>
+                <div id="gratitudeMessage" class="hidden"></div>
+            </div>
+            
             <!-- CBT Tools Tab -->
             <div id="cbtTab" class="tab-content">
                                 <h3>Cognitive Behavioral Therapy Tools</h3>
@@ -3940,7 +3931,6 @@
                                 <script>
                                 // --- CBT Tools Dashboard & Loader ---
                                 const CBT_TOOLS = [
-                                    { id: 'GratitudeJournal', name: 'Gratitude Journal', icon: '🙏' },
                                     { id: 'CognitiveDistortionsQuiz', name: 'Cognitive Distortions Quiz', icon: '🧩' },
                                     { id: 'CoreBeliefsWorksheet', name: 'Core Beliefs Worksheet', icon: '🧠' },
                                     { id: 'ThoughtDefusionExercise', name: 'Thought Defusion Exercise', icon: '🌬️' },
@@ -4097,7 +4087,6 @@
 
                                 // Pet Reward Message
                                 const PET_MESSAGES = {
-                                    'GratitudeJournal': ['🙏 Your pet is grateful for you!', '🐶 Woof! Gratitude makes us both happy!'],
                                     'CognitiveDistortionsQuiz': ['🧩 Your pet is impressed by your detective work!', '🐶 Woof! You caught those tricky thoughts!'],
                                     'CoreBeliefsWorksheet': ['🧠 Your pet feels your growth!', '🐱 Purr-fect self-reflection!'],
                                     'ThoughtDefusionExercise': ['🌬️ Your pet breathes easier with you!', '🐰 Hop hop! Those thoughts are floating away!'],
@@ -7806,7 +7795,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 });
                 
                 // Hide all patient-facing tab content for clinicians
-                const patientTabs = ['therapyTab', 'moodTab', 'cbtTab', 'petTab',
+                const patientTabs = ['therapyTab', 'moodTab', 'gratitudeTab', 'cbtTab', 'petTab',
                                      'clinicalTab', 'communityTab', 'insightsTab',
                                      'historyTab'];
                 patientTabs.forEach(tabId => {
@@ -8580,53 +8569,10 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
         }
         
         // Tab Navigation
-        function toggleMoreMenu(event) {
-            if (event) event.stopPropagation();
-            const dropdown = document.getElementById('moreMenuDropdown');
-            dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
-        }
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(event) {
-            const dropdown = document.getElementById('moreMenuDropdown');
-            const moreBtn = document.getElementById('moreMenuBtn');
-            if (dropdown && moreBtn && !moreBtn.contains(event.target) && !dropdown.contains(event.target)) {
-                dropdown.style.display = 'none';
-            }
-        });
-
-        // Update More menu badge based on sub-items
-        function updateMoreMenuBadge() {
-            const messagesBadge = document.getElementById('messagesBadge');
-            const appointmentBadge = document.getElementById('appointmentBadge');
-            const moreMenuBadge = document.getElementById('moreMenuBadge');
-
-            let totalCount = 0;
-
-            // Count messages
-            if (messagesBadge && messagesBadge.style.display !== 'none') {
-                const count = parseInt(messagesBadge.textContent) || 0;
-                totalCount += count;
-            }
-
-            // Count appointments (shows "!" instead of number)
-            if (appointmentBadge && appointmentBadge.style.display !== 'none') {
-                totalCount += 1;
-            }
-
-            // Update More menu badge
-            if (totalCount > 0) {
-                moreMenuBadge.textContent = totalCount;
-                moreMenuBadge.style.display = 'inline-block';
-            } else {
-                moreMenuBadge.style.display = 'none';
-            }
-        }
-
         function switchTab(tabName, buttonEl) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-
+            
             document.getElementById(tabName + 'Tab').classList.add('active');
             if (buttonEl) buttonEl.classList.add('active');
 
@@ -10388,8 +10334,6 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     if (badge) {
                         if (pendingCount > 0) {
                             badge.textContent = pendingCount;
-                            badge.style.display = 'inline-block';
-                            updateMoreMenuBadge();
                             badge.style.display = 'inline';
                         } else {
                             badge.style.display = 'none';
@@ -10462,7 +10406,6 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     const badge = document.getElementById('appointmentBadge');
                     if (badge) {
                         badge.style.display = 'none';
-                        updateMoreMenuBadge();
                     }
                     
                     listDiv.innerHTML = `
@@ -12963,7 +12906,6 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 if (!data.messages || data.messages.length === 0) {
                     container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">No messages yet.</p>';
                     document.getElementById('messagesBadge').style.display = 'none';
-                    updateMoreMenuBadge();
                     return;
                 }
 
@@ -12973,10 +12915,8 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 if (unreadCount > 0) {
                     badge.textContent = unreadCount;
                     badge.style.display = 'inline-block';
-                    updateMoreMenuBadge();
                 } else {
                     badge.style.display = 'none';
-                    updateMoreMenuBadge();
                 }
 
                 // Display messages
