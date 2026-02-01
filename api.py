@@ -3847,18 +3847,14 @@ def developer_register():
 def accept_disclaimer():
     """Mark disclaimer as accepted for user"""
     try:
-        data = request.json
-        username = data.get('username')
-        
+        username = get_authenticated_username()
         if not username:
-            return jsonify({'error': 'Username required'}), 400
-        
+            return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
         cur.execute("UPDATE users SET disclaimer_accepted=1 WHERE username=?", (username,))
         conn.commit()
         conn.close()
-        
         return jsonify({'success': True}), 200
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')

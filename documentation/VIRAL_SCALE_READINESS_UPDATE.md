@@ -380,3 +380,15 @@
 - Final fixes, full retest, and security hardening required before launch or university trial.
 
 ---
+
+# February 1, 2026 – Security Patch Update
+
+- Disclaimer acceptance endpoint now requires session/token-based authentication and only allows the authenticated user to mark their own disclaimer as accepted.
+- All previously audited endpoints (CBT, admin, community, registration, login, session validation, password reset, clinician/developer registration) confirmed secure against authentication bypass.
+- Sequential audit and patching of endpoints continues; any discovered vulnerabilities are immediately patched and documented here.
+
+Next steps:
+- Continue auditing and patching remaining endpoints for session/token-based authentication.
+- Strictly enforce role-based access control on all endpoints.
+- Rerun and verify automated test suite.
+- Document all security changes and audit results.
