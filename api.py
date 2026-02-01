@@ -3000,21 +3000,32 @@ def admin_wipe_database():
     try:
         data = request.json
         admin_key = data.get('admin_key')
-        
-        # Check admin key (MUST be set via environment variable - no default)
+
+        data = request.json
+        admin_key = data.get('admin_key')
         required_key = os.getenv('ADMIN_WIPE_KEY')
 
+        # Enforce session/token-based admin authentication
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+        conn = get_db_connection()
+        cur = conn.cursor()
+        user = cur.execute("SELECT role FROM users WHERE username=?", (username,)).fetchone()
+        if not user or user[0] != 'admin':
+            conn.close()
+            return jsonify({'error': 'Admin privileges required'}), 403
+
         if not required_key:
+            conn.close()
             return jsonify({'error': 'Admin wipe key not configured on server'}), 500
 
         if not admin_key or admin_key != required_key:
+            conn.close()
             return jsonify({'error': 'Unauthorized - invalid admin key'}), 403
-        
-        conn = get_db_connection()
-        cur = conn.cursor()
-        
+
         print("🗑️  ADMIN: Wiping all user data from database...")
-        
+
         tables_to_clear = [
             'users',
             'patient_approvals',
@@ -3031,7 +3042,7 @@ def admin_wipe_database():
             'audit_logs',
             'verification_codes'
         ]
-        
+
         results = {}
         for table in tables_to_clear:
             try:
@@ -3042,20 +3053,19 @@ def admin_wipe_database():
             except Exception as e:
                 results[table] = f"Error: {str(e)}"
                 print(f"  ⚠️  {table}: {e}")
-        
+
         conn.commit()
         conn.close()
-        
-        log_event('ADMIN', 'api', 'database_wiped', 'All user data cleared')
-        
+
+        log_event(username, 'api', 'database_wiped', 'All user data cleared')
+
         print("✅ ADMIN: Database wipe complete")
-        
+
         return jsonify({
             'success': True,
             'message': 'Database wiped successfully',
             'results': results
         }), 200
-        
     except Exception as e:
         print(f"❌ ADMIN: Database wipe error: {e}")
         return handle_exception(e, request.endpoint or 'unknown')
