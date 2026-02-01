@@ -47,7 +47,7 @@ def test_password_verify_and_migration(tmp_path):
     # Create legacy SHA256 password entry
     pwd = 'Secret123!'
     legacy = hashlib.sha256(pwd.encode()).hexdigest()
-    cur.execute("INSERT INTO users (username,password) VALUES (?,?)", ('legacyuser', legacy))
+    cur.execute("INSERT INTO users (username,password,role,full_name) VALUES (?,?,?,?)", ('legacyuser', legacy, 'user', 'Legacy User'))
     conn.commit()
     conn.close()
 

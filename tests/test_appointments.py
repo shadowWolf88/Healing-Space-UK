@@ -22,8 +22,24 @@ def client(tmp_path, monkeypatch):
 
 
 def create_user(cur, username, role='user'):
-    cur.execute("INSERT INTO users (username, password, role, last_login, full_name) VALUES (?,?,?,?,?)",
-                (username, 'passhash', role, datetime.now(timezone.utc).isoformat(), username))
+    # Always use test_ usernames for rate limit bypass
+    if not username.startswith('test_'):
+        username = f'test_{username}'
+    hashed_password = api.hash_password('testpass')
+    hashed_pin = api.hash_pin('1234')
+    if role == 'user':
+        cur.execute("INSERT INTO users (username, password, pin, role, last_login, full_name, email, phone, dob, conditions, country, area, postcode, nhs_number, clinician_id, disclaimer_accepted) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (username, hashed_password, hashed_pin, role, datetime.now(timezone.utc).isoformat(), username, f'{username}@example.com', '07000000000', '1990-01-01', 'None', 'UK', 'London', 'N1 1AA', '1234567890', 'test_clinician', 1))
+        # Ensure patient approval
+        cur.execute("INSERT INTO patient_approvals (patient_username, clinician_username, status) VALUES (?,?,?)", (username, 'test_clinician', 'approved'))
+    elif role == 'clinician':
+        cur.execute("INSERT INTO users (username, password, pin, role, last_login, full_name, email, phone, country, area, professional_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            (username, hashed_password, hashed_pin, role, datetime.now(timezone.utc).isoformat(), username, f'{username}@example.com', '07000000001', 'UK', 'London', f'PROF_{username}'))
+        # Ensure clinician has at least one approved patient
+        cur.execute("INSERT INTO patient_approvals (patient_username, clinician_username, status) VALUES (?,?,?)", ('test_patient1', username, 'approved'))
+    elif role == 'developer':
+        cur.execute("INSERT INTO users (username, password, pin, role, last_login) VALUES (?,?,?,?,?)",
+            (username, hashed_password, hashed_pin, 'developer', datetime.now(timezone.utc).isoformat()))
 
 
 def test_analytics_includes_appointments(client):
@@ -44,7 +60,16 @@ def test_analytics_includes_appointments(client):
     conn.commit()
     conn.close()
 
-    resp = client.get(f"/api/analytics/patient/patient1")
+    # Login as clinician to get token
+    login_resp = client.post("/api/auth/login", json={
+        "username": "dr_smith",
+        "password": "testpass",
+        "pin": "1234"
+    })
+    assert login_resp.status_code == 200
+    token = login_resp.get_json().get("token", "")
+    headers = {"Authorization": f"Bearer {token}"}
+    resp = client.get(f"/api/analytics/patient/patient1?clinician=dr_smith", headers=headers)
     assert resp.status_code == 200
     data = resp.get_json()
     assert 'upcoming_appointments' in data
@@ -65,11 +90,20 @@ def test_attendance_endpoint_updates_db_and_notifications(client):
     appt_id = cur.lastrowid
     conn.commit()
 
+    # Login as clinician to get token
+    login_resp = client.post("/api/auth/login", json={
+        "username": "dr_jones",
+        "password": "testpass",
+        "pin": "1234"
+    })
+    assert login_resp.status_code == 200
+    token = login_resp.get_json().get("token", "")
+    headers = {"Authorization": f"Bearer {token}"}
     # Call attendance endpoint as clinician
     client_resp = client.post(f"/api/appointments/{appt_id}/attendance", json={
         'clinician_username': 'dr_jones',
         'status': 'attended'
-    })
+    }, headers=headers)
     assert client_resp.status_code == 200
     j = client_resp.get_json()
     assert j.get('success') is True

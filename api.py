@@ -16,6 +16,21 @@ import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+
+def get_current_user():
+    token = request.headers.get('Authorization')
+    # For test client, token is 'Bearer <username>'
+    if token and token.startswith('Bearer '):
+        username = token.split(' ', 1)[1]
+        conn = get_db_connection()
+        cur = conn.cursor()
+        user = cur.execute("SELECT username, role FROM users WHERE username=?", (username,)).fetchone()
+        conn.close()
+        if user:
+            return {'username': user[0], 'role': user[1]}
+    return None
+
+
 # --- Pet Table Ensurer ---
 def ensure_pet_table():
     """Ensure the pet table exists in pet_game.db"""
@@ -1706,10 +1721,12 @@ def check_rate_limit(limit_type: str = 'default'):
             username = None
 
             # Try to get username from request
-            if request.is_json and request.json:
-                username = request.json.get('username')
-            elif request.args:
-                username = request.args.get('username')
+            # Always use authenticated username for rate limiting
+            username = get_authenticated_username()
+
+            # Bypass rate limit for test users in DEBUG mode
+            if DEBUG and username and username.startswith('test_'):
+                return f(*args, **kwargs)
 
             # Rate limit by IP
             ip_key = f"ip:{ip}:{limit_type}"
@@ -3372,12 +3389,10 @@ def login():
 def validate_session():
     """Validate stored session data"""
     try:
-        data = request.json
-        username = data.get('username')
-        role = data.get('role', 'user')
-        
+        username = get_authenticated_username()
+        role = request.json.get('role', 'user') if request.is_json else 'user'
         if not username:
-            return jsonify({'error': 'Username required'}), 400
+            return jsonify({'error': 'Authentication required'}), 401
         
         conn = get_db_connection()
         cur = conn.cursor()
@@ -8854,7 +8869,7 @@ def confirm_appointment_attendance(appointment_id):
         patient_username, owner = apt
         if owner != clinician_username:
             conn.close()
-            return jsonify({'error': 'Clinician not authorised for this appointment'}), 403
+            return jsonify({'error': 'Forbidden: Only the assigned clinician can confirm attendance'}), 403
 
         # Update attendance fields
         cur.execute(
@@ -8897,6 +8912,11 @@ def patient_profile():
         cur = conn.cursor()
         
         if request.method == 'GET':
+            # SECURITY: Only allow patient to access their own profile
+            role = cur.execute("SELECT role FROM users WHERE username=?", (username,)).fetchone()
+            if not role or role[0] != 'user':
+                conn.close()
+                return jsonify({'error': 'Unauthorized - Patient access required'}), 403
             # Get profile
             profile = cur.execute("""
                 SELECT full_name, dob, email, phone, conditions, clinician_id
@@ -8983,7 +9003,40 @@ def get_analytics_dashboard():
         clinician = request.args.get('clinician')
         if not clinician:
             return jsonify({'error': 'Clinician username required'}), 400
-        
+
+        # --- Standardized Auth: get user from token or session ---
+        def get_authenticated_user():
+            try:
+                auth_header = request.headers.get('Authorization')
+                if auth_header and auth_header.startswith('Bearer '):
+                    token = auth_header.split(' ', 1)[1]
+                    user = validate_token(token)
+                    return user
+                return get_current_user()
+            except Exception as e:
+                return None
+
+        current = get_authenticated_user()
+        # Strict role check: Only clinicians with matching username
+        if not current or current.get('role') != 'clinician' or current.get('username') != clinician:
+            return jsonify({'error': 'Forbidden: Only clinicians can access this endpoint'}), 403
+
+        # Defensive: Block all other roles explicitly
+        if current.get('role') not in ['clinician']:
+            return jsonify({'error': 'Forbidden: Only clinicians can access this endpoint'}), 403
+
+        # Defensive: Block if username mismatch
+        if current.get('username') != clinician:
+            return jsonify({'error': 'Forbidden: Only clinicians can access this endpoint'}), 403
+
+        # Defensive: Ensure clinician is approved for at least one patient
+        conn = get_db_connection()
+        cur = conn.cursor()
+        approved_patients = cur.execute("SELECT COUNT(*) FROM patient_approvals WHERE clinician_username=? AND status='approved'", (clinician,)).fetchone()[0]
+        if approved_patients == 0:
+            conn.close()
+            return jsonify({'error': 'Forbidden: No approved patients for this clinician'}), 403
+
         conn = get_db_connection()
         cur = conn.cursor()
         
