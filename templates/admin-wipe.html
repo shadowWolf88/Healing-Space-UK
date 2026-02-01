@@ -107,9 +107,9 @@
         </div>
         
         <label for="adminKey" style="font-weight: bold; display: block; margin-bottom: 5px;">Admin Secret Key:</label>
-        <input type="password" id="adminKey" placeholder="Enter admin secret key" />
+        <input type="password" id="adminKey" placeholder="Enter admin secret key" aria-label="Admin Secret Key" tabindex="0" />
         
-        <button onclick="wipeDatabase()">🗑️ WIPE DATABASE</button>
+        <button onclick="wipeDatabase()" aria-label="Wipe Database" role="button" tabindex="0">🗑️ WIPE DATABASE</button>
         
         <div id="result" class="result"></div>
     </div>

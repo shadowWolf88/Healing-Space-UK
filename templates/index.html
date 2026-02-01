@@ -2928,15 +2928,15 @@
             <!-- Landing Page -->
             <div id="landingPage">
                 <h2 style="text-align: center; margin-bottom: 30px;">Welcome! Please select:</h2>
-                <button class="btn" onclick="showPatientAuth();" style="width: 100%; margin-bottom: 15px; padding: 20px; font-size: 18px;">
+                <button class="btn" onclick="showPatientAuth();" style="width: 100%; margin-bottom: 15px; padding: 20px; font-size: 18px;" aria-label="Patient Login" role="button" tabindex="0">
                     👤 I'm a Patient
                 </button>
-                <button class="btn btn-secondary" onclick="showClinicianAuth();" style="width: 100%; padding: 20px; font-size: 18px;">
+                <button class="btn btn-secondary" onclick="showClinicianAuth();" style="width: 100%; padding: 20px; font-size: 18px;" aria-label="Clinician Login" role="button" tabindex="0">
                     👨‍⚕️ I'm a Clinician
                 </button>
                 
             <!-- Developer Access Button (fixed to window) -->
-            <button id="devAccessBtn" onclick="showDevLogin()" style="position: fixed; bottom: 18px; right: 18px; background: #222; color: #fff; opacity: 0.6; font-size: 13px; padding: 7px 16px; border-radius: 16px; border: none; z-index: 3000; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: opacity 0.2s; min-width: 0; width: auto; height: auto;">
+            <button id="devAccessBtn" onclick="showDevLogin()" style="position: fixed; bottom: 18px; right: 18px; background: #222; color: #fff; opacity: 0.6; font-size: 13px; padding: 7px 16px; border-radius: 16px; border: none; z-index: 3000; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: opacity 0.2s; min-width: 0; width: auto; height: auto;" aria-label="Developer Login" role="button" tabindex="0">
                 Developer Access
             </button>
 
@@ -2946,24 +2946,24 @@
                     <h3 style="text-align: center; margin-bottom: 20px;">Developer Login</h3>
                     <div class="form-group">
                         <label>Username</label>
-                        <input type="text" id="devLoginUsername" placeholder="Enter developer username">
+                        <input type="text" id="devLoginUsername" placeholder="Enter developer username" aria-label="Developer Username" tabindex="0">
                     </div>
                     <div class="form-group">
                         <label>Password</label>
                         <div class="password-field-wrapper">
-                            <input type="password" id="devLoginPassword" placeholder="Enter password">
-                            <button type="button" class="password-toggle" onclick="togglePassword('devLoginPassword', this)" title="Show/Hide password">👁️</button>
+                            <input type="password" id="devLoginPassword" placeholder="Enter password" aria-label="Developer Password" tabindex="0">
+                            <button type="button" class="password-toggle" onclick="togglePassword('devLoginPassword', this)" title="Show/Hide password" aria-label="Show or hide developer password" tabindex="0">👁️</button>
                         </div>
                     </div>
                     <div class="form-group">
                         <label>PIN (4 digits) - 2FA</label>
                         <div class="password-field-wrapper">
-                            <input type="password" id="devLoginPin" placeholder="Enter your 4-digit PIN" maxlength="4">
-                            <button type="button" class="password-toggle" onclick="togglePassword('devLoginPin', this)" title="Show/Hide PIN">👁️</button>
+                            <input type="password" id="devLoginPin" placeholder="Enter your 4-digit PIN" maxlength="4" aria-label="Developer PIN" tabindex="0">
+                            <button type="button" class="password-toggle" onclick="togglePassword('devLoginPin', this)" title="Show/Hide PIN" aria-label="Show or hide developer PIN" tabindex="0">👁️</button>
                         </div>
                     </div>
-                    <button class="btn" onclick="login('developer')">Login</button>
-                    <button class="btn btn-secondary" onclick="closeDevLogin()" style="margin-top: 10px;">Cancel</button>
+                    <button class="btn" onclick="login('developer')" aria-label="Developer Login Submit" role="button" tabindex="0">Login</button>
+                    <button class="btn btn-secondary" onclick="closeDevLogin()" style="margin-top: 10px;" aria-label="Cancel Developer Login" role="button" tabindex="0">Cancel</button>
                 </div>
             </div>
             </div>
@@ -2973,13 +2973,13 @@
                 <h3 style="text-align: center; margin-bottom: 20px;">Patient Login</h3>
                 <div class="form-group">
                     <label>Username</label>
-                    <input type="text" id="loginUsername" placeholder="Enter username">
+                    <input type="text" id="loginUsername" placeholder="Enter username" aria-label="Username" tabindex="0">
                 </div>
                 <div class="form-group">
                     <label>Password</label>
                     <div class="password-field-wrapper">
-                        <input type="password" id="loginPassword" placeholder="Enter password">
-                        <button type="button" class="password-toggle" onclick="togglePassword('loginPassword', this)" title="Show/Hide password">
+                        <input type="password" id="loginPassword" placeholder="Enter password" aria-label="Password" tabindex="0">
+                        <button type="button" class="password-toggle" onclick="togglePassword('loginPassword', this)" title="Show/Hide password" aria-label="Show or hide password" tabindex="0">
                             👁️
                         </button>
                     </div>
@@ -2987,18 +2987,18 @@
                 <div class="form-group">
                     <label>PIN (4 digits) - 2FA</label>
                     <div class="password-field-wrapper">
-                        <input type="password" id="loginPin" placeholder="Enter your 4-digit PIN" maxlength="4">
-                        <button type="button" class="password-toggle" onclick="togglePassword('loginPin', this)" title="Show/Hide PIN">👁️</button>
+                        <input type="password" id="loginPin" placeholder="Enter your 4-digit PIN" maxlength="4" aria-label="PIN" tabindex="0">
+                        <button type="button" class="password-toggle" onclick="togglePassword('loginPin', this)" title="Show/Hide PIN" aria-label="Show or hide PIN" tabindex="0">👁️</button>
                     </div>
                 </div>
                 <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" id="rememberMe" style="width: auto; margin: 0;">
+                    <input type="checkbox" id="rememberMe" style="width: auto; margin: 0;" aria-label="Remember Me" tabindex="0">
                     <label for="rememberMe" style="margin: 0; cursor: pointer;">Remember Me</label>
                 </div>
-                <button class="btn" onclick="login('user')">Login</button>
+                <button class="btn" onclick="login('user')" aria-label="User Login Submit" role="button" tabindex="0">Login</button>
                 <a href="#" onclick="showForgotPassword('patient'); return false;" style="display: block; text-align: center; margin: 15px 0; color: #667eea; text-decoration: none;">Forgot Password or PIN?</a>
-                <button class="btn btn-secondary" onclick="showPatientRegister()">Create Patient Account</button>
-                <button class="btn btn-secondary" onclick="showLanding()">Back</button>
+                <button class="btn btn-secondary" onclick="showPatientRegister()" aria-label="Create Patient Account" role="button" tabindex="0">Create Patient Account</button>
+                <button class="btn btn-secondary" onclick="showLanding()" aria-label="Back to Landing" role="button" tabindex="0">Back</button>
             </div>
             
             <!-- Clinician Login Form -->
@@ -3006,13 +3006,13 @@
                 <h3 style="text-align: center; margin-bottom: 20px;">Clinician Login</h3>
                 <div class="form-group">
                     <label>Username</label>
-                    <input type="text" id="clinicianLoginUsername" placeholder="Enter username">
+                    <input type="text" id="clinicianLoginUsername" placeholder="Enter username" aria-label="Clinician Username" tabindex="0">
                 </div>
                 <div class="form-group">
                     <label>Password</label>
                     <div class="password-field-wrapper">
-                        <input type="password" id="clinicianLoginPassword" placeholder="Enter password">
-                        <button type="button" class="password-toggle" onclick="togglePassword('clinicianLoginPassword', this)" title="Show/Hide password">
+                        <input type="password" id="clinicianLoginPassword" placeholder="Enter password" aria-label="Clinician Password" tabindex="0">
+                        <button type="button" class="password-toggle" onclick="togglePassword('clinicianLoginPassword', this)" title="Show/Hide password" aria-label="Show or hide clinician password" tabindex="0">
                             👁️
                         </button>
                     </div>
@@ -3020,18 +3020,18 @@
                 <div class="form-group">
                     <label>PIN (4 digits) - 2FA</label>
                     <div class="password-field-wrapper">
-                        <input type="password" id="clinicianLoginPin" placeholder="Enter your 4-digit PIN" maxlength="4">
-                        <button type="button" class="password-toggle" onclick="togglePassword('clinicianLoginPin', this)" title="Show/Hide PIN">👁️</button>
+                        <input type="password" id="clinicianLoginPin" placeholder="Enter your 4-digit PIN" maxlength="4" aria-label="Clinician PIN" tabindex="0">
+                        <button type="button" class="password-toggle" onclick="togglePassword('clinicianLoginPin', this)" title="Show/Hide PIN" aria-label="Show or hide clinician PIN" tabindex="0">👁️</button>
                     </div>
                 </div>
                 <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
-                    <input type="checkbox" id="clinicianRememberMe" style="width: auto; margin: 0;">
+                    <input type="checkbox" id="clinicianRememberMe" style="width: auto; margin: 0;" aria-label="Remember Me Clinician" tabindex="0">
                     <label for="clinicianRememberMe" style="margin: 0; cursor: pointer;">Remember Me</label>
                 </div>
-                <button class="btn" onclick="login('clinician')">Login</button>
+                <button class="btn" onclick="login('clinician')" aria-label="Clinician Login Submit" role="button" tabindex="0">Login</button>
                 <a href="#" onclick="showForgotPassword('clinician'); return false;" style="display: block; text-align: center; margin: 15px 0; color: #667eea; text-decoration: none;">Forgot Password or PIN?</a>
-                <button class="btn btn-secondary" onclick="showClinicianRegister()">Create Clinician Account</button>
-                <button class="btn btn-secondary" onclick="showLanding()">Back</button>
+                <button class="btn btn-secondary" onclick="showClinicianRegister()" aria-label="Create Clinician Account" role="button" tabindex="0">Create Clinician Account</button>
+                <button class="btn btn-secondary" onclick="showLanding()" aria-label="Back to Landing" role="button" tabindex="0">Back</button>
             </div>
             
             <!-- Patient Registration Form -->
@@ -3039,11 +3039,11 @@
                 <h3 style="text-align: center; margin-bottom: 20px;">Create Patient Account</h3>
                 <div class="form-group">
                     <label>Full Name *</label>
-                    <input type="text" id="regFullName" placeholder="John Doe" required>
+                    <input type="text" id="regFullName" placeholder="John Doe" required aria-label="Full Name" tabindex="0">
                 </div>
                 <div class="form-group">
                     <label>Date of Birth *</label>
-                    <input type="date" id="regDOB" required max="" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px;">
+                    <input type="date" id="regDOB" required max="" style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 16px;" aria-label="Date of Birth" tabindex="0">
                 </div>
                 <div class="form-group">
                     <label>Medical Conditions / Diagnosis *</label>
@@ -3052,29 +3052,29 @@
                 </div>
                 <div class="form-group">
                     <label>Country *</label>
-                    <input type="text" id="regCountry" placeholder="United Kingdom" required>
+                    <input type="text" id="regCountry" placeholder="United Kingdom" required aria-label="Country" tabindex="0">
                 </div>
                 <div class="form-group">
                     <label>Area / Region *</label>
-                    <input type="text" id="regArea" placeholder="London, Manchester, etc." required>
+                    <input type="text" id="regArea" placeholder="London, Manchester, etc." required aria-label="Area" tabindex="0">
                 </div>
                 <div class="form-group">
                     <label>Postcode (optional)</label>
-                    <input type="text" id="regPostcode" placeholder="SW1A 1AA">
+                    <input type="text" id="regPostcode" placeholder="SW1A 1AA" aria-label="Postcode" tabindex="0">
                 </div>
                 <div class="form-group">
                     <label>NHS Number (optional)</label>
-                    <input type="text" id="regNHS" placeholder="123 456 7890" maxlength="12">
+                    <input type="text" id="regNHS" placeholder="123 456 7890" maxlength="12" aria-label="NHS Number" tabindex="0">
                 </div>
                 <div class="form-group">
                     <label>Username *</label>
-                    <input type="text" id="regUsername" placeholder="Choose username" required>
+                    <input type="text" id="regUsername" placeholder="Choose username" required aria-label="Username" tabindex="0">
                 </div>
                 <div class="form-group">
                     <label>Password *</label>
                     <div style="position: relative;">
-                        <input type="password" id="regPassword" placeholder="Min 8 chars, must include: number, letter, special char" oninput="checkPasswordStrength(this.value)" required style="width: 100%; padding-right: 45px;">
-                        <button type="button" onclick="togglePasswordVisibility('regPassword', 'regPasswordToggle')" id="regPasswordToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;">👁️</button>
+                        <input type="password" id="regPassword" placeholder="Min 8 chars, must include: number, letter, special char" oninput="checkPasswordStrength(this.value)" required style="width: 100%; padding-right: 45px;" aria-label="Password" tabindex="0">
+                        <button type="button" onclick="togglePasswordVisibility('regPassword', 'regPasswordToggle')" id="regPasswordToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;" aria-label="Show or hide password" tabindex="0">👁️</button>
                     </div>
                     <div id="passwordStrengthBar" style="height: 5px; background: #e0e0e0; border-radius: 3px; margin-top: 5px; overflow: hidden;">
                         <div id="passwordStrengthFill" style="height: 100%; width: 0%; background: #dc3545; transition: all 0.3s;"></div>
@@ -3084,31 +3084,31 @@
                 <div class="form-group">
                     <label>Confirm Password *</label>
                     <div style="position: relative;">
-                        <input type="password" id="regConfirmPassword" placeholder="Re-enter password" required style="width: 100%; padding-right: 45px;">
-                        <button type="button" onclick="togglePasswordVisibility('regConfirmPassword', 'regConfirmPasswordToggle')" id="regConfirmPasswordToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;">👁️</button>
+                        <input type="password" id="regConfirmPassword" placeholder="Re-enter password" required style="width: 100%; padding-right: 45px;" aria-label="Confirm Password" tabindex="0">
+                        <button type="button" onclick="togglePasswordVisibility('regConfirmPassword', 'regConfirmPasswordToggle')" id="regConfirmPasswordToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;" aria-label="Show or hide confirm password" tabindex="0">👁️</button>
                     </div>
                 </div>
                 <div class="form-group">
                     <label>PIN (4 digits) *</label>
                     <div style="position: relative;">
-                        <input type="password" id="regPin" placeholder="Choose 4-digit PIN" maxlength="4" required style="width: 100%; padding-right: 45px;">
-                        <button type="button" onclick="togglePasswordVisibility('regPin', 'regPinToggle')" id="regPinToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;">👁️</button>
+                        <input type="password" id="regPin" placeholder="Choose 4-digit PIN" maxlength="4" required style="width: 100%; padding-right: 45px;" aria-label="PIN" tabindex="0">
+                        <button type="button" onclick="togglePasswordVisibility('regPin', 'regPinToggle')" id="regPinToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;" aria-label="Show or hide PIN" tabindex="0">👁️</button>
                     </div>
                 </div>
                 <div class="form-group">
                     <label>Confirm PIN *</label>
                     <div style="position: relative;">
-                        <input type="password" id="regConfirmPin" placeholder="Re-enter 4-digit PIN" maxlength="4" required style="width: 100%; padding-right: 45px;">
-                        <button type="button" onclick="togglePasswordVisibility('regConfirmPin', 'regConfirmPinToggle')" id="regConfirmPinToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;">👁️</button>
+                        <input type="password" id="regConfirmPin" placeholder="Re-enter 4-digit PIN" maxlength="4" required style="width: 100%; padding-right: 45px;" aria-label="Confirm PIN" tabindex="0">
+                        <button type="button" onclick="togglePasswordVisibility('regConfirmPin', 'regConfirmPinToggle')" id="regConfirmPinToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;" aria-label="Show or hide confirm PIN" tabindex="0">👁️</button>
                     </div>
                 </div>
                 <div class="form-group">
                     <label>Email Address *</label>
-                    <input type="email" id="regEmail" placeholder="your.email@example.com" required>
+                    <input type="email" id="regEmail" placeholder="your.email@example.com" required aria-label="Email" tabindex="0">
                 </div>
                 <div class="form-group">
                     <label>Phone Number *</label>
-                    <input type="tel" id="regPhone" placeholder="+1234567890" required>
+                    <input type="tel" id="regPhone" placeholder="+1234567890" required aria-label="Phone" tabindex="0">
                 </div>
                 <div class="form-group">
                     <label>Select Your Clinician *</label>
@@ -3117,8 +3117,8 @@
                     </select>
                     <small style="color: #666; display: block; margin-top: 5px;">Your assigned mental health professional</small>
                 </div>
-                <button class="btn" onclick="register()">Create Account</button>
-                <button class="btn btn-secondary" onclick="showPatientAuth()">Back to Login</button>
+                <button class="btn" onclick="register()" aria-label="Register Patient Account" role="button" tabindex="0">Create Account</button>
+                <button class="btn btn-secondary" onclick="showPatientAuth()" aria-label="Back to Patient Login" role="button" tabindex="0">Back to Login</button>
             </div>
             
             <!-- Clinician Registration Form -->
@@ -3126,64 +3126,64 @@
                 <h3 style="text-align: center; margin-bottom: 20px;">Create Clinician Account</h3>
                 <div class="form-group">
                     <label>Username *</label>
-                    <input type="text" id="clinicianUsername" placeholder="Choose username" required>
+                    <input type="text" id="clinicianUsername" placeholder="Choose username" required aria-label="Clinician Username" tabindex="0">
                 </div>
                 <div class="form-group">
                     <label>Full Name *</label>
-                    <input type="text" id="clinicianFullName" placeholder="Dr. Jane Smith" required>
+                    <input type="text" id="clinicianFullName" placeholder="Dr. Jane Smith" required aria-label="Clinician Full Name" tabindex="0">
                 </div>
                 <div class="form-group">
                     <label>Professional ID Number *</label>
-                    <input type="text" id="clinicianProfessionalId" placeholder="License/Registration Number" required>
+                    <input type="text" id="clinicianProfessionalId" placeholder="License/Registration Number" required aria-label="Professional ID" tabindex="0">
                     <small style="color: #666; display: block; margin-top: 5px;">e.g., Medical License, GMC number, NMC PIN, etc.</small>
                 </div>
                 <div class="form-group">
                     <label>Country *</label>
-                    <input type="text" id="clinicianCountry" placeholder="United Kingdom" required>
+                    <input type="text" id="clinicianCountry" placeholder="United Kingdom" required aria-label="Clinician Country" tabindex="0">
                 </div>
                 <div class="form-group">
                     <label>Area / Region *</label>
-                    <input type="text" id="clinicianArea" placeholder="London, Manchester, etc." required>
+                    <input type="text" id="clinicianArea" placeholder="London, Manchester, etc." required aria-label="Clinician Area" tabindex="0">
                     <small style="color: #666; display: block; margin-top: 5px;">Patients can filter by location to find you</small>
                 </div>
                 <div class="form-group">
                     <label>Email Address *</label>
-                    <input type="email" id="clinicianEmail" placeholder="doctor@clinic.com" required>
+                    <input type="email" id="clinicianEmail" placeholder="doctor@clinic.com" required aria-label="Clinician Email" tabindex="0">
                 </div>
                 <div class="form-group">
                     <label>Phone Number *</label>
-                    <input type="tel" id="clinicianPhone" placeholder="+1234567890" required>
+                    <input type="tel" id="clinicianPhone" placeholder="+1234567890" required aria-label="Clinician Phone" tabindex="0">
                 </div>
                 <div class="form-group">
                     <label>Password *</label>
                     <div style="position: relative;">
-                        <input type="password" id="clinicianPassword" placeholder="Choose password (min 8 chars)" required style="width: 100%; padding-right: 45px;">
-                        <button type="button" onclick="togglePasswordVisibility('clinicianPassword', 'clinicianPasswordToggle')" id="clinicianPasswordToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;">👁️</button>
+                        <input type="password" id="clinicianPassword" placeholder="Choose password (min 8 chars)" required style="width: 100%; padding-right: 45px;" aria-label="Clinician Password" tabindex="0">
+                        <button type="button" onclick="togglePasswordVisibility('clinicianPassword', 'clinicianPasswordToggle')" id="clinicianPasswordToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;" aria-label="Show or hide clinician password" tabindex="0">👁️</button>
                     </div>
                 </div>
                 <div class="form-group">
                     <label>Confirm Password *</label>
                     <div style="position: relative;">
-                        <input type="password" id="clinicianConfirmPassword" placeholder="Re-enter password" required style="width: 100%; padding-right: 45px;">
-                        <button type="button" onclick="togglePasswordVisibility('clinicianConfirmPassword', 'clinicianConfirmPasswordToggle')" id="clinicianConfirmPasswordToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;">👁️</button>
+                        <input type="password" id="clinicianConfirmPassword" placeholder="Re-enter password" required style="width: 100%; padding-right: 45px;" aria-label="Confirm Clinician Password" tabindex="0">
+                        <button type="button" onclick="togglePasswordVisibility('clinicianConfirmPassword', 'clinicianConfirmPasswordToggle')" id="clinicianConfirmPasswordToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;" aria-label="Show or hide confirm clinician password" tabindex="0">👁️</button>
                     </div>
                 </div>
                 <div class="form-group">
                     <label>PIN (4 digits) - 2FA *</label>
                     <div style="position: relative;">
-                        <input type="password" id="clinicianPin" placeholder="Choose 4-digit PIN" maxlength="4" required style="width: 100%; padding-right: 45px;">
-                        <button type="button" onclick="togglePasswordVisibility('clinicianPin', 'clinicianPinToggle')" id="clinicianPinToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;">👁️</button>
+                        <input type="password" id="clinicianPin" placeholder="Choose 4-digit PIN" maxlength="4" required style="width: 100%; padding-right: 45px;" aria-label="Clinician PIN" tabindex="0">
+                        <button type="button" onclick="togglePasswordVisibility('clinicianPin', 'clinicianPinToggle')" id="clinicianPinToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;" aria-label="Show or hide clinician PIN" tabindex="0">👁️</button>
                     </div>
                 </div>
                 <div class="form-group">
                     <label>Confirm PIN *</label>
                     <div style="position: relative;">
-                        <input type="password" id="clinicianConfirmPin" placeholder="Re-enter 4-digit PIN" maxlength="4" required style="width: 100%; padding-right: 45px;">
-                        <button type="button" onclick="togglePasswordVisibility('clinicianConfirmPin', 'clinicianConfirmPinToggle')" id="clinicianConfirmPinToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;">👁️</button>
+                        <input type="password" id="clinicianConfirmPin" placeholder="Re-enter 4-digit PIN" maxlength="4" required style="width: 100%; padding-right: 45px;" aria-label="Confirm Clinician PIN" tabindex="0">
+                        <button type="button" onclick="togglePasswordVisibility('clinicianConfirmPin', 'clinicianConfirmPinToggle')" id="clinicianConfirmPinToggle" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; font-size: 20px;" aria-label="Show or hide confirm clinician PIN" tabindex="0">👁️</button>
                     </div>
                 </div>
-                <button class="btn" onclick="registerClinician()">Create Clinician Account</button>
-                <button class="btn btn-secondary" onclick="showClinicianAuth()">Back to Login</button>
+                <button class="btn" onclick="registerClinician()" aria-label="Register Clinician Account" role="button" tabindex="0">Create Clinician Account</button>
+                <button class="btn btn-secondary" onclick="showClinicianAuth()" aria-label="Back to Clinician Login" role="button" tabindex="0">Back to Login</button>
             </div>
             
             <!-- Forgot Password Form -->
@@ -3192,14 +3192,14 @@
                 <p style="text-align: center; color: #666; margin-bottom: 20px;">Enter your username and email. We'll send you a reset link.</p>
                 <div class="form-group">
                     <label>Username</label>
-                    <input type="text" id="forgotUsername" placeholder="Enter your username">
+                    <input type="text" id="forgotUsername" placeholder="Enter your username" aria-label="Forgot Username" tabindex="0">
                 </div>
                 <div class="form-group">
                     <label>Email Address</label>
-                    <input type="email" id="forgotEmail" placeholder="Enter your registered email">
+                    <input type="email" id="forgotEmail" placeholder="Enter your registered email" aria-label="Forgot Email" tabindex="0">
                 </div>
-                <button class="btn" onclick="requestPasswordReset()">Send Reset Link</button>
-                <button class="btn btn-secondary" onclick="showLanding()">Back</button>
+                <button class="btn" onclick="requestPasswordReset()" aria-label="Send Password Reset Link" role="button" tabindex="0">Send Reset Link</button>
+                <button class="btn btn-secondary" onclick="showLanding()" aria-label="Back to Landing" role="button" tabindex="0">Back</button>
             </div>
             
             <div id="authMessage" class="hidden"></div>
@@ -3666,7 +3666,7 @@
                         <p class="last-login-text" id="homeLastLogin">Loading...</p>
                     </div>
                     <div class="home-version-info">
-                        <span class="app-version">Healing Space UK v22.1.0</span>
+                        <span class="app-version">Healing Space UK v25.1.0</span>
                     </div>
                     <div class="motivational-quote" id="homeMotivationalQuote">
                         Every day is a fresh start. You're doing great!
