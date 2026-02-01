@@ -1,0 +1,33 @@
+# Healing Space UK – Security & Compliance Audit (2026)
+
+## Backup and Recovery Procedures – Confirmation and Summary
+
+### Documentation Review
+- The backup and recovery strategy is fully documented in [documentation/RAILWAY_PERSISTENCE.md](documentation/RAILWAY_PERSISTENCE.md).
+- The project uses Railway Volumes for persistent storage in production, with automated encrypted backups stored in the [backups/](backups/) directory.
+- Backup files include encrypted SQLite database snapshots (e.g., therapist_app_*.db.bak) and repository snapshots.
+- PostgreSQL migration and backup/restore commands are documented for cloud deployments.
+
+### Implementation Review
+- On application launch, the system auto-generates encrypted backups of all critical SQLite databases to [backups/](backups/), as confirmed by the presence of recent .db.bak files.
+- Backup logic is implemented in both [api.py](api.py) and [legacy_desktop/main.py) to ensure coverage for web and desktop modes.
+- Recovery procedures are documented and tested: restoring from backup involves copying the relevant .db.bak file to the active database path and restarting the service.
+- PostgreSQL backup/restore is handled via Railway CLI and documented shell commands.
+
+### Testing and Validation
+- Backup and recovery procedures have been manually and automatically tested:
+  - Encrypted backup files are generated on every launch and after critical operations.
+  - Recovery was validated by restoring a .db.bak file and confirming full data integrity and application functionality.
+  - PostgreSQL backup/restore tested using Railway CLI and documented commands.
+
+### Compliance and Auditability
+- All backup and recovery steps are traceable and reproducible per [documentation/RAILWAY_PERSISTENCE.md](documentation/RAILWAY_PERSISTENCE.md).
+- Audit logs and backup events are recorded for compliance.
+- GDPR and clinical data protection requirements are met via encryption and documented recovery procedures.
+
+### Status
+**Backup and recovery documentation and testing are complete and compliant.**
+
+---
+
+_Last updated: 2026-01-09_
