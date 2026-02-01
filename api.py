@@ -5498,7 +5498,9 @@ def log_mood():
     """Log mood entry with full tracking (water, exercise, meds with strength)"""
     try:
         data = request.json
-        username = data.get('username')
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
         mood_val = data.get('mood_val')
         sleep_val = data.get('sleep_val', 0)
         meds = data.get('meds', '')  # Now expects JSON array of {name, strength, quantity}
