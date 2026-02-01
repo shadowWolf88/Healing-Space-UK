@@ -9843,6 +9843,7 @@ def get_home_data():
 
 
 @app.route('/api/feedback', methods=['POST'])
+@require_auth
 def submit_feedback():
     """Submit user feedback to developers"""
     try:
@@ -9883,6 +9884,7 @@ def submit_feedback():
 
 
 @app.route('/api/feedback', methods=['GET'])
+@require_auth
 def get_user_feedback():
     """Get feedback history for the authenticated user"""
     try:
