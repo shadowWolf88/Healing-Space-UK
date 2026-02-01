@@ -1,4 +1,30 @@
 from flask import Flask, request, jsonify, render_template, send_from_directory, make_response, Response, g
+from functools import wraps
+def require_auth(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+def require_role(*roles):
+    def decorator(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            username = get_authenticated_username()
+            if not username:
+                return jsonify({'error': 'Authentication required'}), 401
+            conn = get_db_connection()
+            cur = conn.cursor()
+            user = cur.execute("SELECT role FROM users WHERE username=?", (username,)).fetchone()
+            conn.close()
+            if not user or user[0] not in roles:
+                return jsonify({'error': 'Insufficient privileges'}), 403
+            return f(*args, **kwargs)
+        return decorated
+    return decorator
 from flask_cors import CORS
 from functools import wraps
 import sqlite3
@@ -141,6 +167,7 @@ logger.info("=" * 60)
 # ================== CBT: GOAL SETTING/TRACKING ENDPOINTS ==================
 
 @app.route('/api/cbt/goals', methods=['POST'])
+@require_auth
 def create_goal():
     """Create a new goal entry"""
     try:
@@ -171,6 +198,7 @@ def create_goal():
         return handle_exception(e, 'create_goal')
 
 @app.route('/api/cbt/goals', methods=['GET'])
+@require_auth
 def list_goals():
     """List all goal entries for the authenticated user"""
     try:
@@ -187,6 +215,7 @@ def list_goals():
         return handle_exception(e, 'list_goals')
 
 @app.route('/api/cbt/goals/<int:entry_id>', methods=['GET'])
+@require_auth
 def get_goal(entry_id):
     """Get a single goal entry by ID"""
     try:
@@ -205,6 +234,7 @@ def get_goal(entry_id):
         return handle_exception(e, 'get_goal')
 
 @app.route('/api/cbt/goals/<int:entry_id>', methods=['PUT'])
+@require_auth
 def update_goal(entry_id):
     """Update a goal entry"""
     try:
@@ -231,6 +261,7 @@ def update_goal(entry_id):
         return handle_exception(e, 'update_goal')
 
 @app.route('/api/cbt/goals/<int:entry_id>', methods=['DELETE'])
+@require_auth
 def delete_goal(entry_id):
     """Delete a goal entry"""
     try:
@@ -253,6 +284,7 @@ def delete_goal(entry_id):
 
 # Milestones CRUD
 @app.route('/api/cbt/goals/<int:goal_id>/milestone', methods=['POST'])
+@require_auth
 def create_goal_milestone(goal_id):
     try:
         data = request.json
@@ -275,6 +307,7 @@ def create_goal_milestone(goal_id):
         return handle_exception(e, 'create_goal_milestone')
 
 @app.route('/api/cbt/goals/<int:goal_id>/milestone', methods=['GET'])
+@require_auth
 def list_goal_milestones(goal_id):
     try:
         username = get_authenticated_username()
@@ -291,6 +324,7 @@ def list_goal_milestones(goal_id):
 
 # Check-ins CRUD
 @app.route('/api/cbt/goals/<int:goal_id>/checkin', methods=['POST'])
+@require_auth
 def create_goal_checkin(goal_id):
     try:
         data = request.json
@@ -313,6 +347,7 @@ def create_goal_checkin(goal_id):
         return handle_exception(e, 'create_goal_checkin')
 
 @app.route('/api/cbt/goals/<int:goal_id>/checkin', methods=['GET'])
+@require_auth
 def list_goal_checkins(goal_id):
     try:
         username = get_authenticated_username()
@@ -346,6 +381,7 @@ def summarize_goals(username, limit=3):
 # ================== CBT: VALUES CLARIFICATION ENDPOINTS ==================
 
 @app.route('/api/cbt/values', methods=['POST'])
+@require_auth
 def create_value():
     """Create a new values clarification entry"""
     try:
@@ -376,6 +412,7 @@ def create_value():
         return handle_exception(e, 'create_value')
 
 @app.route('/api/cbt/values', methods=['GET'])
+@require_auth
 def list_values():
     """List all values clarification entries for the authenticated user"""
     try:
@@ -392,6 +429,7 @@ def list_values():
         return handle_exception(e, 'list_values')
 
 @app.route('/api/cbt/values/<int:entry_id>', methods=['GET'])
+@require_auth
 def get_value(entry_id):
     """Get a single values clarification entry by ID"""
     try:
@@ -410,6 +448,7 @@ def get_value(entry_id):
         return handle_exception(e, 'get_value')
 
 @app.route('/api/cbt/values/<int:entry_id>', methods=['PUT'])
+@require_auth
 def update_value(entry_id):
     """Update a values clarification entry"""
     try:
@@ -436,6 +475,7 @@ def update_value(entry_id):
         return handle_exception(e, 'update_value')
 
 @app.route('/api/cbt/values/<int:entry_id>', methods=['DELETE'])
+@require_auth
 def delete_value(entry_id):
     """Delete a values clarification entry"""
     try:
@@ -475,6 +515,7 @@ def summarize_values_clarification(username, limit=3):
 # ================== CBT: SELF-COMPASSION JOURNAL ENDPOINTS ==================
 
 @app.route('/api/cbt/self-compassion', methods=['POST'])
+@require_auth
 def create_self_compassion():
     """Create a new self-compassion journal entry"""
     try:
@@ -501,6 +542,7 @@ def create_self_compassion():
         return handle_exception(e, 'create_self_compassion')
 
 @app.route('/api/cbt/self-compassion', methods=['GET'])
+@require_auth
 def list_self_compassion():
     """List all self-compassion journal entries for the authenticated user"""
     try:
@@ -517,6 +559,7 @@ def list_self_compassion():
         return handle_exception(e, 'list_self_compassion')
 
 @app.route('/api/cbt/self-compassion/<int:entry_id>', methods=['GET'])
+@require_auth
 def get_self_compassion(entry_id):
     """Get a single self-compassion journal entry by ID"""
     try:
@@ -535,6 +578,7 @@ def get_self_compassion(entry_id):
         return handle_exception(e, 'get_self_compassion')
 
 @app.route('/api/cbt/self-compassion/<int:entry_id>', methods=['PUT'])
+@require_auth
 def update_self_compassion(entry_id):
     """Update a self-compassion journal entry"""
     try:
@@ -561,6 +605,7 @@ def update_self_compassion(entry_id):
         return handle_exception(e, 'update_self_compassion')
 
 @app.route('/api/cbt/self-compassion/<int:entry_id>', methods=['DELETE'])
+@require_auth
 def delete_self_compassion(entry_id):
     """Delete a self-compassion journal entry"""
     try:
@@ -600,6 +645,7 @@ def summarize_self_compassion(username, limit=3):
 # ================== CBT: COPING CARDS ENDPOINTS ==================
 
 @app.route('/api/cbt/coping-card', methods=['POST'])
+@require_auth
 def create_coping_card():
     """Create a new coping card entry"""
     try:
@@ -630,6 +676,7 @@ def create_coping_card():
         return handle_exception(e, 'create_coping_card')
 
 @app.route('/api/cbt/coping-card', methods=['GET'])
+@require_auth
 def list_coping_cards():
     """List all coping card entries for the authenticated user"""
     try:
@@ -646,6 +693,7 @@ def list_coping_cards():
         return handle_exception(e, 'list_coping_cards')
 
 @app.route('/api/cbt/coping-card/<int:entry_id>', methods=['GET'])
+@require_auth
 def get_coping_card(entry_id):
     """Get a single coping card entry by ID"""
     try:
@@ -664,6 +712,7 @@ def get_coping_card(entry_id):
         return handle_exception(e, 'get_coping_card')
 
 @app.route('/api/cbt/coping-card/<int:entry_id>', methods=['PUT'])
+@require_auth
 def update_coping_card(entry_id):
     """Update a coping card entry"""
     try:
@@ -690,6 +739,7 @@ def update_coping_card(entry_id):
         return handle_exception(e, 'update_coping_card')
 
 @app.route('/api/cbt/coping-card/<int:entry_id>', methods=['DELETE'])
+@require_auth
 def delete_coping_card(entry_id):
     """Delete a coping card entry"""
     try:
@@ -729,6 +779,7 @@ def summarize_coping_cards(username, limit=3):
 # ================== CBT: PROBLEM-SOLVING WORKSHEET ENDPOINTS ==================
 
 @app.route('/api/cbt/problem-solving', methods=['POST'])
+@require_auth
 def create_problem_solving():
     """Create a new problem-solving worksheet entry"""
     try:
@@ -759,6 +810,7 @@ def create_problem_solving():
         return handle_exception(e, 'create_problem_solving')
 
 @app.route('/api/cbt/problem-solving', methods=['GET'])
+@require_auth
 def list_problem_solving():
     """List all problem-solving worksheet entries for the authenticated user"""
     try:
@@ -775,6 +827,7 @@ def list_problem_solving():
         return handle_exception(e, 'list_problem_solving')
 
 @app.route('/api/cbt/problem-solving/<int:entry_id>', methods=['GET'])
+@require_auth
 def get_problem_solving(entry_id):
     """Get a single problem-solving worksheet entry by ID"""
     try:
@@ -793,6 +846,7 @@ def get_problem_solving(entry_id):
         return handle_exception(e, 'get_problem_solving')
 
 @app.route('/api/cbt/problem-solving/<int:entry_id>', methods=['PUT'])
+@require_auth
 def update_problem_solving(entry_id):
     """Update a problem-solving worksheet entry"""
     try:
@@ -819,6 +873,7 @@ def update_problem_solving(entry_id):
         return handle_exception(e, 'update_problem_solving')
 
 @app.route('/api/cbt/problem-solving/<int:entry_id>', methods=['DELETE'])
+@require_auth
 def delete_problem_solving(entry_id):
     """Delete a problem-solving worksheet entry"""
     try:
@@ -858,6 +913,7 @@ def summarize_problem_solving(username, limit=3):
 # ================== CBT: EXPOSURE HIERARCHY ENDPOINTS ==================
 
 @app.route('/api/cbt/exposure', methods=['POST'])
+@require_auth
 def create_exposure_hierarchy():
     """Create a new exposure hierarchy entry"""
     try:
@@ -886,6 +942,7 @@ def create_exposure_hierarchy():
         return handle_exception(e, 'create_exposure_hierarchy')
 
 @app.route('/api/cbt/exposure', methods=['GET'])
+@require_auth
 def list_exposure_hierarchy():
     """List all exposure hierarchy entries for the authenticated user"""
     try:
@@ -902,6 +959,7 @@ def list_exposure_hierarchy():
         return handle_exception(e, 'list_exposure_hierarchy')
 
 @app.route('/api/cbt/exposure/<int:entry_id>', methods=['GET'])
+@require_auth
 def get_exposure_hierarchy(entry_id):
     """Get a single exposure hierarchy entry by ID"""
     try:
@@ -920,6 +978,7 @@ def get_exposure_hierarchy(entry_id):
         return handle_exception(e, 'get_exposure_hierarchy')
 
 @app.route('/api/cbt/exposure/<int:entry_id>', methods=['PUT'])
+@require_auth
 def update_exposure_hierarchy(entry_id):
     """Update an exposure hierarchy entry"""
     try:
@@ -946,6 +1005,7 @@ def update_exposure_hierarchy(entry_id):
         return handle_exception(e, 'update_exposure_hierarchy')
 
 @app.route('/api/cbt/exposure/<int:entry_id>', methods=['DELETE'])
+@require_auth
 def delete_exposure_hierarchy(entry_id):
     """Delete an exposure hierarchy entry"""
     try:
@@ -968,6 +1028,7 @@ def delete_exposure_hierarchy(entry_id):
 
 # Exposure Attempts CRUD
 @app.route('/api/cbt/exposure/<int:exposure_id>/attempt', methods=['POST'])
+@require_auth
 def create_exposure_attempt(exposure_id):
     """Create a new exposure attempt for a hierarchy item"""
     try:
@@ -993,6 +1054,7 @@ def create_exposure_attempt(exposure_id):
         return handle_exception(e, 'create_exposure_attempt')
 
 @app.route('/api/cbt/exposure/<int:exposure_id>/attempt', methods=['GET'])
+@require_auth
 def list_exposure_attempts(exposure_id):
     """List all exposure attempts for a hierarchy item"""
     try:
@@ -1027,6 +1089,7 @@ def summarize_exposure_hierarchy(username, limit=3):
 # ================== CBT: CORE BELIEF WORKSHEET ENDPOINTS ==================
 
 @app.route('/api/cbt/core-belief', methods=['POST'])
+@require_auth
 def create_core_belief():
     """Create a new core belief worksheet entry"""
     try:
@@ -1058,6 +1121,7 @@ def create_core_belief():
         return handle_exception(e, 'create_core_belief')
 
 @app.route('/api/cbt/core-belief', methods=['GET'])
+@require_auth
 def list_core_beliefs():
     """List all core belief worksheet entries for the authenticated user"""
     try:
@@ -1074,6 +1138,7 @@ def list_core_beliefs():
         return handle_exception(e, 'list_core_beliefs')
 
 @app.route('/api/cbt/core-belief/<int:entry_id>', methods=['GET'])
+@require_auth
 def get_core_belief(entry_id):
     """Get a single core belief worksheet entry by ID"""
     try:
@@ -1092,6 +1157,7 @@ def get_core_belief(entry_id):
         return handle_exception(e, 'get_core_belief')
 
 @app.route('/api/cbt/core-belief/<int:entry_id>', methods=['PUT'])
+@require_auth
 def update_core_belief(entry_id):
     """Update a core belief worksheet entry"""
     try:
@@ -1119,6 +1185,7 @@ def update_core_belief(entry_id):
         return handle_exception(e, 'update_core_belief')
 
 @app.route('/api/cbt/core-belief/<int:entry_id>', methods=['DELETE'])
+@require_auth
 def delete_core_belief(entry_id):
     """Delete a core belief worksheet entry"""
     try:
@@ -1158,6 +1225,7 @@ def summarize_core_beliefs(username, limit=3):
 # ================== CBT: SLEEP DIARY ENDPOINTS ==================
 
 @app.route('/api/cbt/sleep', methods=['POST'])
+@require_auth
 def create_sleep_diary():
     """Create a new sleep diary entry"""
     try:
@@ -1192,6 +1260,7 @@ def create_sleep_diary():
         return handle_exception(e, 'create_sleep_diary')
 
 @app.route('/api/cbt/sleep', methods=['GET'])
+@require_auth
 def list_sleep_diary():
     """List all sleep diary entries for the authenticated user"""
     try:
@@ -1208,6 +1277,7 @@ def list_sleep_diary():
         return handle_exception(e, 'list_sleep_diary')
 
 @app.route('/api/cbt/sleep/<int:entry_id>', methods=['GET'])
+@require_auth
 def get_sleep_diary(entry_id):
     """Get a single sleep diary entry by ID"""
     try:
@@ -1226,6 +1296,7 @@ def get_sleep_diary(entry_id):
         return handle_exception(e, 'get_sleep_diary')
 
 @app.route('/api/cbt/sleep/<int:entry_id>', methods=['PUT'])
+@require_auth
 def update_sleep_diary(entry_id):
     """Update a sleep diary entry"""
     try:
@@ -1253,6 +1324,7 @@ def update_sleep_diary(entry_id):
         return handle_exception(e, 'update_sleep_diary')
 
 @app.route('/api/cbt/sleep/<int:entry_id>', methods=['DELETE'])
+@require_auth
 def delete_sleep_diary(entry_id):
     """Delete a sleep diary entry"""
     try:
@@ -1292,6 +1364,7 @@ def summarize_sleep_diary(username, limit=3):
 # ================== CBT: RELAXATION TECHNIQUES ENDPOINTS ==================
 
 @app.route('/api/cbt/relaxation', methods=['POST'])
+@require_auth
 def create_relaxation_technique():
     """Create a new relaxation technique entry"""
     try:
@@ -1320,6 +1393,7 @@ def create_relaxation_technique():
         return handle_exception(e, 'create_relaxation_technique')
 
 @app.route('/api/cbt/relaxation', methods=['GET'])
+@require_auth
 def list_relaxation_techniques():
     """List all relaxation technique entries for the authenticated user"""
     try:
@@ -1336,6 +1410,7 @@ def list_relaxation_techniques():
         return handle_exception(e, 'list_relaxation_techniques')
 
 @app.route('/api/cbt/relaxation/<int:entry_id>', methods=['GET'])
+@require_auth
 def get_relaxation_technique(entry_id):
     """Get a single relaxation technique entry by ID"""
     try:
@@ -1354,6 +1429,7 @@ def get_relaxation_technique(entry_id):
         return handle_exception(e, 'get_relaxation_technique')
 
 @app.route('/api/cbt/relaxation/<int:entry_id>', methods=['PUT'])
+@require_auth
 def update_relaxation_technique(entry_id):
     """Update a relaxation technique entry"""
     try:
@@ -1381,6 +1457,7 @@ def update_relaxation_technique(entry_id):
         return handle_exception(e, 'update_relaxation_technique')
 
 @app.route('/api/cbt/relaxation/<int:entry_id>', methods=['DELETE'])
+@require_auth
 def delete_relaxation_technique(entry_id):
     """Delete a relaxation technique entry"""
     try:
@@ -2723,6 +2800,7 @@ def get_authenticated_username():
     return request.headers.get('X-Username') or request.args.get('username')
 
 @app.route('/api/cbt/breathing', methods=['POST'])
+@require_auth
 def create_breathing_exercise():
     """Create a new breathing exercise entry"""
     try:
@@ -2752,6 +2830,7 @@ def create_breathing_exercise():
         return handle_exception(e, 'create_breathing_exercise')
 
 @app.route('/api/cbt/breathing', methods=['GET'])
+@require_auth
 def list_breathing_exercises():
     """List all breathing exercise entries for the authenticated user"""
     try:
@@ -2768,6 +2847,7 @@ def list_breathing_exercises():
         return handle_exception(e, 'list_breathing_exercises')
 
 @app.route('/api/cbt/breathing/<int:entry_id>', methods=['GET'])
+@require_auth
 def get_breathing_exercise(entry_id):
     """Get a single breathing exercise entry by ID"""
     try:
@@ -2786,6 +2866,7 @@ def get_breathing_exercise(entry_id):
         return handle_exception(e, 'get_breathing_exercise')
 
 @app.route('/api/cbt/breathing/<int:entry_id>', methods=['PUT'])
+@require_auth
 def update_breathing_exercise(entry_id):
     """Update a breathing exercise entry"""
     try:
@@ -2813,6 +2894,7 @@ def update_breathing_exercise(entry_id):
         return handle_exception(e, 'update_breathing_exercise')
 
 @app.route('/api/cbt/breathing/<int:entry_id>', methods=['DELETE'])
+@require_auth
 def delete_breathing_exercise(entry_id):
     """Delete a breathing exercise entry"""
     try:
@@ -2895,6 +2977,8 @@ def admin_wipe_page():
     return render_template('admin-wipe.html')
 
 @app.route('/api/debug/analytics/<clinician>', methods=['GET'])
+@require_auth
+@require_role('clinician', 'developer', 'admin')
 def debug_analytics(clinician):
     """Debug endpoint to see what analytics data would be returned"""
     try:
@@ -2995,6 +3079,8 @@ def health_check():
     })
 
 @app.route('/api/admin/wipe-database', methods=['POST'])
+@require_auth
+@require_role('admin')
 def admin_wipe_database():
     """ADMIN ONLY: Wipe all user data from database - requires secret key"""
     try:
@@ -3396,6 +3482,7 @@ def login():
         return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/validate-session', methods=['POST'])
+@require_auth
 def validate_session():
     """Validate stored session data"""
     try:
@@ -3733,6 +3820,8 @@ def send_verification_code(identifier, code, method='email'):
         raise Exception(error_msg)
 
 @app.route('/api/auth/clinician/register', methods=['POST'])
+@require_auth
+@require_role('developer')
 def clinician_register():
     """Register a new clinician account"""
     try:
@@ -3800,6 +3889,8 @@ def clinician_register():
         return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/auth/developer/register', methods=['POST'])
+@require_auth
+@require_role('developer')
 def developer_register():
     """Register single developer account (one-time setup)"""
     try:
@@ -3844,6 +3935,7 @@ def developer_register():
         return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/auth/disclaimer/accept', methods=['POST'])
+@require_auth
 def accept_disclaimer():
     """Mark disclaimer as accepted for user"""
     try:
@@ -3862,6 +3954,8 @@ def accept_disclaimer():
 # ========== DEVELOPER DASHBOARD ENDPOINTS ==========
 
 @app.route('/api/developer/terminal/execute', methods=['POST'])
+@require_auth
+@require_role('developer')
 def execute_terminal():
     """Execute terminal command with restricted whitelist"""
     try:
@@ -3957,6 +4051,8 @@ def execute_terminal():
         return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/developer/ai/chat', methods=['POST'])
+@require_auth
+@require_role('developer')
 def developer_ai_chat():
     """Developer AI assistant"""
     try:
@@ -4037,6 +4133,8 @@ You have full knowledge of the codebase and can provide specific advice. Be conc
         return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/developer/messages/send', methods=['POST'])
+@require_auth
+@require_role('developer', 'clinician', 'user')
 def send_dev_message():
     """Send message from developer to user(s)"""
     try:
@@ -4117,6 +4215,8 @@ def send_dev_message():
         return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/developer/messages/list', methods=['GET'])
+@require_auth
+@require_role('developer', 'clinician', 'user')
 def list_dev_messages():
     """Get messages for current user (dev or patient/clinician)"""
     try:
@@ -4169,6 +4269,8 @@ def list_dev_messages():
         return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/developer/messages/reply', methods=['POST'])
+@require_auth
+@require_role('developer', 'clinician', 'user')
 def reply_dev_message():
     """Reply to a developer message"""
     try:
@@ -4213,6 +4315,8 @@ def reply_dev_message():
         return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/developer/stats', methods=['GET'])
+@require_auth
+@require_role('developer')
 def developer_stats():
     """Get system statistics"""
     try:
@@ -4251,6 +4355,8 @@ def developer_stats():
         return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/developer/users/list', methods=['GET'])
+@require_auth
+@require_role('developer')
 def list_all_users():
     """List all users with filter"""
     try:
@@ -4301,6 +4407,8 @@ def list_all_users():
         return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/developer/users/delete', methods=['POST'])
+@require_auth
+@require_role('developer')
 def delete_user():
     """Delete a user account (GDPR-compliant deletion)"""
     try:
@@ -4367,6 +4475,7 @@ def delete_user():
 # ========== END DEVELOPER DASHBOARD ENDPOINTS ==========
 
 @app.route('/api/clinicians/list', methods=['GET'])
+@require_auth
 def get_clinicians():
     """Get list of all clinicians for patient signup (with optional filtering)"""
     try:
@@ -4408,6 +4517,7 @@ def get_clinicians():
 
 # === NOTIFICATIONS ===
 @app.route('/api/notifications', methods=['GET'])
+@require_auth
 def get_notifications():
     """Get notifications for user"""
     try:
@@ -4436,6 +4546,7 @@ def get_notifications():
         return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/notifications/<int:notification_id>/read', methods=['POST'])
+@require_auth
 def mark_notification_read(notification_id):
     """Mark notification as read"""
     try:
@@ -4453,6 +4564,7 @@ def mark_notification_read(notification_id):
         return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/notifications/<int:notification_id>', methods=['DELETE'])
+@require_auth
 def delete_notification(notification_id):
     """Delete a single notification"""
     try:
@@ -4470,6 +4582,7 @@ def delete_notification(notification_id):
         return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/notifications/clear-read', methods=['POST'])
+@require_auth
 def clear_read_notifications():
     """Clear all read notifications for a user"""
     try:
@@ -4488,6 +4601,8 @@ def clear_read_notifications():
 
 # === PATIENT APPROVAL SYSTEM ===
 @app.route('/api/approvals/pending', methods=['GET'])
+@require_auth
+@require_role('clinician')
 def get_pending_approvals():
     """Get pending patient approval requests for clinician"""
     try:
@@ -4519,6 +4634,8 @@ def get_pending_approvals():
         return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/approvals/<int:approval_id>/approve', methods=['POST'])
+@require_auth
+@require_role('clinician')
 def approve_patient(approval_id):
     """Approve patient request"""
     try:
@@ -4575,6 +4692,8 @@ def approve_patient(approval_id):
         return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/approvals/<int:approval_id>/reject', methods=['POST'])
+@require_auth
+@require_role('clinician')
 def reject_patient(approval_id):
     """Reject patient request"""
     try:
@@ -4618,6 +4737,7 @@ def reject_patient(approval_id):
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+@require_auth
 def update_ai_memory(username):
     """Update AI memory with recent user activity summary including clinician notes"""
     try:
@@ -4752,6 +4872,7 @@ def send_notification(username, message, notification_type='info'):
         print(f"Notification error: {e}")
         return False
 
+@require_auth
 def reward_pet(action, activity_type=None):
     """Helper function to reward pet for user activities
     
@@ -4834,6 +4955,7 @@ def reward_pet(action, activity_type=None):
         return False
 
 @app.route('/api/therapy/chat', methods=['POST'])
+@require_auth
 @check_rate_limit('ai_chat')
 def therapy_chat():
     """AI therapy chat endpoint"""
