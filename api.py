@@ -2862,6 +2862,170 @@ def init_db():
     except sqlite3.OperationalError:
         pass
     
+    # ==================== PHASE 4D: CHECK CONSTRAINTS ====================
+    # Add CHECK constraints to enforce valid data ranges
+    # These prevent invalid data from being inserted at the database level
+    
+    # Mood validation: ratings must be 1-10
+    try:
+        cursor.execute("ALTER TABLE mood_logs ADD CONSTRAINT check_mood_val CHECK (mood_val >= 1 AND mood_val <= 10)")
+    except sqlite3.OperationalError:
+        pass  # Constraint already exists
+    
+    # Sleep validation: sleep_val must be 0-10
+    try:
+        cursor.execute("ALTER TABLE mood_logs ADD CONSTRAINT check_sleep_val CHECK (sleep_val >= 0 AND sleep_val <= 10)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Exercise minutes: must be >= 0
+    try:
+        cursor.execute("ALTER TABLE mood_logs ADD CONSTRAINT check_exercise_mins CHECK (exercise_mins >= 0)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Outside time: must be >= 0
+    try:
+        cursor.execute("ALTER TABLE mood_logs ADD CONSTRAINT check_outside_mins CHECK (outside_mins >= 0)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Water intake: must be >= 0
+    try:
+        cursor.execute("ALTER TABLE mood_logs ADD CONSTRAINT check_water_pints CHECK (water_pints >= 0)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Breathing exercises - pre/post anxiety must be 0-10
+    try:
+        cursor.execute("ALTER TABLE breathing_exercises ADD CONSTRAINT check_pre_anxiety CHECK (pre_anxiety_level >= 0 AND pre_anxiety_level <= 10)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE breathing_exercises ADD CONSTRAINT check_post_anxiety CHECK (post_anxiety_level >= 0 AND post_anxiety_level <= 10)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Breathing duration: must be positive (in seconds)
+    try:
+        cursor.execute("ALTER TABLE breathing_exercises ADD CONSTRAINT check_duration CHECK (duration_seconds > 0)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Relaxation effectiveness: must be 1-10
+    try:
+        cursor.execute("ALTER TABLE relaxation_techniques ADD CONSTRAINT check_effectiveness CHECK (effectiveness_rating >= 1 AND effectiveness_rating <= 10)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Sleep quality: must be 1-10
+    try:
+        cursor.execute("ALTER TABLE sleep_diary ADD CONSTRAINT check_sleep_quality CHECK (sleep_quality >= 1 AND sleep_quality <= 10)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Sleep diary - morning mood must be 1-10
+    try:
+        cursor.execute("ALTER TABLE sleep_diary ADD CONSTRAINT check_morning_mood CHECK (morning_mood >= 1 AND morning_mood <= 10)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Sleep diary - times woken must be >= 0
+    try:
+        cursor.execute("ALTER TABLE sleep_diary ADD CONSTRAINT check_times_woken CHECK (times_woken >= 0)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Sleep diary - total sleep hours must be >= 0
+    try:
+        cursor.execute("ALTER TABLE sleep_diary ADD CONSTRAINT check_total_sleep CHECK (total_sleep_hours >= 0)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Core beliefs - strength ratings must be 0-100 (percentage)
+    try:
+        cursor.execute("ALTER TABLE core_beliefs ADD CONSTRAINT check_belief_strength CHECK (belief_strength_before >= 0 AND belief_strength_before <= 100 AND belief_strength_after >= 0 AND belief_strength_after <= 100)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Exposure hierarchy - SUDS must be 0-100
+    try:
+        cursor.execute("ALTER TABLE exposure_hierarchy ADD CONSTRAINT check_suds_values CHECK (initial_suds >= 0 AND initial_suds <= 100 AND target_suds >= 0 AND target_suds <= 100)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Exposure attempts - SUDS values must be 0-100
+    try:
+        cursor.execute("ALTER TABLE exposure_attempts ADD CONSTRAINT check_exposure_suds CHECK (pre_suds >= 0 AND pre_suds <= 100 AND peak_suds >= 0 AND peak_suds <= 100 AND post_suds >= 0 AND post_suds <= 100)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Coping cards - mood ratings must be 1-10
+    try:
+        cursor.execute("ALTER TABLE self_compassion_journal ADD CONSTRAINT check_mood_before CHECK (mood_before >= 1 AND mood_before <= 10)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE self_compassion_journal ADD CONSTRAINT check_mood_after CHECK (mood_after >= 1 AND mood_after <= 10)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Values clarification - importance rating must be 1-10
+    try:
+        cursor.execute("ALTER TABLE values_clarification ADD CONSTRAINT check_importance CHECK (importance_rating >= 1 AND importance_rating <= 10)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Values clarification - alignment must be 0-100
+    try:
+        cursor.execute("ALTER TABLE values_clarification ADD CONSTRAINT check_alignment CHECK (current_alignment >= 0 AND current_alignment <= 100)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Goal progress - must be 0-100 percentage
+    try:
+        cursor.execute("ALTER TABLE goals ADD CONSTRAINT check_progress CHECK (progress_percentage >= 0 AND progress_percentage <= 100)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Problem solving - importance must be 1-10
+    try:
+        cursor.execute("ALTER TABLE problem_solving ADD CONSTRAINT check_problem_importance CHECK (problem_importance >= 1 AND problem_importance <= 10)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Goal check-ins - motivation level must be 1-10
+    try:
+        cursor.execute("ALTER TABLE goal_checkins ADD CONSTRAINT check_motivation CHECK (motivation_level >= 1 AND motivation_level <= 10)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Clinical scales - scores should be reasonable (typically 0-100 for most scales)
+    try:
+        cursor.execute("ALTER TABLE clinical_scales ADD CONSTRAINT check_score CHECK (score >= 0)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Daily tasks - only 0 or 1 for boolean
+    try:
+        cursor.execute("ALTER TABLE daily_tasks ADD CONSTRAINT check_completed CHECK (completed IN (0, 1))")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Daily streaks - streak counts must be non-negative
+    try:
+        cursor.execute("ALTER TABLE daily_streaks ADD CONSTRAINT check_streaks CHECK (current_streak >= 0 AND longest_streak >= 0 AND total_bonus_coins >= 0 AND total_bonus_xp >= 0)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Community likes - must be valid reactions
+    try:
+        cursor.execute("ALTER TABLE community_likes ADD CONSTRAINT check_reaction_type CHECK (reaction_type IN ('like', 'love', 'helpful', 'funny'))")
+    except sqlite3.OperationalError:
+        pass
+    
     # ==================== PHASE 4B: SOFT DELETE TIMESTAMPS ====================
     # Add deleted_at column to key tables for logical deletion (not hard delete)
     # This allows data recovery and maintains referential integrity
