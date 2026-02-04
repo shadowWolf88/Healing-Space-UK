@@ -2862,6 +2862,94 @@ def init_db():
     except sqlite3.OperationalError:
         pass
     
+    # ==================== PHASE 4B: SOFT DELETE TIMESTAMPS ====================
+    # Add deleted_at column to key tables for logical deletion (not hard delete)
+    # This allows data recovery and maintains referential integrity
+    
+    # Appointments - allow undoing appointment deletions
+    try:
+        cursor.execute("ALTER TABLE appointments ADD COLUMN deleted_at DATETIME")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    
+    # Clinician notes - allow clinicians to "delete" notes while maintaining audit trail
+    try:
+        cursor.execute("ALTER TABLE clinician_notes ADD COLUMN deleted_at DATETIME")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Feedback - keep all user feedback even if deleted
+    try:
+        cursor.execute("ALTER TABLE feedback ADD COLUMN deleted_at DATETIME")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Alerts - archive instead of delete
+    try:
+        cursor.execute("ALTER TABLE alerts ADD COLUMN deleted_at DATETIME")
+    except sqlite3.OperationalError:
+        pass
+    
+    # CBT records - allow undoing entries
+    try:
+        cursor.execute("ALTER TABLE cbt_records ADD COLUMN deleted_at DATETIME")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Community posts - soft delete for moderation
+    try:
+        cursor.execute("ALTER TABLE community_posts ADD COLUMN deleted_at DATETIME")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Community replies - soft delete for moderation
+    try:
+        cursor.execute("ALTER TABLE community_replies ADD COLUMN deleted_at DATETIME")
+    except sqlite3.OperationalError:
+        pass
+    
+    # CBT tool entries - allow undoing
+    try:
+        cursor.execute("ALTER TABLE cbt_tool_entries ADD COLUMN deleted_at DATETIME")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Coping cards - allow deletion while preserving history
+    try:
+        cursor.execute("ALTER TABLE coping_cards ADD COLUMN deleted_at DATETIME")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Core beliefs - track deletion of beliefs
+    try:
+        cursor.execute("ALTER TABLE core_beliefs ADD COLUMN deleted_at DATETIME")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Goals - soft delete goals
+    try:
+        cursor.execute("ALTER TABLE goals ADD COLUMN deleted_at DATETIME")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Goal milestones - track milestone deletions
+    try:
+        cursor.execute("ALTER TABLE goal_milestones ADD COLUMN deleted_at DATETIME")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Gratitude logs - allow undoing
+    try:
+        cursor.execute("ALTER TABLE gratitude_logs ADD COLUMN deleted_at DATETIME")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Mood logs - allow undoing
+    try:
+        cursor.execute("ALTER TABLE mood_logs ADD COLUMN deleted_at DATETIME")
+    except sqlite3.OperationalError:
+        pass
+    
     # Add email and phone columns if they don't exist
     try:
         cursor.execute("ALTER TABLE users ADD COLUMN email TEXT")
@@ -3037,6 +3125,37 @@ def init_db():
     # CBT tool entries
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_cbt_tool_entries_username ON cbt_tool_entries(username)')
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_cbt_tool_entries_tool_type ON cbt_tool_entries(username, tool_type)')
+
+    # ==================== SOFT DELETE INDEXES ====================
+    # Indexes for commonly queried tables filtering by deleted_at IS NULL
+    
+    # Appointments - most queries exclude deleted appointments
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_appointments_active ON appointments(patient_username, deleted_at)')
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_appointments_clinician_active ON appointments(clinician_username, deleted_at)')
+    
+    # Clinician notes - queries exclude deleted notes
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_clinician_notes_active ON clinician_notes(patient_username, deleted_at)')
+    
+    # Feedback - queries show only active feedback
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_feedback_active ON feedback(username, deleted_at)')
+    
+    # Alerts - queries exclude archived/deleted alerts
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_alerts_active ON alerts(username, deleted_at)')
+    
+    # Community posts - queries exclude deleted posts
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_community_posts_active ON community_posts(username, deleted_at)')
+    
+    # Community replies - queries exclude deleted replies
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_community_replies_active ON community_replies(post_id, deleted_at)')
+    
+    # CBT records - queries exclude deleted entries
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_cbt_records_active ON cbt_records(username, deleted_at)')
+    
+    # Mood logs - queries exclude deleted entries
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_mood_logs_active ON mood_logs(username, deleted_at)')
+    
+    # Goals - queries exclude deleted goals
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_goals_active ON goals(username, deleted_at)')
 
     conn.commit()
     conn.close()
