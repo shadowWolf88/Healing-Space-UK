@@ -11,8 +11,7 @@ git add
 - Enforce PIN/password “match” validation and security requirements.
 - Set the default theme to dark mode on the login page, and ensure the light/dark switch reflects the current theme.
 - Place the light/dark theme switcher on the initial login selection page (patient/clinician).
-- Prevent users from changing name, NHS number, or DOB after initial setup; allow email/phone/address changes only with clinician approval.
-
+- Prevent users from changing name, NHS number, or DOB after initial setup; allow email/phone/address changes only with clinician approval.- **[PENDING] Implement password reset via SMS (Twilio free tier) or Email (SendGrid free tier).** Railway blocks SMTP. Need Twilio Account SID, Auth Token, and Phone Number. Or implement SendGrid API alternative.
 ## Insights & AI Assistant
 - Make the Insights tab’s generated insight area scrollable to prevent content from being cut off.
 - In the patient AI assistant, ensure the “thinking” indicator does not display code or text—only a minimum 2-second delay before each response.
@@ -69,7 +68,6 @@ git add
 
 
 
-* add the reset password function for all accounts too, make sure it sends a "reset password" link where the user/clinician can create and reguster a new passowrd
 
 * is it possible to implement texts/LIVE notifications for free? 
 * what else can we add to the onboarding flow to make it more concise from the start? would it be good to get a bit of background?
