@@ -1,5 +1,7 @@
-from flask import Flask, request, jsonify, render_template, send_from_directory, make_response, Response, g
+from flask import Flask, request, jsonify, render_template, send_from_directory, make_response, Response, g, session
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from functools import wraps
 import sqlite3
 import os
@@ -56,6 +58,22 @@ except Exception:
     HAS_BCRYPT = False
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
+
+# Configure Flask session support for secure authentication (Phase 1A)
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_urlsafe(32))
+app.config['SESSION_COOKIE_SECURE'] = not os.getenv('DEBUG')  # HTTPS only in production
+app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent JavaScript access
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=2)  # 2-hour timeout
+
+# Initialize rate limiter (Phase 1D)
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://",
+    strategy="fixed-window"
+)
 
 # Initialize with same settings as main app
 DEBUG = os.environ.get('DEBUG', '').lower() in ('1', 'true', 'yes')
@@ -1581,6 +1599,7 @@ class RateLimiter:
         # Rate limit configurations: (max_requests, window_seconds)
         self.limits = {
             'login': (5, 60),           # 5 login attempts per minute
+            'verify_code': (10, 60),    # 10 code verification attempts per minute (Phase 1D)
             'register': (3, 300),       # 3 registrations per 5 minutes
             'forgot_password': (3, 300), # 3 password resets per 5 minutes
             'ai_chat': (30, 60),        # 30 AI chat messages per minute
@@ -2604,8 +2623,47 @@ If you are feeling overwhelmed and considering self-harm or ending your life, pl
 from flask import g
 
 def get_authenticated_username():
-    # Placeholder: Replace with real authentication/session logic
-    return request.headers.get('X-Username') or request.args.get('username')
+    """Get authenticated username from Flask session (SECURE - Phase 1A).
+    
+    PRIMARY: Uses Flask session (secure, server-side, httponly)
+    FALLBACK: X-Username header/query param for dev/test only (DEBUG mode)
+    
+    Returns: username if authenticated, None otherwise
+    """
+    try:
+        # PRIMARY: Use Flask session (secure, server-side)
+        if 'username' in session and 'role' in session:
+            username = session.get('username')
+            role = session.get('role')
+            
+            # Verify user still exists in database (prevents stale sessions)
+            conn = get_db_connection()
+            cur = conn.cursor()
+            result = cur.execute(
+                "SELECT role FROM users WHERE username=? AND role=?",
+                (username, role)
+            ).fetchone()
+            conn.close()
+            
+            if result:
+                return username  # Session is valid
+            else:
+                # User doesn't exist or role mismatch - invalidate session
+                session.clear()
+                return None
+        
+        # FALLBACK: For development/testing with X-Username header (INSECURE)
+        # This should NEVER be used in production - prefer session
+        if DEBUG:
+            fallback = request.headers.get('X-Username') or request.args.get('username')
+            if fallback:
+                print(f"⚠️  WARNING: Using insecure X-Username header for {fallback}. Only use in DEBUG mode.")
+                return fallback
+        
+        return None
+    except Exception as e:
+        print(f"❌ Auth error: {e}")
+        return None
 
 @app.route('/api/cbt/breathing', methods=['POST'])
 def create_breathing_exercise():
@@ -2781,10 +2839,25 @@ def admin_wipe_page():
 
 @app.route('/api/debug/analytics/<clinician>', methods=['GET'])
 def debug_analytics(clinician):
-    """Debug endpoint to see what analytics data would be returned"""
+    """Phase 1C: Debug endpoint - PROTECTED (developer role only)"""
     try:
+        # Phase 1C: Only allow developers to access debug endpoints
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+        
         conn = get_db_connection()
         cur = conn.cursor()
+        
+        # Verify user is a developer
+        user_role = cur.execute(
+            "SELECT role FROM users WHERE username=?",
+            (username,)
+        ).fetchone()
+        
+        if not user_role or user_role[0] != 'developer':
+            conn.close()
+            return jsonify({'error': 'Developer role required for debug endpoints'}), 403
         
         debug_info = {
             'clinician': clinician,
@@ -2984,6 +3057,7 @@ def send_verification():
         return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/auth/verify-code', methods=['POST'])
+@check_rate_limit('verify_code')  # Phase 1D: Add rate limiting to prevent brute-force
 def verify_code():
     """Verify 2FA code"""
     try:
@@ -3262,6 +3336,13 @@ def login():
         
         log_event(username, 'api', 'user_login', 'Login via API with 2FA')
         
+        # Set session after successful authentication (Phase 1A - SECURE)
+        session.permanent = True
+        session['username'] = username
+        session['role'] = role
+        session['clinician_id'] = clinician_id
+        session['login_time'] = datetime.now().isoformat()
+        
         return jsonify({
             'success': True,
             'message': 'Login successful',
@@ -3275,6 +3356,56 @@ def login():
         
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
+
+@app.route('/api/auth/logout', methods=['POST'])
+def logout():
+    """Logout user and clear session"""
+    try:
+        username = get_authenticated_username()
+        if username:
+            log_event(username, 'api', 'user_logout', 'Logout via API')
+        
+        session.clear()
+        return jsonify({'success': True, 'message': 'Logged out successfully'}), 200
+    except Exception as e:
+        return handle_exception(e, 'logout')
+
+def verify_clinician_patient_relationship(clinician_username, patient_username):
+    """Phase 1B: Verify clinician is assigned to patient (FK validation).
+    
+    Returns: (is_valid, clinician_id)
+    """
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        
+        # Get clinician's ID
+        clinician = cur.execute(
+            "SELECT id FROM users WHERE username=? AND role='clinician'",
+            (clinician_username,)
+        ).fetchone()
+        
+        if not clinician:
+            conn.close()
+            return False, None
+        
+        clinician_id = clinician[0]
+        
+        # Check if clinician is assigned to patient
+        patient = cur.execute(
+            "SELECT clinician_id FROM users WHERE username=? AND role='user'",
+            (patient_username,)
+        ).fetchone()
+        
+        conn.close()
+        
+        if patient and patient[0] == clinician_id:
+            return True, clinician_id
+        
+        return False, None
+    except Exception as e:
+        print(f"❌ FK validation error: {e}")
+        return False, None
 
 @app.route('/api/validate-session', methods=['POST'])
 def validate_session():
@@ -8452,13 +8583,13 @@ def get_patients():
     Previously: 1 + 4*N queries (where N = number of patients)
     Now: 1 query (with subqueries executed once per patient in SQL)
 
-    SECURITY: Verifies that the clinician_username belongs to an actual clinician.
+    SECURITY: Uses session authentication and verifies clinician role.
     """
     try:
-        clinician_username = request.args.get('clinician')
-
+        # SECURITY: Get authenticated clinician from session (Phase 1A)
+        clinician_username = get_authenticated_username()
         if not clinician_username:
-            return jsonify({'error': 'Clinician username required'}), 400
+            return jsonify({'error': 'Authentication required'}), 401
 
         conn = get_db_connection()
         cur = conn.cursor()
@@ -8543,25 +8674,31 @@ def get_patients():
 
 @app.route('/api/professional/patient/<username>', methods=['GET'])
 def get_patient_detail(username):
-    """Get detailed patient data including chat history, diary, habits (for professional dashboard)"""
+    """Phase 1B: Get detailed patient data with FK validation"""
     try:
-        # SECURITY: Require clinician authentication and verify patient relationship
-        clinician_username = request.args.get('clinician')
+        # SECURITY: Get authenticated clinician from session
+        clinician_username = get_authenticated_username()
         if not clinician_username:
-            return jsonify({'error': 'Clinician username required'}), 400
+            return jsonify({'error': 'Authentication required'}), 401
 
         conn = get_db_connection()
         cur = conn.cursor()
-
-        # Verify clinician has approved access to this patient
-        approval = cur.execute(
-            "SELECT status FROM patient_approvals WHERE clinician_username=? AND patient_username=? AND status='approved'",
-            (clinician_username, username)
+        
+        # Verify user is a clinician
+        clinician = cur.execute(
+            "SELECT role FROM users WHERE username=?",
+            (clinician_username,)
         ).fetchone()
-
-        if not approval:
+        
+        if not clinician or clinician[0] != 'clinician':
             conn.close()
-            return jsonify({'error': 'Unauthorized: You do not have access to this patient'}), 403
+            return jsonify({'error': 'Clinician role required'}), 403
+
+        # Phase 1B: Verify clinician-patient relationship via FK
+        is_valid, _ = verify_clinician_patient_relationship(clinician_username, username)
+        if not is_valid:
+            conn.close()
+            return jsonify({'error': 'Unauthorized: Patient not assigned to clinician'}), 403
 
         # Profile
         profile = cur.execute(
@@ -8923,17 +9060,28 @@ Be thorough, evidence-based, and clinically specific. Reference the actual data 
 def create_clinician_note():
     """Create a note about a patient - automatically updates AI memory"""
     try:
+        # SECURITY: Get authenticated clinician from session (Phase 1B)
+        clinician_username = get_authenticated_username()
+        if not clinician_username:
+            return jsonify({'error': 'Authentication required'}), 401
+
         data = request.json
-        clinician_username = data.get('clinician_username')
         patient_username = data.get('patient_username')
         note_text = data.get('note_text')
         is_highlighted = data.get('is_highlighted', False)
         
-        if not clinician_username or not patient_username or not note_text:
-            return jsonify({'error': 'Clinician, patient, and note text required'}), 400
+        if not patient_username or not note_text:
+            return jsonify({'error': 'Patient username and note text required'}), 400
         
         conn = get_db_connection()
         cur = conn.cursor()
+
+        # Phase 1B: Verify clinician-patient relationship via FK
+        is_valid, _ = verify_clinician_patient_relationship(clinician_username, patient_username)
+        if not is_valid:
+            conn.close()
+            return jsonify({'error': 'Unauthorized: Patient not assigned to clinician'}), 403
+        
         cur.execute(
             "INSERT INTO clinician_notes (clinician_username, patient_username, note_text, is_highlighted) VALUES (?,?,?,?)",
             (clinician_username, patient_username, note_text, 1 if is_highlighted else 0)
@@ -8955,13 +9103,20 @@ def create_clinician_note():
 def get_clinician_notes(patient_username):
     """Get all notes for a patient"""
     try:
-        clinician_username = request.args.get('clinician')
-        
+        # SECURITY: Get authenticated clinician from session (Phase 1B)
+        clinician_username = get_authenticated_username()
         if not clinician_username:
-            return jsonify({'error': 'Clinician username required'}), 400
+            return jsonify({'error': 'Authentication required'}), 401
         
         conn = get_db_connection()
         cur = conn.cursor()
+
+        # Phase 1B: Verify clinician-patient relationship via FK
+        is_valid, _ = verify_clinician_patient_relationship(clinician_username, patient_username)
+        if not is_valid:
+            conn.close()
+            return jsonify({'error': 'Unauthorized: Patient not assigned to clinician'}), 403
+        
         notes = cur.execute(
             "SELECT id, note_text, is_highlighted, created_at FROM clinician_notes WHERE clinician_username=? AND patient_username=? ORDER BY created_at DESC",
             (clinician_username, patient_username)
@@ -8983,11 +9138,10 @@ def get_clinician_notes(patient_username):
 def delete_clinician_note(note_id):
     """Delete a clinician note"""
     try:
-        data = request.json
-        clinician_username = data.get('clinician_username')
-        
+        # SECURITY: Get authenticated clinician from session (Phase 1A)
+        clinician_username = get_authenticated_username()
         if not clinician_username:
-            return jsonify({'error': 'Clinician username required'}), 400
+            return jsonify({'error': 'Authentication required'}), 401
         
         conn = get_db_connection()
         cur = conn.cursor()
@@ -10082,25 +10236,31 @@ def get_active_patients():
 
 @app.route('/api/analytics/patient/<username>', methods=['GET'])
 def get_patient_analytics(username):
-    """Get detailed analytics for specific patient"""
+    """Phase 1B: Get detailed analytics for specific patient with FK validation"""
     try:
-        # SECURITY: Require clinician authentication and verify patient relationship
-        clinician_username = request.args.get('clinician')
+        # SECURITY: Get authenticated clinician from session
+        clinician_username = get_authenticated_username()
         if not clinician_username:
-            return jsonify({'error': 'Clinician username required'}), 400
+            return jsonify({'error': 'Authentication required'}), 401
 
         conn = get_db_connection()
         cur = conn.cursor()
-
-        # Verify clinician has approved access to this patient
-        approval = cur.execute(
-            "SELECT status FROM patient_approvals WHERE clinician_username=? AND patient_username=? AND status='approved'",
-            (clinician_username, username)
+        
+        # Verify user is a clinician
+        clinician = cur.execute(
+            "SELECT role FROM users WHERE username=?",
+            (clinician_username,)
         ).fetchone()
-
-        if not approval:
+        
+        if not clinician or clinician[0] != 'clinician':
             conn.close()
-            return jsonify({'error': 'Unauthorized: You do not have access to this patient'}), 403
+            return jsonify({'error': 'Clinician role required'}), 403
+
+        # Phase 1B: Verify clinician-patient relationship via FK
+        is_valid, _ = verify_clinician_patient_relationship(clinician_username, username)
+        if not is_valid:
+            conn.close()
+            return jsonify({'error': 'Unauthorized: Patient not assigned to clinician'}), 403
 
         # Mood trend (last 90 days)
         mood_trend = cur.execute("""

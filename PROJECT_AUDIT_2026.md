@@ -43,7 +43,7 @@
 - Target: 100% pass rate
 ```
 
-### Bug #2: Password Reset Not Working
+### Bug #2: Password Reset Not Working *LEAVE FOR NOW*
 **Impact**: Users cannot reset lost passwords  
 **Status**: Endpoint created but email blocked by Railway SMTP firewall  
 **Root Cause**: Railway blocks port 25 and 587 outbound SMTP  
