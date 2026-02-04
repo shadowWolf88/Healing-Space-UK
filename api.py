@@ -78,6 +78,133 @@ limiter = Limiter(
 # Initialize with same settings as main app
 DEBUG = os.environ.get('DEBUG', '').lower() in ('1', 'true', 'yes')
 
+# ================== PHASE 2A: INPUT VALIDATION ==================
+
+class InputValidator:
+    """Phase 2A: Centralized input validation to prevent injection attacks"""
+    
+    # Maximum field lengths
+    MAX_MESSAGE_LENGTH = 10000
+    MAX_NOTE_LENGTH = 50000
+    MAX_TITLE_LENGTH = 500
+    MAX_USERNAME_LENGTH = 100
+    MAX_EMAIL_LENGTH = 255
+    
+    # Minimum field lengths
+    MIN_MESSAGE_LENGTH = 1
+    MIN_PASSWORD_LENGTH = 8
+    MIN_USERNAME_LENGTH = 3
+    
+    @staticmethod
+    def validate_text(text, max_length=1000, min_length=1, field_name='text'):
+        """Validate text field"""
+        if text is None:
+            return None, f"{field_name} cannot be None"
+        
+        text = str(text).strip()
+        
+        if len(text) < min_length:
+            return None, f"{field_name} must be at least {min_length} character(s)"
+        
+        if len(text) > max_length:
+            return None, f"{field_name} cannot exceed {max_length} characters (got {len(text)})"
+        
+        return text, None
+    
+    @staticmethod
+    def validate_message(message):
+        """Validate user message for therapy chat"""
+        if not message or not isinstance(message, str):
+            return None, "Message is required and must be a string"
+        return InputValidator.validate_text(
+            message,
+            max_length=InputValidator.MAX_MESSAGE_LENGTH,
+            min_length=InputValidator.MIN_MESSAGE_LENGTH,
+            field_name="Message"
+        )
+    
+    @staticmethod
+    def validate_note(note_text):
+        """Validate clinician note"""
+        if not note_text or not isinstance(note_text, str):
+            return None, "Note text is required and must be a string"
+        return InputValidator.validate_text(
+            note_text,
+            max_length=InputValidator.MAX_NOTE_LENGTH,
+            min_length=InputValidator.MIN_MESSAGE_LENGTH,
+            field_name="Note"
+        )
+    
+    @staticmethod
+    def validate_integer(value, min_val=None, max_val=None, field_name='value'):
+        """Validate integer field with optional range check"""
+        try:
+            val = int(value)
+            
+            if min_val is not None and val < min_val:
+                return None, f"{field_name} must be at least {min_val}"
+            
+            if max_val is not None and val > max_val:
+                return None, f"{field_name} cannot exceed {max_val}"
+            
+            return val, None
+        except (ValueError, TypeError):
+            return None, f"{field_name} must be an integer"
+    
+    @staticmethod
+    def validate_mood(mood_value):
+        """Validate mood rating (1-10)"""
+        return InputValidator.validate_integer(
+            mood_value,
+            min_val=1,
+            max_val=10,
+            field_name="Mood rating"
+        )
+    
+    @staticmethod
+    def validate_sleep(sleep_value):
+        """Validate sleep rating (0-10)"""
+        return InputValidator.validate_integer(
+            sleep_value,
+            min_val=0,
+            max_val=10,
+            field_name="Sleep rating"
+        )
+    
+    @staticmethod
+    def validate_anxiety(anxiety_value):
+        """Validate anxiety/stress rating (0-10)"""
+        return InputValidator.validate_integer(
+            anxiety_value,
+            min_val=0,
+            max_val=10,
+            field_name="Anxiety rating"
+        )
+    
+    @staticmethod
+    def validate_title(title):
+        """Validate title field"""
+        if not title or not isinstance(title, str):
+            return None, "Title is required and must be a string"
+        return InputValidator.validate_text(
+            title,
+            max_length=InputValidator.MAX_TITLE_LENGTH,
+            min_length=1,
+            field_name="Title"
+        )
+    
+    @staticmethod
+    def validate_username(username):
+        """Validate username field"""
+        if not username or not isinstance(username, str):
+            return None, "Username is required and must be a string"
+        return InputValidator.validate_text(
+            username,
+            max_length=InputValidator.MAX_USERNAME_LENGTH,
+            min_length=InputValidator.MIN_USERNAME_LENGTH,
+            field_name="Username"
+        )
+
 # ================== CBT: GOAL SETTING/TRACKING ENDPOINTS ==================
 
 @app.route('/api/cbt/goals', methods=['POST'])
@@ -4843,7 +4970,7 @@ def reward_pet(action, activity_type=None):
 @app.route('/api/therapy/chat', methods=['POST'])
 @check_rate_limit('ai_chat')
 def therapy_chat():
-    """AI therapy chat endpoint"""
+    """AI therapy chat endpoint (Phase 2A: Input validation added)"""
     try:
         data = request.json
         username = data.get('username')
@@ -4851,6 +4978,11 @@ def therapy_chat():
         
         if not username or not message:
             return jsonify({'error': 'Username and message required'}), 400
+        
+        # PHASE 2A: Input validation
+        message, msg_error = InputValidator.validate_message(message)
+        if msg_error:
+            return jsonify({'error': msg_error}), 400
         
         # Update AI memory before chat
         try:
@@ -5519,7 +5651,7 @@ def initialize_chat():
 
 @app.route('/api/mood/log', methods=['POST'])
 def log_mood():
-    """Log mood entry with full tracking (water, exercise, meds with strength)"""
+    """Log mood entry with full tracking (Phase 2A: Input validation added)"""
     try:
         data = request.json
         username = data.get('username')
@@ -5535,20 +5667,17 @@ def log_mood():
         if not username or mood_val is None:
             return jsonify({'error': 'Username and mood_val required'}), 400
 
-        # Validate mood_val range (1-10)
-        try:
-            mood_val = int(mood_val)
-            if mood_val < 1 or mood_val > 10:
-                return jsonify({'error': 'mood_val must be between 1 and 10'}), 400
-        except (ValueError, TypeError):
-            return jsonify({'error': 'mood_val must be a valid integer'}), 400
+        # PHASE 2A: Validate mood_val range (1-10)
+        mood_val, mood_error = InputValidator.validate_mood(mood_val)
+        if mood_error:
+            return jsonify({'error': mood_error}), 400
 
-        # Validate sleep_val (0-24 hours)
-        try:
-            sleep_val = float(sleep_val) if sleep_val else 0
-            if sleep_val < 0 or sleep_val > 24:
-                return jsonify({'error': 'sleep_val must be between 0 and 24 hours'}), 400
-        except (ValueError, TypeError):
+        # PHASE 2A: Validate sleep_val (0-10 scale)
+        if sleep_val is not None:
+            sleep_val, sleep_error = InputValidator.validate_sleep(sleep_val)
+            if sleep_error:
+                return jsonify({'error': sleep_error}), 400
+        else:
             sleep_val = 0
 
         # Validate exercise_mins (non-negative, max 1440 minutes = 24 hours)
@@ -9058,7 +9187,7 @@ Be thorough, evidence-based, and clinically specific. Reference the actual data 
 # ===== CLINICIAN NOTES & PDF EXPORT =====
 @app.route('/api/professional/notes', methods=['POST'])
 def create_clinician_note():
-    """Create a note about a patient - automatically updates AI memory"""
+    """Create a note about a patient (Phase 2A: Input validation added)"""
     try:
         # SECURITY: Get authenticated clinician from session (Phase 1B)
         clinician_username = get_authenticated_username()
@@ -9072,6 +9201,11 @@ def create_clinician_note():
         
         if not patient_username or not note_text:
             return jsonify({'error': 'Patient username and note text required'}), 400
+        
+        # PHASE 2A: Input validation
+        note_text, note_error = InputValidator.validate_note(note_text)
+        if note_error:
+            return jsonify({'error': note_error}), 400
         
         conn = get_db_connection()
         cur = conn.cursor()
