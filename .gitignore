@@ -72,5 +72,8 @@ htmlcov/
 Full_History_*.txt
 healing_space.py.save
 
-# OS files
-Thumbs.db
+# Mobile/Node dependencies (Capacitor, build tools)
+node_modules/
+capacitor.config.json
+*.hxml
+
