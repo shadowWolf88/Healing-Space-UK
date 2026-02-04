@@ -12952,25 +12952,37 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
         // Messaging Functions
         async function loadMessageRecipients() {
             try {
+                const select = document.getElementById('messageRecipient');
+                if (!select) {
+                    console.error('messageRecipient select element not found');
+                    return;
+                }
+
                 const response = await fetch(`/api/developer/users/list?username=${currentUser}&role=all`);
+                if (!response.ok) {
+                    console.error('Failed to fetch users:', response.statusText);
+                    return;
+                }
+
                 const data = await response.json();
 
-                const select = document.getElementById('messageRecipient');
-                const broadcastOption = select.querySelector('option[value="ALL"]');
-                const separator = select.querySelector('option[disabled]');
+                // Clear and rebuild options
+                select.innerHTML = `
+                    <option value="ALL">🔔 Broadcast to All Users</option>
+                    <option disabled>──────────</option>
+                `;
 
-                select.innerHTML = '';
-                select.appendChild(broadcastOption.cloneNode(true));
-                select.appendChild(separator.cloneNode(true));
-
-                data.users.forEach(user => {
-                    if (user.role !== 'developer') {
-                        const option = document.createElement('option');
-                        option.value = user.username;
-                        option.textContent = `${user.username} (${user.role})`;
-                        select.appendChild(option);
-                    }
-                });
+                // Add individual users
+                if (data.users && Array.isArray(data.users)) {
+                    data.users.forEach(user => {
+                        if (user.role !== 'developer') {
+                            const option = document.createElement('option');
+                            option.value = user.username;
+                            option.textContent = `${user.username} (${user.role})`;
+                            select.appendChild(option);
+                        }
+                    });
+                }
             } catch (error) {
                 console.error('Failed to load recipients:', error);
             }
@@ -12981,6 +12993,13 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             const type = document.getElementById('messageType').value;
             const content = document.getElementById('messageContent').value.trim();
 
+            // Validate recipient
+            if (!recipient || recipient === '') {
+                alert('Please select a recipient');
+                return;
+            }
+
+            // Validate content
             if (!content) {
                 alert('Please enter a message');
                 return;
