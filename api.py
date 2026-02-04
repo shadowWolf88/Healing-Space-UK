@@ -5818,8 +5818,12 @@ def initialize_chat():
 def log_mood():
     """Log mood entry with full tracking (Phase 2A: Input validation added)"""
     try:
+        # SECURITY: Authenticate user via session
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
         data = request.json
-        username = data.get('username')
         mood_val = data.get('mood_val')
         sleep_val = data.get('sleep_val', 0)
         meds = data.get('meds', '')  # Now expects JSON array of {name, strength, quantity}
@@ -7285,8 +7289,12 @@ def pet_feed():
 def pet_reward():
     """Reward pet for user self-care actions - matches original desktop app logic"""
     try:
+        # SECURITY: Authenticate user via session
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
         data = request.json
-        username = data.get('username')
         action = data.get('action')  # 'therapy', 'mood', 'gratitude', 'breathing', 'cbt', 'clinical'
         activity_type = data.get('activity_type')  # 'cbt', 'clinical', etc.
 
@@ -7453,8 +7461,12 @@ def pet_buy():
 def pet_declutter():
     """Declutter task - throw away worries"""
     try:
+        # SECURITY: Authenticate user via session
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
         data = request.json
-        username = data.get('username')
         worries = data.get('worries', [])
 
         # SECURITY: Verify user exists
@@ -7542,8 +7554,12 @@ def pet_adventure():
 def pet_check_return():
     """Check if pet returned from adventure and give rewards"""
     try:
+        # SECURITY: Authenticate user via session
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
         data = request.json or {}
-        username = data.get('username')
 
         # SECURITY: Verify user exists
         valid, error = verify_pet_user(username)
@@ -7592,8 +7608,12 @@ def pet_check_return():
 def pet_apply_decay():
     """Apply time-based stat decay"""
     try:
+        # SECURITY: Authenticate user via session
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
         data = request.json or {}
-        username = data.get('username')
 
         # SECURITY: Verify user exists
         valid, error = verify_pet_user(username)

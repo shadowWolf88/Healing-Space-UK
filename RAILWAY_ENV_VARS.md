@@ -26,11 +26,22 @@
 - **Critical:** Without this, data encryption fails
 
 ### 4. PORT
-- **Purpose:** Railway assigns this automatically
-- **Value:** Usually `5000` or auto-assigned by Railway
-- **Note:** You don't need to set this manually - Railway handles it
+- **Purpose:** Flask app listening port
+- **Value:** Auto-assigned by Railway (usually `5000`)
+- **Note:** Railway handles this automatically, don't set manually
 
-### 5. DEBUG
+### 5. SECRET_KEY
+- **Purpose:** Flask session encryption - MUST be persistent across container restarts
+- **Format:** Any random secure string (32+ characters)
+- **Generate with:**
+  ```bash
+  python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+  ```
+- **Example:** `VyuBxj_oO69TcSj81wguirrLsK3f7F9JioFrGeSTHqI`
+- **Critical:** WITHOUT this, sessions are invalidated on every container restart/scale, causing 401 errors
+- **⚠️ IMPORTANT:** If you've been getting 401 errors on `/api/messages/inbox` and other endpoints, this is likely the cause
+
+### 6. DEBUG
 - **Purpose:** Control debug mode (0 = production, 1 = development)
 - **Value:** `0` for production on Railway
 - **Example:** `DEBUG=0`
@@ -101,10 +112,12 @@ After setting variables in Railway, verify:
 - [ ] `GROQ_API_KEY` is set and valid
 - [ ] `PIN_SALT` is set (any secure random string)
 - [ ] `ENCRYPTION_KEY` is set (valid Fernet key)
+- [ ] `SECRET_KEY` is set (any secure random string, 32+ chars) ⚠️ CRITICAL FOR SESSIONS
 - [ ] `DEBUG=0` for production
 - [ ] Service is deployed and running
 - [ ] No build errors in Railway logs
 - [ ] Health check passes: `https://your-app.up.railway.app/api/health`
+- [ ] Sessions persist after container restart
 
 ---
 
@@ -116,6 +129,11 @@ python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().
 ```
 
 ### Generate PIN_SALT:
+```bash
+python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+```
+
+### Generate SECRET_KEY:
 ```bash
 python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
