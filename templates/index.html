@@ -8648,6 +8648,12 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                                 emoji = '🚨';
                             } else if (n.notification_type === 'approval') {
                                 emoji = '✅';
+                            } else if (n.notification_type === 'dev_message') {
+                                emoji = '📨';
+                                onClick = `markNotificationRead(${n.id}); switchTab('${currentUserRole === 'clinician' ? 'professional' : currentUserRole === 'developer' ? 'developer' : 'home'}', null); setTimeout(() => switchMessageTab('inbox', null), 100)`;
+                            } else if (n.notification_type === 'message') {
+                                emoji = '💬';
+                                onClick = `markNotificationRead(${n.id}); switchTab('${currentUserRole === 'clinician' ? 'professional' : currentUserRole === 'developer' ? 'developer' : 'home'}', null); setTimeout(() => switchMessageTab('inbox', null), 100)`;
                             }
 
                             return `
