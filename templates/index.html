@@ -7899,11 +7899,11 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     switchDevTab('terminal', document.getElementById('terminalSubtabBtn'));
                 }, 100);
             } else {
-                // PATIENT: Hide professional tab, SHOW all patient tabs
+                // PATIENT: Hide professional tab, SHOW all patient tabs including messages
                 document.getElementById('professionalTabBtn').style.display = 'none';
                 document.getElementById('professionalTab').style.display = 'none';
 
-                // Ensure patient tab buttons are visible
+                // Ensure patient tab buttons are visible (including messages)
                 document.querySelectorAll('.tab-btn').forEach(btn => {
                     if (btn.id !== 'professionalTabBtn' && btn.id !== 'developerTabBtn') {
                         btn.style.display = 'inline-block';
@@ -13022,22 +13022,29 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
         // ========== USER MESSAGES (Inbox for patients/clinicians) - Phase 3 Messaging ==========
         async function loadUserMessages() {
             try {
+                console.log('🔄 Loading messages for user:', currentUser, 'role:', currentUserRole);
+                
                 const response = await fetch(`/api/messages/inbox`, {
                     method: 'GET',
                     credentials: 'include', // Send session cookies
                     headers: { 'Content-Type': 'application/json' }
                 });
                 
+                console.log('📨 Inbox response status:', response.status);
+                
                 if (!response.ok) {
                     const errorData = await response.json();
+                    console.error('❌ API Error:', errorData);
                     throw new Error(errorData.error || 'Failed to load messages');
                 }
                 
                 const data = await response.json();
+                console.log('✅ Got conversations:', data.conversations?.length || 0, 'Unread:', data.total_unread);
+                
                 const container = document.getElementById('userMessagesContainer');
 
                 if (!data.conversations || data.conversations.length === 0) {
-                    container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">No messages yet.</p>';
+                    container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">No messages yet. Waiting for messages from clinicians or therapists.</p>';
                     document.getElementById('messagesBadge').style.display = 'none';
                     return;
                 }
@@ -13069,7 +13076,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 `).join('');
 
             } catch (error) {
-                console.error('Failed to load messages:', error);
+                console.error('❌ Failed to load messages:', error);
                 document.getElementById('userMessagesContainer').innerHTML = `<p style="color: #e74c3c; padding: 20px;">⚠️ Error loading messages: ${error.message}</p>`;
             }
         }
@@ -13208,6 +13215,8 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
 
         async function markConversationAsRead(withUser) {
             try {
+                console.log('📖 Marking conversation as read with:', withUser);
+                
                 const response = await fetch(`/api/messages/conversation/${encodeURIComponent(withUser)}`, {
                     method: 'GET',
                     credentials: 'include',
@@ -13218,15 +13227,20 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 
                 const data = await response.json();
                 const messages = data.messages || [];
+                console.log('📨 Found', messages.length, 'messages, marking unread ones as read');
                 
                 // Mark all unread messages as read
                 for (const msg of messages) {
                     if (!msg.is_read && msg.recipient_username === currentUser) {
-                        await fetch(`/api/messages/${msg.id}/read`, {
+                        console.log('  Marking message', msg.id, 'as read');
+                        const readResp = await fetch(`/api/messages/${msg.id}/read`, {
                             method: 'PATCH',
                             credentials: 'include',
                             headers: { 'Content-Type': 'application/json' }
                         });
+                        if (!readResp.ok) {
+                            console.error('  ❌ Failed to mark message', msg.id, 'as read');
+                        }
                     }
                 }
                 
@@ -13235,7 +13249,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 loadUserMessages(); // Refresh inbox
                 
             } catch (error) {
-                console.error('Failed to mark as read:', error);
+                console.error('❌ Failed to mark as read:', error);
                 alert('❌ Error: ' + error.message);
             }
         }
