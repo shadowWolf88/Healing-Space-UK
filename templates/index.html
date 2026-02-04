@@ -13224,29 +13224,180 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     return;
                 }
 
-                // Display all feedback
-                container.innerHTML = data.feedback.map(item => `
-                    <div style="border-left: 4px solid ${getCategoryColor(item.category)}; padding: 15px; margin-bottom: 10px; background: white; border-radius: 8px; border: 1px solid #e0e0e0;">
-                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
-                            <div>
-                                <strong style="color: #333; font-size: 15px;">${getCategoryEmoji(item.category)} ${item.category}</strong>
-                                <div style="color: #666; font-size: 12px; margin-top: 4px;">
-                                    👤 ${item.username} (${item.user_role}) • ${new Date(item.created_at).toLocaleString()}
+                // Organize feedback by category and status
+                const organized = {};
+                const categoryOrder = ['bug', 'feature', 'improvement', 'other'];
+                const statusOrder = ['pending', 'in_progress', 'resolved', 'wont_fix', 'duplicate'];
+
+                categoryOrder.forEach(cat => {
+                    organized[cat] = {};
+                    statusOrder.forEach(stat => {
+                        organized[cat][stat] = [];
+                    });
+                });
+
+                // Sort feedback into organized structure
+                data.feedback.forEach(item => {
+                    const cat = item.category.toLowerCase();
+                    const stat = (item.status || 'pending').toLowerCase();
+                    if (organized[cat] && organized[cat][stat] !== undefined) {
+                        organized[cat][stat].push(item);
+                    }
+                });
+
+                // Build HTML with organized feedback
+                let html = '';
+                categoryOrder.forEach(category => {
+                    const items = organized[category];
+                    const totalInCategory = Object.values(items).reduce((sum, arr) => sum + arr.length, 0);
+                    
+                    if (totalInCategory === 0) return;
+
+                    html += `<div style="margin-bottom: 30px;">
+                        <h4 style="color: #333; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid ${getCategoryColor(category)};">
+                            ${getCategoryEmoji(category)} ${category.toUpperCase()} (${totalInCategory} total)
+                        </h4>`;
+
+                    statusOrder.forEach(status => {
+                        const statusItems = items[status];
+                        if (statusItems.length === 0) return;
+
+                        html += `<div style="margin-left: 20px; margin-bottom: 20px;">
+                            <div style="color: #666; font-size: 12px; font-weight: bold; margin-bottom: 10px;">
+                                ${getStatusEmoji(status)} ${status.replace(/_/g, ' ').toUpperCase()} (${statusItems.length})
+                            </div>`;
+
+                        statusItems.forEach(item => {
+                            html += `
+                                <div style="border-left: 4px solid ${getCategoryColor(item.category)}; padding: 12px; margin-bottom: 8px; background: white; border-radius: 8px; border: 1px solid #e0e0e0; cursor: pointer; transition: all 0.2s;" 
+                                     onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'; this.style.transform='translateX(4px)'" 
+                                     onmouseout="this.style.boxShadow=''; this.style.transform='translateX(0)'"
+                                     onclick="viewFeedbackDetail(${item.id}, '${item.category}', '${item.status}', \`${item.message.replace(/`/g, '\\`')}\`, '${item.username}', '${item.user_role}', '${new Date(item.created_at).toLocaleString()}')">
+                                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 6px;">
+                                        <strong style="color: #333; font-size: 14px;">${item.category}</strong>
+                                        <span style="background: ${getStatusColor(item.status)}; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">
+                                            ${item.status}
+                                        </span>
+                                    </div>
+                                    <div style="color: #666; font-size: 11px; margin-bottom: 6px;">
+                                        👤 ${item.username} (${item.user_role}) • ${new Date(item.created_at).toLocaleString()}
+                                    </div>
+                                    <div style="color: #555; font-size: 13px; line-height: 1.5;">
+                                        ${item.message.substring(0, 100)}${item.message.length > 100 ? '...' : ''}
+                                    </div>
+                                    <div style="color: #999; font-size: 11px; margin-top: 6px;">
+                                        Click to update status
+                                    </div>
                                 </div>
-                            </div>
-                            <span style="background: ${getStatusColor(item.status)}; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold;">
-                                ${getStatusEmoji(item.status)} ${item.status}
-                            </span>
-                        </div>
-                        <div style="color: #555; font-size: 14px; line-height: 1.6; margin-top: 10px; background: #f9f9f9; padding: 10px; border-radius: 4px;">
-                            ${item.message}
-                        </div>
-                    </div>
-                `).join('');
+                            `;
+                        });
+
+                        html += `</div>`;
+                    });
+
+                    html += `</div>`;
+                });
+
+                container.innerHTML = html;
 
             } catch (error) {
                 console.error('Error loading feedback:', error);
                 document.getElementById('feedbackContainer').innerHTML = `<p style="color: #e74c3c; padding: 20px;">❌ Error: ${error.message}</p>`;
+            }
+        }
+
+        function viewFeedbackDetail(id, category, status, message, username, role, createdAt) {
+            // Create modal
+            const modal = document.createElement('div');
+            modal.id = 'feedbackDetailModal';
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+                background: rgba(0,0,0,0.6); display: flex; align-items: center; 
+                justify-content: center; z-index: 10000;
+            `;
+
+            const validStatuses = ['pending', 'in_progress', 'resolved', 'wont_fix', 'duplicate'];
+
+            modal.innerHTML = `
+                <div style="background: white; padding: 30px; border-radius: 12px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="margin: 0; color: #333;">Feedback Details</h3>
+                        <button onclick="document.getElementById('feedbackDetailModal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #999;">×</button>
+                    </div>
+
+                    <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div>
+                                <div style="color: #999; font-size: 12px; font-weight: bold; margin-bottom: 4px;">CATEGORY</div>
+                                <div style="color: #333; font-size: 14px;">${getCategoryEmoji(category)} ${category.toUpperCase()}</div>
+                            </div>
+                            <div>
+                                <div style="color: #999; font-size: 12px; font-weight: bold; margin-bottom: 4px;">STATUS</div>
+                                <div style="color: #333; font-size: 14px;">${getStatusEmoji(status)} ${status.replace(/_/g, ' ').toUpperCase()}</div>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="color: #999; font-size: 12px; font-weight: bold; margin-bottom: 4px;">SUBMITTED BY</div>
+                            <div style="color: #333; font-size: 14px;">👤 ${username} (${role}) • ${createdAt}</div>
+                        </div>
+                    </div>
+
+                    <div style="background: white; padding: 15px; border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 20px;">
+                        <div style="color: #999; font-size: 12px; font-weight: bold; margin-bottom: 8px;">MESSAGE</div>
+                        <div style="color: #555; font-size: 14px; line-height: 1.6;">${message}</div>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; color: #999; font-size: 12px; font-weight: bold; margin-bottom: 8px;">UPDATE STATUS</label>
+                        <select id="feedbackStatusSelect" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
+                            ${validStatuses.map(s => `<option value="${s}" ${s === status ? 'selected' : ''}>${getStatusEmoji(s)} ${s.replace(/_/g, ' ').toUpperCase()}</option>`).join('')}
+                        </select>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; color: #999; font-size: 12px; font-weight: bold; margin-bottom: 8px;">ADMIN NOTES (optional)</label>
+                        <textarea id="feedbackNotesTextarea" placeholder="Add notes about this feedback..." style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 80px;"></textarea>
+                    </div>
+
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button onclick="document.getElementById('feedbackDetailModal').remove()" style="padding: 10px 20px; background: #e0e0e0; color: #333; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">Cancel</button>
+                        <button onclick="submitFeedbackUpdate(${id})" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold;">✅ Update Feedback</button>
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(modal);
+        }
+
+        async function submitFeedbackUpdate(feedbackId) {
+            const newStatus = document.getElementById('feedbackStatusSelect').value;
+            const adminNotes = document.getElementById('feedbackNotesTextarea').value.trim();
+
+            try {
+                const response = await fetch(`/api/feedback/${feedbackId}/status`, {
+                    method: 'PUT',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    body: JSON.stringify({
+                        status: newStatus,
+                        admin_notes: adminNotes
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    alert(`✅ Feedback updated to ${newStatus.replace(/_/g, ' ').toUpperCase()}`);
+                    document.getElementById('feedbackDetailModal').remove();
+                    loadFeedback(); // Reload the list
+                } else {
+                    alert(`❌ Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert(`❌ Network error: ${error.message}`);
             }
         }
 

@@ -11632,7 +11632,25 @@ def submit_feedback():
             "INSERT INTO feedback (username, role, category, message) VALUES (?, ?, ?, ?)",
             (username, role, category, message)
         )
+        
+        feedback_id = cur.lastrowid
         conn.commit()
+
+        # Send notification to all developers
+        try:
+            developers = cur.execute("SELECT username FROM users WHERE role='developer'").fetchall()
+            emoji = {'bug': '🐛', 'feature': '⭐', 'improvement': '📈', 'other': '💬'}.get(category, '📝')
+            message_preview = message[:50] + '...' if len(message) > 50 else message
+            
+            for dev in developers:
+                dev_username = dev[0]
+                send_notification(
+                    dev_username,
+                    f"New {category.lower()}: {emoji} {message_preview} (from {username})",
+                    'feedback_notification'
+                )
+        except Exception as notif_error:
+            print(f"Failed to send developer notifications: {notif_error}")
 
         log_event(username, 'api', 'feedback_submitted', f'Category: {category}')
         conn.close()
@@ -12455,6 +12473,78 @@ def get_all_feedback():
     except Exception as e:
         return handle_exception(e, 'get_all_feedback')
 
+@app.route('/api/feedback/<int:feedback_id>/status', methods=['PUT'])
+def update_feedback_status(feedback_id):
+    """Update feedback status (developers only)"""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        data = request.get_json() or {}
+        new_status = data.get('status', '').strip()
+        admin_notes = data.get('admin_notes', '').strip()
+
+        # Validate status
+        valid_statuses = ['pending', 'in_progress', 'resolved', 'wont_fix', 'duplicate']
+        if not new_status or new_status not in valid_statuses:
+            return jsonify({'error': f'Invalid status. Valid options: {", ".join(valid_statuses)}'}), 400
+
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        # Check if user is developer
+        user_role = cur.execute('SELECT role FROM users WHERE username=?', (username,)).fetchone()
+        if not user_role or user_role[0] != 'developer':
+            conn.close()
+            return jsonify({'error': 'Only developers can update feedback'}), 403
+
+        # Get feedback to find who submitted it
+        feedback = cur.execute('''
+            SELECT username, category, message FROM feedback WHERE id=?
+        ''', (feedback_id,)).fetchone()
+
+        if not feedback:
+            conn.close()
+            return jsonify({'error': 'Feedback not found'}), 404
+
+        feedback_submitter, category, message = feedback
+
+        # Update feedback
+        resolved_at = 'CURRENT_TIMESTAMP' if new_status == 'resolved' else 'NULL'
+        cur.execute(f'''
+            UPDATE feedback 
+            SET status=?, admin_notes=?, resolved_at={resolved_at}
+            WHERE id=?
+        ''', (new_status, admin_notes, feedback_id))
+
+        conn.commit()
+
+        # Send notification to user who submitted feedback
+        emoji = {'pending': '⏳', 'in_progress': '⚙️', 'resolved': '✅', 'wont_fix': '❌', 'duplicate': '📋'}.get(new_status, '📝')
+        status_display = new_status.replace('_', ' ').title()
+        send_notification(
+            feedback_submitter,
+            f"Your {category.lower()} has been updated: {emoji} {status_display}",
+            'feedback_update'
+        )
+
+        # Log event
+        try:
+            log_event(username, 'developer', 'feedback_status_update', f'Feedback #{feedback_id} ({category}) → {new_status}')
+        except:
+            pass
+
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'message': f'Feedback status updated to {new_status}',
+            'feedback_id': feedback_id
+        }), 200
+
+    except Exception as e:
+        return handle_exception(e, 'update_feedback_status')
 
 @app.route('/api/messages/<int:message_id>', methods=['DELETE'])
 def delete_message(message_id):
