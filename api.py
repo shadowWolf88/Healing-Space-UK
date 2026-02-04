@@ -20,7 +20,7 @@ from email.mime.multipart import MIMEMultipart
 # --- Pet Table Ensurer ---
 def ensure_pet_table():
     """Ensure the pet table exists in pet_game.db with username support"""
-    conn = sqlite3.connect(PET_DB_PATH)
+    conn = get_pet_db_connection()
     cur = conn.cursor()
     
     # Check if table exists
@@ -55,6 +55,37 @@ def ensure_pet_table():
     
     conn.commit()
     conn.close()
+
+def get_pet_db_connection():
+    """Get pet database connection with proper type handling"""
+    conn = sqlite3.connect(PET_DB_PATH, timeout=30.0, check_same_thread=False)
+    conn.execute('PRAGMA journal_mode=WAL')
+    conn.execute('PRAGMA busy_timeout=30000')
+    # Don't set row_factory - we'll handle type conversion explicitly where needed
+    return conn
+
+def normalize_pet_row(pet_row):
+    """Convert pet row values to proper types"""
+    if not pet_row:
+        return None
+    # pet schema: id, username, name, species, gender, hunger, happiness, energy, hygiene, coins, xp, stage, adventure_end, last_updated, hat
+    return (
+        int(pet_row[0]),      # id
+        pet_row[1],           # username (text)
+        pet_row[2],           # name (text)
+        pet_row[3],           # species (text)
+        pet_row[4],           # gender (text)
+        int(pet_row[5]),      # hunger (int)
+        int(pet_row[6]),      # happiness (int)
+        int(pet_row[7]),      # energy (int)
+        int(pet_row[8]),      # hygiene (int)
+        int(pet_row[9]),      # coins (int)
+        int(pet_row[10]),     # xp (int)
+        pet_row[11],          # stage (text)
+        float(pet_row[12]) if pet_row[12] else 0.0,  # adventure_end (real)
+        float(pet_row[13]) if pet_row[13] else time.time(),  # last_updated (real)
+        pet_row[14]           # hat (text)
+    )
 
 # Import existing modules (avoid importing main.py which has tkinter)
 from secrets_manager import SecretsManager
@@ -3096,12 +3127,14 @@ def init_pet_db():
         cur.execute("""
             CREATE TABLE IF NOT EXISTS pet (
                 id INTEGER PRIMARY KEY,
+                username TEXT NOT NULL,
                 name TEXT, species TEXT, gender TEXT,
                 hunger INTEGER DEFAULT 70, happiness INTEGER DEFAULT 70,
                 energy INTEGER DEFAULT 70, hygiene INTEGER DEFAULT 80,
                 coins INTEGER DEFAULT 0, xp INTEGER DEFAULT 0,
                 stage TEXT DEFAULT 'Baby', adventure_end REAL DEFAULT 0,
-                last_updated REAL, hat TEXT DEFAULT 'None'
+                last_updated REAL, hat TEXT DEFAULT 'None',
+                UNIQUE(username)
             )
         """)
         conn.commit()
@@ -5260,7 +5293,7 @@ def therapy_chat():
         
         # Collect for training if user has consented
         try:
-            if training_manager.has_user_consented(username):
+            if training_manager.check_user_consent(username):
                 # Get user's mood context
                 conn = get_db_connection()
                 cur = conn.cursor()
@@ -7303,9 +7336,10 @@ def pet_reward():
         if not valid:
             return jsonify({'success': False, 'message': error}), 200
 
-        conn = sqlite3.connect(PET_DB_PATH)
+        conn = get_pet_db_connection()
         cur = conn.cursor()
-        pet = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
+        pet_raw = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
+        pet = normalize_pet_row(pet_raw)
         
         if not pet:
             conn.close()
@@ -7477,9 +7511,10 @@ def pet_declutter():
         if not worries or len(worries) == 0:
             return jsonify({'error': 'Please provide at least one worry'}), 400
 
-        conn = sqlite3.connect(PET_DB_PATH)
+        conn = get_pet_db_connection()
         cur = conn.cursor()
-        pet = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
+        pet_raw = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
+        pet = normalize_pet_row(pet_raw)
         
         if not pet:
             conn.close()
@@ -7519,9 +7554,10 @@ def pet_adventure():
         if not valid:
             return jsonify({'error': error}), 401
 
-        conn = sqlite3.connect(PET_DB_PATH)
+        conn = get_pet_db_connection()
         cur = conn.cursor()
-        pet = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
+        pet_raw = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
+        pet = normalize_pet_row(pet_raw)
         
         if not pet:
             conn.close()
@@ -7566,9 +7602,10 @@ def pet_check_return():
         if not valid:
             return jsonify({'error': error}), 401
 
-        conn = sqlite3.connect(PET_DB_PATH)
+        conn = get_pet_db_connection()
         cur = conn.cursor()
-        pet = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
+        pet_raw = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
+        pet = normalize_pet_row(pet_raw)
         
         if not pet:
             conn.close()
@@ -7620,9 +7657,10 @@ def pet_apply_decay():
         if not valid:
             return jsonify({'error': error}), 401
 
-        conn = sqlite3.connect(PET_DB_PATH)
+        conn = get_pet_db_connection()
         cur = conn.cursor()
-        pet = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
+        pet_raw = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
+        pet = normalize_pet_row(pet_raw)
         
         if not pet:
             conn.close()
