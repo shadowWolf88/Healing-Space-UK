@@ -8795,7 +8795,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     <span>Thinking...</span>
                 </div>
             `;
-            addMessage(thinkingHtml, 'ai', thinkingId);
+            addMessage(thinkingHtml, 'ai', thinkingId, null, true);
 
             const startTime = Date.now();
 
@@ -8963,15 +8963,21 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             }
         }
         
-        function addMessage(text, sender, id, timestamp) {
+        function addMessage(text, sender, id, timestamp, isRawHtml = false) {
             const messagesDiv = document.getElementById('chatMessages');
             const messageEl = document.createElement('div');
             messageEl.className = `message ${sender}`;
             if (id) messageEl.id = 'msg-' + id;
 
-            // Add message content (sanitized to prevent XSS)
+            // Add message content (sanitized to prevent XSS, unless isRawHtml is true)
             const contentDiv = document.createElement('div');
-            contentDiv.innerHTML = sanitizeWithLineBreaks(text);
+            if (isRawHtml) {
+                // For trusted HTML (like thinking animation)
+                contentDiv.innerHTML = text;
+            } else {
+                // For user input, sanitize to prevent XSS
+                contentDiv.innerHTML = sanitizeWithLineBreaks(text);
+            }
             messageEl.appendChild(contentDiv);
 
             // Add timestamp if provided

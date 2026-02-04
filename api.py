@@ -19,20 +19,32 @@ from email.mime.multipart import MIMEMultipart
 
 # --- Pet Table Ensurer ---
 def ensure_pet_table():
-    """Ensure the pet table exists in pet_game.db"""
+    """Ensure the pet table exists in pet_game.db with username support"""
     conn = sqlite3.connect(PET_DB_PATH)
     cur = conn.cursor()
+    
+    # Create table with username column for multi-user support
     cur.execute("""
         CREATE TABLE IF NOT EXISTS pet (
             id INTEGER PRIMARY KEY,
+            username TEXT NOT NULL,
             name TEXT, species TEXT, gender TEXT,
             hunger INTEGER DEFAULT 70, happiness INTEGER DEFAULT 70,
             energy INTEGER DEFAULT 70, hygiene INTEGER DEFAULT 80,
             coins INTEGER DEFAULT 0, xp INTEGER DEFAULT 0,
             stage TEXT DEFAULT 'Baby', adventure_end REAL DEFAULT 0,
-            last_updated REAL, hat TEXT DEFAULT 'None'
+            last_updated REAL, hat TEXT DEFAULT 'None',
+            UNIQUE(username)
         )
     """)
+    
+    # Add username column if it doesn't exist (migration for existing data)
+    try:
+        cur.execute("ALTER TABLE pet ADD COLUMN username TEXT")
+        cur.execute("ALTER TABLE pet ADD UNIQUE(username)")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    
     conn.commit()
     conn.close()
 
@@ -7101,30 +7113,20 @@ def pet_status():
             return jsonify({'exists': False, 'error': error}), 200
         conn = sqlite3.connect(PET_DB_PATH)
         cur = conn.cursor()
-        # Ensure table exists (in case DB was reset)
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS pet (
-                id INTEGER PRIMARY KEY,
-                name TEXT, species TEXT, gender TEXT,
-                hunger INTEGER DEFAULT 70, happiness INTEGER DEFAULT 70,
-                energy INTEGER DEFAULT 70, hygiene INTEGER DEFAULT 80,
-                coins INTEGER DEFAULT 0, xp INTEGER DEFAULT 0,
-                stage TEXT DEFAULT 'Baby', adventure_end REAL DEFAULT 0,
-                last_updated REAL, hat TEXT DEFAULT 'None'
-            )
-        """)
-        pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
+        ensure_pet_table()
+        
+        pet = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
         conn.close()
         if not pet:
             return jsonify({'exists': False, 'error': 'No pet found for user'}), 200
         return jsonify({
             'exists': True,
             'pet': {
-                'name': pet[1], 'species': pet[2], 'gender': pet[3],
-                'hunger': pet[4], 'happiness': pet[5], 'energy': pet[6],
-                'hygiene': pet[7], 'coins': pet[8], 'xp': pet[9],
-                'stage': pet[10], 'adventure_end': pet[11],
-                'last_updated': pet[12], 'hat': pet[13]
+                'name': pet[2], 'species': pet[3], 'gender': pet[4],
+                'hunger': pet[5], 'happiness': pet[6], 'energy': pet[7],
+                'hygiene': pet[8], 'coins': pet[9], 'xp': pet[10],
+                'stage': pet[11], 'adventure_end': pet[12],
+                'last_updated': pet[13], 'hat': pet[14]
             }
         }), 200
     except Exception as e:
@@ -7191,12 +7193,14 @@ def pet_create():
         ensure_pet_table()
         conn = sqlite3.connect(PET_DB_PATH)
         cur = conn.cursor()
-        cur.execute("DELETE FROM pet")  # Only one pet per user in current schema
+        
+        # Delete only THIS user's pet, not all pets
+        cur.execute("DELETE FROM pet WHERE username = ?", (username,))
         cur.execute("""
-            INSERT INTO pet (name, species, gender, hunger, happiness, energy, hygiene, 
+            INSERT INTO pet (username, name, species, gender, hunger, happiness, energy, hygiene, 
                            coins, xp, stage, adventure_end, last_updated, hat)
-            VALUES (?, ?, ?, 70, 70, 70, 80, 0, 0, 'Baby', 0, ?, 'None')
-        """, (name, species, gender, datetime.now().timestamp()))
+            VALUES (?, ?, ?, ?, 70, 70, 70, 80, 0, 0, 'Baby', 0, ?, 'None')
+        """, (username, name, species, gender, datetime.now().timestamp()))
         conn.commit()
         conn.close()
         
@@ -7219,19 +7223,19 @@ def pet_feed():
 
         conn = sqlite3.connect(PET_DB_PATH)
         cur = conn.cursor()
-        pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
+        pet = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
         
         if not pet:
             conn.close()
             return jsonify({'error': 'No pet found'}), 404
         
-        coins = pet[8]
+        coins = pet[9]
         if coins < item_cost:
             conn.close()
             return jsonify({'error': 'Not enough coins'}), 400
         
         # Update pet
-        new_hunger = min(100, pet[4] + 30)
+        new_hunger = min(100, pet[5] + 30)
         new_coins = coins - item_cost
         cur.execute("UPDATE pet SET hunger=?, coins=? WHERE id=?", (new_hunger, new_coins, pet[0]))
         conn.commit()
@@ -7257,7 +7261,7 @@ def pet_reward():
 
         conn = sqlite3.connect(PET_DB_PATH)
         cur = conn.cursor()
-        pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
+        pet = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
         
         if not pet:
             conn.close()
@@ -7291,15 +7295,15 @@ def pet_reward():
             xp_gain += 10
 
         # Calculate new stats
-        new_hunger = max(0, min(100, pet[4] + hun))
-        new_happiness = max(0, min(100, pet[5] + hap))
-        new_energy = max(0, min(100, pet[6] + en))
-        new_hygiene = max(0, min(100, pet[7] + hyg))
-        new_coins = pet[8] + coin_gain
-        new_xp = pet[9] + xp_gain
+        new_hunger = max(0, min(100, pet[5] + hun))
+        new_happiness = max(0, min(100, pet[6] + hap))
+        new_energy = max(0, min(100, pet[7] + en))
+        new_hygiene = max(0, min(100, pet[8] + hyg))
+        new_coins = pet[9] + coin_gain
+        new_xp = pet[10] + xp_gain
         
         # Check evolution
-        stage = pet[10]
+        stage = pet[11]
         if new_xp >= 500 and stage == 'Baby':
             stage = 'Child'
         elif new_xp >= 1500 and stage == 'Child':
@@ -7319,7 +7323,7 @@ def pet_reward():
             'new_coins': new_coins,
             'new_xp': new_xp,
             'new_stage': stage,
-            'evolved': stage != pet[10]
+            'evolved': stage != pet[11]
         }), 200
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
@@ -7368,27 +7372,27 @@ def pet_buy():
         
         conn = sqlite3.connect(PET_DB_PATH)
         cur = conn.cursor()
-        pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
+        pet = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
         
         if not pet:
             conn.close()
             return jsonify({'error': 'No pet found'}), 404
         
-        if pet[8] < item['cost']:
+        if pet[9] < item['cost']:
             conn.close()
             return jsonify({'error': 'Not enough coins'}), 400
         
         # Apply effect
-        new_coins = pet[8] - item['cost']
-        new_hunger = pet[4]
-        new_happiness = pet[5]
-        new_hat = pet[13] if len(pet) > 13 else 'None'
+        new_coins = pet[9] - item['cost']
+        new_hunger = pet[5]
+        new_happiness = pet[6]
+        new_hat = pet[14] if len(pet) > 14 else 'None'
         
         if item['effect'] == 'hunger':
-            new_hunger = min(100, pet[4] + item['value'])
+            new_hunger = min(100, pet[5] + item['value'])
         elif item['effect'] == 'multi':
-            new_hunger = min(100, pet[4] + item['hunger'])
-            new_happiness = min(100, pet[5] + item['happiness'])
+            new_hunger = min(100, pet[5] + item['hunger'])
+            new_happiness = min(100, pet[6] + item['happiness'])
         elif item['effect'] == 'hat':
             new_hat = item['value']
         
@@ -7427,17 +7431,17 @@ def pet_declutter():
 
         conn = sqlite3.connect(PET_DB_PATH)
         cur = conn.cursor()
-        pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
+        pet = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
         
         if not pet:
             conn.close()
             return jsonify({'error': 'No pet found'}), 404
         
         # Boost hygiene and happiness
-        new_hygiene = min(100, pet[7] + 40)
-        new_happiness = min(100, pet[5] + 5)
-        new_xp = pet[9] + 15
-        new_coins = pet[8] + 5
+        new_hygiene = min(100, pet[8] + 40)
+        new_happiness = min(100, pet[6] + 5)
+        new_xp = pet[10] + 15
+        new_coins = pet[9] + 5
         
         cur.execute(
             "UPDATE pet SET hygiene=?, happiness=?, xp=?, coins=?, last_updated=? WHERE id=?",
@@ -7469,19 +7473,19 @@ def pet_adventure():
 
         conn = sqlite3.connect(PET_DB_PATH)
         cur = conn.cursor()
-        pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
+        pet = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
         
         if not pet:
             conn.close()
             return jsonify({'error': 'No pet found'}), 404
         
-        if pet[6] < 20:  # Energy check
+        if pet[7] < 20:  # Energy check
             conn.close()
             return jsonify({'error': 'Pet is too tired for a walk!'}), 400
         
         # Set adventure end time (30 minutes from now)
         adventure_end = time.time() + (30 * 60)
-        new_energy = pet[6] - 20
+        new_energy = pet[7] - 20
         
         cur.execute(
             "UPDATE pet SET energy=?, adventure_end=?, last_updated=? WHERE id=?",
@@ -7512,21 +7516,21 @@ def pet_check_return():
 
         conn = sqlite3.connect(PET_DB_PATH)
         cur = conn.cursor()
-        pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
+        pet = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
         
         if not pet:
             conn.close()
             return jsonify({'error': 'No pet found'}), 404
         
-        adventure_end = pet[11]
+        adventure_end = pet[12]
         
         if adventure_end > 0 and time.time() >= adventure_end:
             # Pet returned!
             import random
             bonus_coins = random.randint(10, 50)
             
-            new_coins = pet[8] + bonus_coins
-            new_xp = pet[9] + 20
+            new_coins = pet[9] + bonus_coins
+            new_xp = pet[10] + 20
             
             cur.execute(
                 "UPDATE pet SET coins=?, xp=?, adventure_end=0, last_updated=? WHERE id=?",
@@ -7537,7 +7541,7 @@ def pet_check_return():
             
             return jsonify({
                 'returned': True,
-                'message': f'{pet[1]} returned with {bonus_coins} coins and a cool leaf! 🍃',
+                'message': f'{pet[2]} returned with {bonus_coins} coins and a cool leaf! 🍃',
                 'coins_earned': bonus_coins,
                 'new_coins': new_coins
             }), 200
@@ -7562,14 +7566,14 @@ def pet_apply_decay():
 
         conn = sqlite3.connect(PET_DB_PATH)
         cur = conn.cursor()
-        pet = cur.execute("SELECT * FROM pet LIMIT 1").fetchone()
+        pet = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
         
         if not pet:
             conn.close()
             return jsonify({'error': 'No pet found'}), 404
         
         now = time.time()
-        last_updated = pet[12]
+        last_updated = pet[13]
         hours_passed = (now - last_updated) / 3600
         
         # Very gentle decay (user doesn't feel like they're neglecting pet)
@@ -7577,9 +7581,9 @@ def pet_apply_decay():
         if hours_passed > 1.0:
             decay = int(hours_passed * 0.3)
             
-            new_hunger = max(20, pet[4] - decay)
-            new_energy = max(20, pet[6] - decay)
-            new_hygiene = max(20, pet[7] - int(decay / 3))
+            new_hunger = max(20, pet[5] - decay)
+            new_energy = max(20, pet[7] - decay)
+            new_hygiene = max(20, pet[8] - int(decay / 3))
             
             cur.execute(
                 "UPDATE pet SET hunger=?, energy=?, hygiene=?, last_updated=? WHERE id=?",
