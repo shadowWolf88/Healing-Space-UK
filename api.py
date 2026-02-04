@@ -7,6 +7,7 @@ import sqlite3
 import os
 import json
 import hashlib
+import socket
 import requests
 from datetime import datetime, timedelta
 import sys
@@ -60,8 +61,21 @@ except Exception:
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
 # Configure Flask session support for secure authentication (Phase 1A)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', secrets.token_urlsafe(32))
-app.config['SESSION_COOKIE_SECURE'] = not os.getenv('DEBUG')  # HTTPS only in production
+# CRITICAL: SECRET_KEY must be persistent across app restarts
+# If not set in environment, log warning and use a deterministic fallback
+SECRET_KEY = os.getenv('SECRET_KEY')
+if not SECRET_KEY:
+    print("⚠️  WARNING: SECRET_KEY not set in environment. Sessions will NOT persist across restarts.")
+    print("           Set SECRET_KEY in Railway environment variables for production.")
+    # Use machine-based deterministic key (better than random for stability)
+    # This ensures consistent key during single session but warns on restart
+    import socket
+    import hashlib
+    hostname = socket.gethostname()
+    SECRET_KEY = hashlib.sha256(hostname.encode()).hexdigest()[:32]
+
+app.config['SECRET_KEY'] = SECRET_KEY
+app.config['SESSION_COOKIE_SECURE'] = not os.getenv('DEBUG', '').lower() in ('1', 'true', 'yes')  # HTTPS in production
 app.config['SESSION_COOKIE_HTTPONLY'] = True  # Prevent JavaScript access
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'  # CSRF protection
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=2)  # 2-hour timeout
