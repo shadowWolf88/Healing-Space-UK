@@ -2605,6 +2605,263 @@ def init_db():
         CHECK (sender_username != recipient_username)
     )''')
 
+    # ==================== PHASE 4A: FOREIGN KEY CONSTRAINTS ====================
+    # Enable FK constraint enforcement (default in SQLite is OFF)
+    try:
+        cursor.execute("PRAGMA foreign_keys = ON")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Add FK constraints for clinician_notes (clinician-patient relationship)
+    try:
+        cursor.execute("ALTER TABLE clinician_notes ADD CONSTRAINT fk_clinician_notes_clinician FOREIGN KEY(clinician_username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass  # Constraint already exists or table structure issue
+    
+    try:
+        cursor.execute("ALTER TABLE clinician_notes ADD CONSTRAINT fk_clinician_notes_patient FOREIGN KEY(patient_username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass  # Constraint already exists or table structure issue
+    
+    # Add FK constraints for patient_approvals
+    try:
+        cursor.execute("ALTER TABLE patient_approvals ADD CONSTRAINT fk_approvals_patient FOREIGN KEY(patient_username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE patient_approvals ADD CONSTRAINT fk_approvals_clinician FOREIGN KEY(clinician_username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Add FK constraints for appointments
+    try:
+        cursor.execute("ALTER TABLE appointments ADD CONSTRAINT fk_appointments_clinician FOREIGN KEY(clinician_username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE appointments ADD CONSTRAINT fk_appointments_patient FOREIGN KEY(patient_username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Add FK constraints for community_replies
+    try:
+        cursor.execute("ALTER TABLE community_replies ADD CONSTRAINT fk_community_replies_post FOREIGN KEY(post_id) REFERENCES community_posts(id)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE community_replies ADD CONSTRAINT fk_community_replies_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Add FK constraints for community_likes
+    try:
+        cursor.execute("ALTER TABLE community_likes ADD CONSTRAINT fk_community_likes_post FOREIGN KEY(post_id) REFERENCES community_posts(id)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE community_likes ADD CONSTRAINT fk_community_likes_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Add FK constraints for community_channel_reads
+    try:
+        cursor.execute("ALTER TABLE community_channel_reads ADD CONSTRAINT fk_channel_reads_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Add FK constraints for alerts
+    try:
+        cursor.execute("ALTER TABLE alerts ADD CONSTRAINT fk_alerts_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Add FK constraints for notifications
+    try:
+        cursor.execute("ALTER TABLE notifications ADD CONSTRAINT fk_notifications_user FOREIGN KEY(recipient_username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Add FK constraints for feedback
+    try:
+        cursor.execute("ALTER TABLE feedback ADD CONSTRAINT fk_feedback_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Add FK constraints for sessions
+    try:
+        cursor.execute("ALTER TABLE sessions ADD CONSTRAINT fk_sessions_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Add FK constraints for audit_logs
+    try:
+        cursor.execute("ALTER TABLE audit_logs ADD CONSTRAINT fk_audit_logs_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Add FK constraints for CBT tool tables
+    try:
+        cursor.execute("ALTER TABLE breathing_exercises ADD CONSTRAINT fk_breathing_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE relaxation_techniques ADD CONSTRAINT fk_relaxation_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE sleep_diary ADD CONSTRAINT fk_sleep_diary_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE core_beliefs ADD CONSTRAINT fk_core_beliefs_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE exposure_hierarchy ADD CONSTRAINT fk_exposure_hierarchy_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE exposure_attempts ADD CONSTRAINT fk_exposure_attempts_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE problem_solving ADD CONSTRAINT fk_problem_solving_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE coping_cards ADD CONSTRAINT fk_coping_cards_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE self_compassion_journal ADD CONSTRAINT fk_self_compassion_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE values_clarification ADD CONSTRAINT fk_values_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE goals ADD CONSTRAINT fk_goals_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE goal_milestones ADD CONSTRAINT fk_goal_milestones_goal FOREIGN KEY(goal_id) REFERENCES goals(id)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE goal_milestones ADD CONSTRAINT fk_goal_milestones_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE goal_checkins ADD CONSTRAINT fk_goal_checkins_goal FOREIGN KEY(goal_id) REFERENCES goals(id)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE goal_checkins ADD CONSTRAINT fk_goal_checkins_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Add FK constraints for daily task tracking
+    try:
+        cursor.execute("ALTER TABLE daily_tasks ADD CONSTRAINT fk_daily_tasks_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE daily_streaks ADD CONSTRAINT fk_daily_streaks_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Add FK constraints for CBT records and clinical scales
+    try:
+        cursor.execute("ALTER TABLE cbt_records ADD CONSTRAINT fk_cbt_records_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE clinical_scales ADD CONSTRAINT fk_clinical_scales_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Add FK constraints for mood and gratitude logs
+    try:
+        cursor.execute("ALTER TABLE mood_logs ADD CONSTRAINT fk_mood_logs_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE gratitude_logs ADD CONSTRAINT fk_gratitude_logs_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Add FK constraints for safety plans and ai_memory
+    try:
+        cursor.execute("ALTER TABLE safety_plans ADD CONSTRAINT fk_safety_plans_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE ai_memory ADD CONSTRAINT fk_ai_memory_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Add FK constraints for community posts
+    try:
+        cursor.execute("ALTER TABLE community_posts ADD CONSTRAINT fk_community_posts_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Add FK constraints for chat tables
+    try:
+        cursor.execute("ALTER TABLE chat_sessions ADD CONSTRAINT fk_chat_sessions_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Add FK constraints for CBT tool entries
+    try:
+        cursor.execute("ALTER TABLE cbt_tool_entries ADD CONSTRAINT fk_cbt_tool_entries_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    # Add FK constraints for dev tables
+    try:
+        cursor.execute("ALTER TABLE dev_messages ADD CONSTRAINT fk_dev_messages_from FOREIGN KEY(from_username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE dev_messages ADD CONSTRAINT fk_dev_messages_to FOREIGN KEY(to_username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE dev_terminal_logs ADD CONSTRAINT fk_dev_terminal_logs_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE dev_ai_chats ADD CONSTRAINT fk_dev_ai_chats_user FOREIGN KEY(username) REFERENCES users(username)")
+    except sqlite3.OperationalError:
+        pass
+    
     # Add email and phone columns if they don't exist
     try:
         cursor.execute("ALTER TABLE users ADD COLUMN email TEXT")
