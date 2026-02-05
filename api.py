@@ -2185,7 +2185,7 @@ def validate_password_strength(password: str) -> tuple:
 
     special_chars = '!@#$%^&*()_+-=[]{}|;:,.<>?'
     if not any(c in special_chars for c in password):
-        return False, 'Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)'
+        return False, 'Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>%s)'
 
     # Check for common weak passwords
     weak_passwords = {'password', 'password1', '12345678', 'qwerty123', 'admin123'}
@@ -2794,7 +2794,7 @@ def send_verification():
         # Insert new code
         expires_at = datetime.now() + timedelta(minutes=10)
         cur.execute(
-            "INSERT INTO verification_codes (identifier, code, method, expires_at) VALUES (%s, ?, ?, ?)",
+            "INSERT INTO verification_codes (identifier, code, method, expires_at) VALUES (%s, %s, %s, %s)",
             (identifier, code, method, expires_at)
         )
         conn.commit()
@@ -3248,7 +3248,7 @@ def forgot_password():
         
         # Store token
         cur.execute(
-            "UPDATE users SET reset_token=?, reset_token_expiry=? WHERE username=?",
+            "UPDATE users SET reset_token=%s, reset_token_expiry=? WHERE username=?",
             (reset_token, expiry, username)
         )
         conn.commit()
@@ -3396,7 +3396,7 @@ def confirm_password_reset():
         # Update password and clear reset token
         hashed_password = hash_password(new_password)
         cur.execute(
-            "UPDATE users SET password=?, reset_token=NULL, reset_token_expiry=NULL WHERE username=?",
+            "UPDATE users SET password=%s, reset_token=NULL, reset_token_expiry=NULL WHERE username=?",
             (hashed_password, username)
         )
 
@@ -3565,7 +3565,7 @@ def clinician_register():
         
         # Insert new clinician
         cur.execute(
-            "INSERT INTO users (username, password, pin, role, full_name, email, phone, last_login, country, area, professional_id) VALUES (%s,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO users (username, password, pin, role, full_name, email, phone, last_login, country, area, professional_id) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
             (username, hashed_password, hashed_pin, 'clinician', full_name, email, phone, datetime.now(), country, area, professional_id)
         )
         conn.commit()
@@ -3610,7 +3610,7 @@ def developer_register():
 
         # Create developer account
         cur.execute(
-            "INSERT INTO users (username, password, pin, role, last_login) VALUES (%s,?,?,?,?)",
+            "INSERT INTO users (username, password, pin, role, last_login) VALUES (%s,%s,%s,%s,%s)",
             (username, hashed_password, hashed_pin, 'developer', datetime.now())
         )
         conn.commit()
@@ -3716,7 +3716,7 @@ def execute_terminal():
 
             # Log command
             cur.execute(
-                "INSERT INTO dev_terminal_logs (username, command, output, exit_code, duration_ms) VALUES (%s,?,?,?,?)",
+                "INSERT INTO dev_terminal_logs (username, command, output, exit_code, duration_ms) VALUES (%s,%s,%s,%s,%s)",
                 (username, command, output[:10000], exit_code, duration_ms)  # Truncate output to 10k chars
             )
             conn.commit()
@@ -3798,11 +3798,11 @@ You have full knowledge of the codebase and can provide specific advice. Be conc
 
             # Save to database
             cur.execute(
-                "INSERT INTO dev_ai_chats (username, session_id, role, message) VALUES (%s,?,?,?)",
+                "INSERT INTO dev_ai_chats (username, session_id, role, message) VALUES (%s,%s,%s,%s)",
                 (username, session_id, 'user', message)
             )
             cur.execute(
-                "INSERT INTO dev_ai_chats (username, session_id, role, message) VALUES (%s,?,?,?)",
+                "INSERT INTO dev_ai_chats (username, session_id, role, message) VALUES (%s,%s,%s,%s)",
                 (username, session_id, 'assistant', ai_response)
             )
             conn.commit()
@@ -3855,7 +3855,7 @@ def send_dev_message():
                     # Insert into messages table (new Phase 3 system)
                     cur.execute('''
                         INSERT INTO messages (sender_username, recipient_username, subject, content, sent_at)
-                        VALUES (%s, ?, ?, ?, CURRENT_TIMESTAMP)
+                        VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
                     ''', (from_username, recipient_username, subject if subject else None, message))
                     
                     # Send notification
@@ -3873,7 +3873,7 @@ def send_dev_message():
                 
                 cur.execute('''
                     INSERT INTO messages (sender_username, recipient_username, subject, content, sent_at)
-                    VALUES (%s, ?, ?, ?, CURRENT_TIMESTAMP)
+                    VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
                 ''', (from_username, to_username, subject if subject else None, message))
                 
                 # Send notification
@@ -3892,7 +3892,7 @@ def send_dev_message():
             
             cur.execute('''
                 INSERT INTO messages (sender_username, recipient_username, subject, content, sent_at)
-                VALUES (%s, ?, ?, ?, CURRENT_TIMESTAMP)
+                VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
             ''', (from_username, to_username, subject if subject else None, message))
             
             # Send notification
@@ -3911,7 +3911,7 @@ def send_dev_message():
             
             cur.execute('''
                 INSERT INTO messages (sender_username, recipient_username, subject, content, sent_at)
-                VALUES (%s, ?, ?, ?, CURRENT_TIMESTAMP)
+                VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
             ''', (from_username, to_username, subject if subject else None, message))
             
             # Send notification
@@ -4010,7 +4010,7 @@ def reply_dev_message():
 
         # Insert reply
         cur.execute(
-            "INSERT INTO dev_messages (from_username, to_username, message, message_type, parent_message_id) VALUES (%s,?,?,?,?)",
+            "INSERT INTO dev_messages (from_username, to_username, message, message_type, parent_message_id) VALUES (%s,%s,%s,%s,%s)",
             (from_username, to_username, message, 'reply', parent_message_id)
         )
         conn.commit()
@@ -4192,15 +4192,15 @@ def get_clinicians():
         params = []
         
         if country:
-            query += " AND LOWER(country) LIKE LOWER(?)"
+            query += " AND LOWER(country) LIKE LOWER(%s)"
             params.append(f"%{country}%")
         
         if area:
-            query += " AND LOWER(area) LIKE LOWER(?)"
+            query += " AND LOWER(area) LIKE LOWER(%s)"
             params.append(f"%{area}%")
         
         if search:
-            query += " AND (LOWER(username) LIKE LOWER(?) OR LOWER(full_name) LIKE LOWER(?))"
+            query += " AND (LOWER(username) LIKE LOWER(%s) OR LOWER(full_name) LIKE LOWER(%s))"
             params.append(f"%{search}%")
             params.append(f"%{search}%")
         
@@ -4365,13 +4365,13 @@ def approve_patient(approval_id):
         
         # Notify patient of approval
         cur.execute(
-            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (%s,?,?)",
+            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (%s,%s,%s)",
             (patient_username, f'Dr. {clinician_username} has approved your request! You can now access all features.', 'approval_accepted')
         )
         
         # Notify clinician
         cur.execute(
-            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (%s,?,?)",
+            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (%s,%s,%s)",
             (clinician_username, f'You approved {patient_username} as your patient', 'patient_approved')
         )
 
@@ -4415,7 +4415,7 @@ def reject_patient(approval_id):
         
         # Notify patient of rejection
         cur.execute(
-            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (%s,?,?)",
+            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (%s,%s,%s)",
             (patient_username, f'Dr. {clinician_username} declined your request. Please select another clinician.', 'approval_rejected')
         )
 
@@ -4541,7 +4541,7 @@ def update_ai_memory(username):
         
         # Update or insert memory
         cur.execute(
-            "INSERT INTO ai_memory (username, memory_summary, last_updated) VALUES (%s,?,?)",
+            "INSERT INTO ai_memory (username, memory_summary, last_updated) VALUES (%s,%s,%s)",
             (username, memory_summary, datetime.now())
         )
         conn.commit()
@@ -4556,7 +4556,7 @@ def send_notification(username, message, notification_type='info'):
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
         cur.execute(
-            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (%s,?,?)",
+            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (%s,%s,%s)",
             (username, message, notification_type)
         )
         conn.commit()
@@ -4636,7 +4636,7 @@ def reward_pet(action, activity_type=None):
             stage = 'Adult'
         
         cur.execute(
-            "UPDATE pet SET hunger=?, happiness=?, energy=?, hygiene=?, coins=?, xp=?, stage=?, last_updated=? WHERE id=?",
+            "UPDATE pet SET hunger=%s, happiness=%s, energy=%s, hygiene=%s, coins=%s, xp=%s, stage=%s, last_updated=? WHERE id=?",
             (new_hunger, new_happiness, new_energy, new_hygiene, new_coins, new_xp, stage, time.time(), pet[0])
         )
         conn.commit()
@@ -4939,8 +4939,8 @@ def export_chat_history():
             # Export specific session
             history = cur.execute(
                 """SELECT sender, message, timestamp FROM chat_history 
-                   WHERE chat_session_id=? 
-                   AND datetime(timestamp) BETWEEN datetime(?) AND datetime(?)
+                   WHERE chat_session_id=%s 
+                   AND datetime(timestamp) BETWEEN datetime(%s) AND datetime(%s)
                    ORDER BY timestamp ASC""",
                 (chat_session_id, from_datetime.isoformat(), to_datetime.isoformat())
             ).fetchall()
@@ -4948,8 +4948,8 @@ def export_chat_history():
             # Export all sessions for this user
             history = cur.execute(
                 """SELECT sender, message, timestamp FROM chat_history 
-                   WHERE session_id=? 
-                   AND datetime(timestamp) BETWEEN datetime(?) AND datetime(?)
+                   WHERE session_id=%s 
+                   AND datetime(timestamp) BETWEEN datetime(%s) AND datetime(%s)
                    ORDER BY timestamp ASC""",
                 (f"{username}_session", from_datetime.isoformat(), to_datetime.isoformat())
             ).fetchall()
@@ -5026,7 +5026,7 @@ def get_chat_sessions():
         
         if existing == 0:
             cur.execute(
-                "INSERT INTO chat_sessions (username, session_name, is_active) VALUES (%s, ?, 1)",
+                "INSERT INTO chat_sessions (username, session_name, is_active) VALUES (%s, %s, 1)",
                 (username, "Main Chat")
             )
             conn.commit()
@@ -5073,7 +5073,7 @@ def create_chat_session():
             
             # Create new session
             cur.execute(
-                "INSERT INTO chat_sessions (username, session_name, is_active) VALUES (%s, ?, 1)",
+                "INSERT INTO chat_sessions (username, session_name, is_active) VALUES (%s, %s, 1) RETURNING id",
                 (username, session_name)
             )
             session_id = cur.fetchone()[0]
@@ -5302,14 +5302,14 @@ def initialize_chat():
         # Save welcome message to chat history
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         cur.execute(
-            "INSERT INTO chat_history (session_id, sender, message, timestamp) VALUES (%s,?,?,?)",
+            "INSERT INTO chat_history (session_id, sender, message, timestamp) VALUES (%s,%s,%s,%s)",
             (f"{username}_session", 'ai', welcome_message, timestamp)
         )
         
         # Initialize AI memory with profile data
         initial_memory = f"Patient: {full_name}. Date of Birth: {dob}. Medical conditions: {conditions}. First session: {timestamp}."
         cur.execute(
-            "INSERT INTO ai_memory (username, memory_summary, last_updated) VALUES (%s,?,?)",
+            "INSERT INTO ai_memory (username, memory_summary, last_updated) VALUES (%s,%s,%s)",
             (username, initial_memory, timestamp)
         )
         
@@ -5417,7 +5417,7 @@ def log_mood():
         
         cur.execute(
             """INSERT INTO mood_logs (username, mood_val, sleep_val, meds, notes, sentiment, 
-               water_pints, exercise_mins, outside_mins) VALUES (%s,?,?,?,?,?,?,?,?)""",
+               water_pints, exercise_mins, outside_mins) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
             (username, mood_val, sleep_val, meds_str, notes, 'Neutral', water_pints, exercise_mins, outside_mins)
         )
         conn.commit()
@@ -5508,10 +5508,10 @@ def log_gratitude():
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
         cur.execute(
-                "INSERT INTO gratitude_logs (username, entry) VALUES (%s,%s) RETURNING id",
-                (username, entry)
-            )
-            log_id = cur.fetchone()[0]
+            "INSERT INTO gratitude_logs (username, entry) VALUES (%s,%s) RETURNING id",
+            (username, entry)
+        )
+        log_id = cur.fetchone()[0]
         conn.close()
         
         # AUTO-UPDATE AI MEMORY
@@ -5596,7 +5596,7 @@ def log_breathing_exercise():
         cur.execute(
             """INSERT INTO breathing_exercises
                (username, exercise_type, duration_seconds, pre_anxiety_level, post_anxiety_level, notes)
-               VALUES (%s,?,?,?,?,?)""",
+               VALUES (%s,%s,%s,%s,%s,%s)""",
             (username, exercise_type, duration_seconds, pre_anxiety, post_anxiety, notes[:500] if notes else None)
         )
         conn.commit()
@@ -5668,7 +5668,7 @@ def log_relaxation_session():
         cur.execute(
             """INSERT INTO relaxation_techniques
                (username, technique_type, duration_minutes, effectiveness_rating, body_scan_areas, notes)
-               VALUES (%s,?,?,?,?,?)""",
+               VALUES (%s,%s,%s,%s,%s,%s)""",
             (username, technique_type, duration_minutes, effectiveness, body_areas[:200] if body_areas else None, notes[:500] if notes else None)
         )
         conn.commit()
@@ -5746,7 +5746,7 @@ def log_sleep_diary():
             """INSERT INTO sleep_diary
                (username, sleep_date, bedtime, wake_time, time_to_fall_asleep, times_woken,
                 total_sleep_hours, sleep_quality, dreams_nightmares, factors_affecting, morning_mood, notes)
-               VALUES (%s,?,?,?,?,?,?,?,?,?,?,?)""",
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
             (username, sleep_date, bedtime, wake_time, time_to_fall_asleep, times_woken,
              total_sleep_hours, sleep_quality, dreams[:500] if dreams else None,
              factors[:500] if factors else None, morning_mood, notes[:500] if notes else None)
@@ -5825,7 +5825,7 @@ def create_core_belief_alt():
             """INSERT INTO core_beliefs
                (username, old_belief, belief_origin, evidence_for, evidence_against,
                 new_balanced_belief, belief_strength_before, belief_strength_after)
-               VALUES (%s,?,?,?,?,?,?,?)""",
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
             (username, old_belief[:500], belief_origin[:500] if belief_origin else None,
              evidence_for[:1000] if evidence_for else None, evidence_against[:1000] if evidence_against else None,
              new_belief[:500] if new_belief else None, strength_before, strength_after)
@@ -5911,7 +5911,7 @@ def create_exposure_item():
         cur.execute(
             """INSERT INTO exposure_hierarchy
                (username, fear_situation, initial_suds, target_suds, hierarchy_rank)
-               VALUES (%s,?,?,?,?)""",
+               VALUES (%s,%s,%s,%s,%s)""",
             (username, fear_situation[:500], initial_suds, target_suds, hierarchy_rank)
         )
         conn.commit()
@@ -5955,7 +5955,7 @@ def log_exposure_attempt(exposure_id):
         cur.execute(
             """INSERT INTO exposure_attempts
                (exposure_id, username, pre_suds, peak_suds, post_suds, duration_minutes, coping_strategies_used, notes)
-               VALUES (%s,?,?,?,?,?,?,?)""",
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
             (exposure_id, username, pre_suds, peak_suds, post_suds, duration,
              coping_strategies[:500] if coping_strategies else None, notes[:500] if notes else None)
         )
@@ -6072,7 +6072,7 @@ def create_coping_card_alt():
         cur.execute(
             """INSERT INTO coping_cards
                (username, card_title, situation_trigger, unhelpful_thought, helpful_response, coping_strategies)
-               VALUES (%s,?,?,?,?,?)""",
+               VALUES (%s,%s,%s,%s,%s,%s)""",
             (username, title[:100], trigger[:500] if trigger else None,
              unhelpful[:500] if unhelpful else None, helpful[:500] if helpful else None,
              strategies[:1000] if strategies else None)
@@ -6232,7 +6232,7 @@ def log_self_compassion():
             """INSERT INTO self_compassion_journal
                (username, difficult_situation, self_critical_thoughts, common_humanity,
                 kind_response, self_care_action, mood_before, mood_after)
-               VALUES (%s,?,?,?,?,?,?,?)""",
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
             (username, situation[:1000], critical_thoughts[:1000] if critical_thoughts else None,
              common_humanity[:1000] if common_humanity else None, kind_response[:1000] if kind_response else None,
              self_care[:500] if self_care else None, mood_before, mood_after)
@@ -6386,7 +6386,7 @@ def add_goal_milestone(goal_id):
         cur.execute(
             """INSERT INTO goal_milestones
                (goal_id, username, milestone_title, milestone_description, target_date)
-               VALUES (%s,?,?,?,?)""",
+               VALUES (%s,%s,%s,%s,%s)""",
             (goal_id, username, title[:200], description[:500] if description else None, target_date)
         )
         conn.commit()
@@ -6484,7 +6484,7 @@ def add_goal_checkin(goal_id):
         cur.execute(
             """INSERT INTO goal_checkins
                (goal_id, username, progress_notes, obstacles, next_steps, motivation_level)
-               VALUES (%s,?,?,?,?,?)""",
+               VALUES (%s,%s,%s,%s,%s,%s)""",
             (goal_id, username, progress_notes[:1000] if progress_notes else None,
              obstacles[:500] if obstacles else None, next_steps[:500] if next_steps else None,
              motivation_level)
@@ -6755,7 +6755,7 @@ def pet_create():
         cur.execute("""
             INSERT INTO pet (username, name, species, gender, hunger, happiness, energy, hygiene, 
                            coins, xp, stage, adventure_end, last_updated, hat)
-            VALUES (%s, ?, ?, ?, 70, 70, 70, 80, 0, 0, 'Baby', 0, ?, 'None')
+            VALUES (%s, %s, %s, %s, 70, 70, 70, 80, 0, 0, 'Baby', 0, %s, 'None')
         """, (username, name, species, gender, datetime.now().timestamp()))
         conn.commit()
         conn.close()
@@ -6871,7 +6871,7 @@ def pet_reward():
             stage = 'Adult'
         
         cur.execute(
-            "UPDATE pet SET hunger=?, happiness=?, energy=?, hygiene=?, coins=?, xp=?, stage=?, last_updated=? WHERE id=?",
+            "UPDATE pet SET hunger=%s, happiness=%s, energy=%s, hygiene=%s, coins=%s, xp=%s, stage=%s, last_updated=? WHERE id=?",
             (new_hunger, new_happiness, new_energy, new_hygiene, new_coins, new_xp, stage, time.time(), pet[0])
         )
         conn.commit()
@@ -6958,7 +6958,7 @@ def pet_buy():
             new_hat = item['value']
         
         cur.execute(
-            "UPDATE pet SET hunger=?, happiness=?, coins=?, hat=?, last_updated=? WHERE id=?",
+            "UPDATE pet SET hunger=%s, happiness=%s, coins=%s, hat=%s, last_updated=? WHERE id=?",
             (new_hunger, new_happiness, new_coins, new_hat, time.time(), pet[0])
         )
         conn.commit()
@@ -7010,7 +7010,7 @@ def pet_declutter():
         new_coins = pet[9] + 5
         
         cur.execute(
-            "UPDATE pet SET hygiene=?, happiness=?, xp=?, coins=?, last_updated=? WHERE id=?",
+            "UPDATE pet SET hygiene=%s, happiness=%s, xp=%s, coins=%s, last_updated=? WHERE id=?",
             (new_hygiene, new_happiness, new_xp, new_coins, time.time(), pet[0])
         )
         conn.commit()
@@ -7055,7 +7055,7 @@ def pet_adventure():
         new_energy = pet[7] - 20
         
         cur.execute(
-            "UPDATE pet SET energy=?, adventure_end=?, last_updated=? WHERE id=?",
+            "UPDATE pet SET energy=%s, adventure_end=%s, last_updated=? WHERE id=?",
             (new_energy, adventure_end, time.time(), pet[0])
         )
         conn.commit()
@@ -7105,7 +7105,7 @@ def pet_check_return():
             new_xp = pet[10] + 20
             
             cur.execute(
-                "UPDATE pet SET coins=?, xp=?, adventure_end=0, last_updated=? WHERE id=?",
+                "UPDATE pet SET coins=%s, xp=%s, adventure_end=0, last_updated=? WHERE id=?",
                 (new_coins, new_xp, time.time(), pet[0])
             )
             conn.commit()
@@ -7163,7 +7163,7 @@ def pet_apply_decay():
             new_hygiene = max(20, pet[8] - int(decay / 3))
             
             cur.execute(
-                "UPDATE pet SET hunger=?, energy=?, hygiene=?, last_updated=? WHERE id=?",
+                "UPDATE pet SET hunger=%s, energy=%s, hygiene=%s, last_updated=? WHERE id=?",
                 (new_hunger, new_energy, new_hygiene, now, pet[0])
             )
             conn.commit()
@@ -7196,10 +7196,10 @@ def cbt_thought_record():
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
         cur.execute(
-                "INSERT INTO cbt_records (username, situation, thought, evidence) VALUES (%s,?,?,?) RETURNING id",
-                (username, situation, thought, evidence or '')
-            )
-            record_id = cur.fetchone()[0]
+            "INSERT INTO cbt_records (username, situation, thought, evidence) VALUES (%s,%s,%s,%s) RETURNING id",
+            (username, situation, thought, evidence or '')
+        )
+        record_id = cur.fetchone()[0]
         conn.close()
         
         # AUTO-UPDATE AI MEMORY
@@ -7281,7 +7281,7 @@ def submit_phq9():
             severity = "Severe"
         
         cur.execute(
-            "INSERT INTO clinical_scales (username, scale_name, score, severity) VALUES (%s,?,?,?)",
+            "INSERT INTO clinical_scales (username, scale_name, score, severity) VALUES (%s,%s,%s,%s)",
             (username, 'PHQ-9', total, severity)
         )
         
@@ -7359,7 +7359,7 @@ def submit_gad7():
             severity = "Severe"
         
         cur.execute(
-            "INSERT INTO clinical_scales (username, scale_name, score, severity) VALUES (%s,?,?,?)",
+            "INSERT INTO clinical_scales (username, scale_name, score, severity) VALUES (%s,%s,%s,%s)",
             (username, 'GAD-7', total, severity)
         )
         
@@ -7423,7 +7423,7 @@ def get_community_posts():
             # Mark channel as read for this user
             if username:
                 cur.execute(
-                    "INSERT INTO community_channel_reads (username, channel, last_read) VALUES (%s, ?, CURRENT_TIMESTAMP)",
+                    "INSERT INTO community_channel_reads (username, channel, last_read) VALUES (%s, %s, CURRENT_TIMESTAMP)",
                     (username, category)
                 )
                 conn.commit()
@@ -7629,7 +7629,7 @@ def create_community_post():
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
         cur.execute(
-            "INSERT INTO community_posts (username, message, category) VALUES (%s,?,?)",
+            "INSERT INTO community_posts (username, message, category) VALUES (%s,%s,%s)",
             (username, message, category)
         )
         conn.commit()
@@ -7678,7 +7678,7 @@ def react_to_post(post_id):
         else:
             # Add reaction
             cur.execute(
-                "INSERT INTO community_likes (post_id, username, reaction_type) VALUES (%s,?,?)",
+                "INSERT INTO community_likes (post_id, username, reaction_type) VALUES (%s,%s,%s)",
                 (post_id, username, reaction_type)
             )
             action = 'added'
@@ -7811,7 +7811,7 @@ def create_reply(post_id):
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
         cur.execute(
-            "INSERT INTO community_replies (post_id, username, message) VALUES (%s,?,?)",
+            "INSERT INTO community_replies (post_id, username, message) VALUES (%s,%s,%s)",
             (post_id, username, sanitized_message)
         )
         reply_id = cur.fetchone()[0]
@@ -7819,7 +7819,7 @@ def create_reply(post_id):
         # Flag for review if needed
         if moderation_result['flagged']:
             cur.execute(
-                "INSERT INTO alerts (username, alert_type, details, status) VALUES (%s,?,?,?)",
+                "INSERT INTO alerts (username, alert_type, details, status) VALUES (%s,%s,%s,%s)",
                 (username, 'content_review', f"Reply {reply_id} to post {post_id}: {moderation_result['flag_reason']}", 'pending_review')
             )
             log_event(username, 'community', 'reply_flagged', moderation_result['flag_reason'])
@@ -7914,7 +7914,7 @@ def report_community_post(post_id):
         # Create report alert
         report_details = f"post_id:{post_id}|reporter:{reporter_username}|author:{post_author}|reason:{reason}"
         cur.execute(
-            "INSERT INTO alerts (username, alert_type, details, status) VALUES (%s,?,?,?)",
+            "INSERT INTO alerts (username, alert_type, details, status) VALUES (%s,%s,%s,%s)",
             (post_author, 'post_report', report_details, 'pending_review')
         )
 
@@ -8003,12 +8003,12 @@ def save_safety_plan():
         existing = cur.execute("SELECT username FROM safety_plans WHERE username=%s", (username,)).fetchone()
         if existing:
             cur.execute(
-                "UPDATE safety_plans SET triggers=?, coping_strategies=?, support_contacts=?, professional_contacts=? WHERE username=?",
+                "UPDATE safety_plans SET triggers=%s, coping_strategies=%s, support_contacts=%s, professional_contacts=? WHERE username=?",
                 (triggers, coping, support, professional, username)
             )
         else:
             cur.execute(
-                "INSERT INTO safety_plans (username, triggers, coping_strategies, support_contacts, professional_contacts) VALUES (%s,?,?,?,?)",
+                "INSERT INTO safety_plans (username, triggers, coping_strategies, support_contacts, professional_contacts) VALUES (%s,%s,%s,%s,%s)",
                 (username, triggers, coping, support, professional)
             )
         conn.commit()
@@ -8263,10 +8263,10 @@ def get_insights():
         mood_query = "SELECT mood_val, sleep_val, entrestamp, notes FROM mood_logs WHERE username=?"
         params = [username]
         if from_date:
-            mood_query += " AND date(entrestamp) >= date(?)"
+            mood_query += " AND date(entrestamp) >= date(%s)"
             params.append(from_date)
         if to_date:
-            mood_query += " AND date(entrestamp) <= date(?)"
+            mood_query += " AND date(entrestamp) <= date(%s)"
             params.append(to_date)
         mood_query += " ORDER BY entrestamp DESC"
         moods = cur.execute(mood_query, tuple(params)).fetchall()
@@ -8275,10 +8275,10 @@ def get_insights():
         chat_query = "SELECT sender, message, timestamp FROM chat_history WHERE session_id=?"
         chat_params = [f"{username}_session"]
         if from_date:
-            chat_query += " AND date(timestamp) >= date(?)"
+            chat_query += " AND date(timestamp) >= date(%s)"
             chat_params.append(from_date)
         if to_date:
-            chat_query += " AND date(timestamp) <= date(?)"
+            chat_query += " AND date(timestamp) <= date(%s)"
             chat_params.append(to_date)
         chat_query += " ORDER BY timestamp DESC"
         chat_history = cur.execute(chat_query, tuple(chat_params)).fetchall()
@@ -8287,10 +8287,10 @@ def get_insights():
         grat_query = "SELECT entry, entry_timestamp FROM gratitude_logs WHERE username=?"
         grat_params = [username]
         if from_date:
-            grat_query += " AND date(entry_timestamp) >= date(?)"
+            grat_query += " AND date(entry_timestamp) >= date(%s)"
             grat_params.append(from_date)
         if to_date:
-            grat_query += " AND date(entry_timestamp) <= date(?)"
+            grat_query += " AND date(entry_timestamp) <= date(%s)"
             grat_params.append(to_date)
         grat_query += " ORDER BY entry_timestamp DESC"
         gratitudes = cur.execute(grat_query, tuple(grat_params)).fetchall()
@@ -8299,10 +8299,10 @@ def get_insights():
         cbt_query = "SELECT situation, thought, evidence, entry_timestamp FROM cbt_records WHERE username=?"
         cbt_params = [username]
         if from_date:
-            cbt_query += " AND date(entry_timestamp) >= date(?)"
+            cbt_query += " AND date(entry_timestamp) >= date(%s)"
             cbt_params.append(from_date)
         if to_date:
-            cbt_query += " AND date(entry_timestamp) <= date(?)"
+            cbt_query += " AND date(entry_timestamp) <= date(%s)"
             cbt_params.append(to_date)
         cbt_query += " ORDER BY entry_timestamp DESC"
         cbt = cur.execute(cbt_query, tuple(cbt_params)).fetchall()
@@ -8915,7 +8915,7 @@ def create_clinician_note():
             return jsonify({'error': 'Unauthorized: Patient not assigned to clinician'}), 403
         
         cur.execute(
-            "INSERT INTO clinician_notes (clinician_username, patient_username, note_text, is_highlighted) VALUES (%s,?,?,?)",
+            "INSERT INTO clinician_notes (clinician_username, patient_username, note_text, is_highlighted) VALUES (%s,%s,%s,%s)",
             (clinician_username, patient_username, note_text, 1 if is_highlighted else 0)
         )
         note_id = cur.fetchone()[0]
@@ -9312,7 +9312,7 @@ def check_mood_reminder():
             if not logged_today:
                 # Send reminder notification
                 cur.execute(
-                    "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (%s,?,?)",
+                    "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (%s,%s,%s)",
                     (username, "🕗 Reminder: Don't forget to log your mood and habits for today!", 'mood_reminder')
                 )
                 reminders_sent += 1
@@ -9563,7 +9563,7 @@ def manage_appointments():
             cur = get_wrapped_cursor(conn)
             cur.execute("""
                 INSERT INTO appointments (clinician_username, patient_username, appointment_date, notes, patient_response)
-                VALUES (%s, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s)
             """, (clinician, patient, appt_date, notes, 'pending'))
             appt_id = cur.fetchone()[0]
             
@@ -9573,7 +9573,7 @@ def manage_appointments():
             date_str = appt_datetime.strftime('%A, %d %B %Y at %H:%M')
             cur.execute("""
                 INSERT INTO notifications (recipient_username, message, notification_type)
-                VALUES (%s, ?, ?)
+                VALUES (%s, %s, %s)
             """, (patient, f'New appointment scheduled with {clinician} on {date_str}. Please view and respond in the Appointments tab.', 'appointment_new'))
             
             conn.commit()
@@ -9611,7 +9611,7 @@ def cancel_appointment(appointment_id):
             
             # Send notification to patient
             cur.execute(
-                "INSERT INTO notifications (username, message, read) VALUES (%s, ?, 0)",
+                "INSERT INTO notifications (username, message, read) VALUES (%s, %s, 0)",
                 (patient_username, f"Your appointment on {apt_date} at {apt_time} with {clinician_username} has been cancelled.")
             )
             
@@ -9660,7 +9660,7 @@ def respond_to_appointment(appointment_id):
         # Update appointment
         cur.execute("""
             UPDATE appointments 
-            SET patient_acknowledged=1, patient_response=?, patient_response_date=?
+            SET patient_acknowledged=1, patient_response=%s, patient_response_date=?
             WHERE id=?
         """, (response, datetime.now(), appointment_id))
         
@@ -9669,7 +9669,7 @@ def respond_to_appointment(appointment_id):
         action = 'accepted' if response == 'accepted' else 'declined'
         cur.execute("""
             INSERT INTO notifications (recipient_username, message, notification_type)
-            VALUES (%s, ?, ?)
+            VALUES (%s, %s, %s)
         """, (clinician, f'{patient_username} has {action} the appointment', 'appointment_response'))
         
         conn.commit()
@@ -9720,7 +9720,7 @@ def confirm_appointment_attendance(appointment_id):
 
         # Update attendance fields
         cur.execute(
-            "UPDATE appointments SET attendance_status=?, attendance_confirmed_by=?, attendance_confirmed_at=? WHERE id=?",
+            "UPDATE appointments SET attendance_status=%s, attendance_confirmed_by=%s, attendance_confirmed_at=? WHERE id=?",
             (status, clinician_username, datetime.now(), appointment_id)
         )
 
@@ -9732,7 +9732,7 @@ def confirm_appointment_attendance(appointment_id):
             message = f'Your clinician {clinician_username} has marked the appointment as {status}.'
 
         cur.execute(
-            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (%s,?,?)",
+            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (%s,%s,%s)",
             (patient_username, message, 'appointment_attendance')
         )
 
@@ -9816,7 +9816,7 @@ def patient_profile():
             data = request.json
             
             cur.execute("""
-                UPDATE users SET full_name=?, dob=?, email=?, phone=?, conditions=?
+                UPDATE users SET full_name=%s, dob=%s, email=%s, phone=%s, conditions=?
                 WHERE username=?
             """, (
                 encrypt_text(data.get('full_name', '')),
@@ -10116,11 +10116,11 @@ def get_patient_analytics(username):
         # Activity metrics
         activity = cur.execute("""
             SELECT 
-                (SELECT COUNT(*) FROM sessions WHERE username=?) as total_sessions,
-                (SELECT COUNT(*) FROM mood_logs WHERE username=?) as mood_logs,
-                (SELECT COUNT(*) FROM gratitude_logs WHERE username=?) as gratitude_logs,
-                (SELECT COUNT(*) FROM cbt_records WHERE username=?) as cbt_records,
-                (SELECT MAX(created_at) FROM sessions WHERE username=?) as last_active
+                (SELECT COUNT(*) FROM sessions WHERE username=%s) as total_sessions,
+                (SELECT COUNT(*) FROM mood_logs WHERE username=%s) as mood_logs,
+                (SELECT COUNT(*) FROM gratitude_logs WHERE username=%s) as gratitude_logs,
+                (SELECT COUNT(*) FROM cbt_records WHERE username=%s) as cbt_records,
+                (SELECT MAX(created_at) FROM sessions WHERE username=%s) as last_active
         """, (username, username, username, username, username)).fetchone()
         
         # Risk indicators
@@ -10408,7 +10408,7 @@ def search_patients():
 
         # Add search filter
         if search_query:
-            query += " AND (u.username LIKE ? OR u.full_name LIKE ? OR u.email LIKE ?)"
+            query += " AND (u.username LIKE %s OR u.full_name LIKE %s OR u.email LIKE %s)"
             search_term = f'%{search_query}%'
             params.extend([search_term, search_term, search_term])
 
@@ -10532,7 +10532,7 @@ def submit_feedback():
         role = user[0] if user else 'user'
 
         cur.execute(
-            "INSERT INTO feedback (username, role, category, message) VALUES (%s, ?, ?, ?)",
+            "INSERT INTO feedback (username, role, category, message) VALUES (%s, %s, %s, %s)",
             (username, role, category, message)
         )
         
@@ -10628,7 +10628,7 @@ def complete_daily_task():
         else:
             # Insert new record
             cur.execute(
-                "INSERT INTO daily_tasks (username, task_type, completed, completed_at, task_date) VALUES (%s, ?, 1, datetime('now'), ?)",
+                "INSERT INTO daily_tasks (username, task_type, completed, completed_at, task_date) VALUES (%s, %s, 1, datetime('now'), %s)",
                 (username, task_type, today)
             )
 
@@ -10681,8 +10681,8 @@ def award_daily_completion_bonus(username, cursor, today):
 
             cursor.execute('''
                 UPDATE daily_streaks
-                SET current_streak=?, last_complete_date=?,
-                    longest_streak=MAX(longest_streak, ?),
+                SET current_streak=%s, last_complete_date=%s,
+                    longest_streak=MAX(longest_streak, %s),
                     total_bonus_coins=total_bonus_coins+50,
                     total_bonus_xp=total_bonus_xp+100
                 WHERE username=?
@@ -10690,7 +10690,7 @@ def award_daily_completion_bonus(username, cursor, today):
         else:
             cursor.execute('''
                 INSERT INTO daily_streaks (username, current_streak, longest_streak, last_complete_date, total_bonus_coins, total_bonus_xp)
-                VALUES (%s, 1, 1, ?, 50, 100)
+                VALUES (%s, 1, 1, %s, 50, 100)
             ''', (username, today))
 
         # Award pet bonus (50 coins, 100 XP, +10 happiness)
@@ -10765,7 +10765,7 @@ def mark_daily_task_complete(username, task_type):
         # Use INSERT OR REPLACE to handle duplicates
         cur.execute('''
             INSERT INTO daily_tasks (username, task_type, completed, completed_at, task_date)
-            VALUES (%s, ?, 1, datetime('now'), ?)
+            VALUES (%s, %s, 1, datetime('now'), %s)
             ON CONFLICT(username, task_type, task_date) DO UPDATE SET completed=1, completed_at=datetime('now')
         ''', (username, task_type, today))
 
@@ -10847,14 +10847,14 @@ def save_cbt_tool_entry():
             # Update existing entry
             cur.execute('''
                 UPDATE cbt_tool_entries
-                SET data=?, mood_rating=?, notes=?, updated_at=datetime('now')
+                SET data=%s, mood_rating=%s, notes=%s, updated_at=datetime('now')
                 WHERE id=?
             ''', (entry_data, mood_rating, notes, existing[0]))
         else:
             # Insert new entry
             cur.execute('''
                 INSERT INTO cbt_tool_entries (username, tool_type, data, mood_rating, notes)
-                VALUES (%s, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s)
             ''', (username, tool_type, entry_data, mood_rating, notes))
 
         conn.commit()
@@ -11038,7 +11038,7 @@ def send_message():
         # Insert message
         cur.execute('''
             INSERT INTO messages (sender_username, recipient_username, subject, content, sent_at)
-            VALUES (%s, ?, ?, ?, CURRENT_TIMESTAMP)
+            VALUES (%s, %s, %s, %s, CURRENT_TIMESTAMP)
         ''', (sender, recipient, subject if subject else None, content))
         
         message_id = cur.fetchone()[0]
@@ -11092,7 +11092,7 @@ def get_inbox():
             # Only show conversations with unread messages
             rows = cur.execute('''
                 SELECT 
-                    CASE WHEN sender_username = ? THEN recipient_username ELSE sender_username END as other_user,
+                    CASE WHEN sender_username = %s THEN recipient_username ELSE sender_username END as other_user,
                     (SELECT content FROM messages m2 
                      WHERE (m2.sender_username = messages.sender_username AND m2.recipient_username = messages.recipient_username
                             OR m2.sender_username = messages.recipient_username AND m2.recipient_username = messages.sender_username)
@@ -11103,10 +11103,10 @@ def get_inbox():
                             OR m2.sender_username = messages.recipient_username AND m2.recipient_username = messages.sender_username)
                      AND m2.deleted_at IS NULL
                      ORDER BY m2.sent_at DESC LIMIT 1) as last_message_time,
-                    SUM(CASE WHEN recipient_username = ? AND is_read = 0 AND deleted_at IS NULL THEN 1 ELSE 0 END) as unread_count,
-                    MAX(CASE WHEN sender_username != ? THEN 1 ELSE 0 END) as is_latest_from_them
+                    SUM(CASE WHEN recipient_username = %s AND is_read = 0 AND deleted_at IS NULL THEN 1 ELSE 0 END) as unread_count,
+                    MAX(CASE WHEN sender_username != %s THEN 1 ELSE 0 END) as is_latest_from_them
                 FROM messages
-                WHERE (sender_username = ? OR recipient_username = ?)
+                WHERE (sender_username = %s OR recipient_username = %s)
                 AND deleted_at IS NULL
                 AND is_read = 0
                 AND recipient_username = ?
@@ -11118,7 +11118,7 @@ def get_inbox():
             # Show all conversations
             rows = cur.execute('''
                 SELECT 
-                    CASE WHEN sender_username = ? THEN recipient_username ELSE sender_username END as other_user,
+                    CASE WHEN sender_username = %s THEN recipient_username ELSE sender_username END as other_user,
                     (SELECT content FROM messages m2 
                      WHERE (m2.sender_username = messages.sender_username AND m2.recipient_username = messages.recipient_username
                             OR m2.sender_username = messages.recipient_username AND m2.recipient_username = messages.sender_username)
@@ -11129,10 +11129,10 @@ def get_inbox():
                             OR m2.sender_username = messages.recipient_username AND m2.recipient_username = messages.sender_username)
                      AND m2.deleted_at IS NULL
                      ORDER BY m2.sent_at DESC LIMIT 1) as last_message_time,
-                    SUM(CASE WHEN recipient_username = ? AND is_read = 0 AND deleted_at IS NULL THEN 1 ELSE 0 END) as unread_count,
-                    MAX(CASE WHEN sender_username != ? THEN 1 ELSE 0 END) as is_latest_from_them
+                    SUM(CASE WHEN recipient_username = %s AND is_read = 0 AND deleted_at IS NULL THEN 1 ELSE 0 END) as unread_count,
+                    MAX(CASE WHEN sender_username != %s THEN 1 ELSE 0 END) as is_latest_from_them
                 FROM messages
-                WHERE (sender_username = ? OR recipient_username = ?)
+                WHERE (sender_username = %s OR recipient_username = %s)
                 AND deleted_at IS NULL
                 GROUP BY other_user
                 ORDER BY last_message_time DESC
@@ -11148,9 +11148,9 @@ def get_inbox():
         # Get total conversation count
         total_conversations = cur.execute('''
             SELECT COUNT(DISTINCT 
-                CASE WHEN sender_username = ? THEN recipient_username ELSE sender_username END
+                CASE WHEN sender_username = %s THEN recipient_username ELSE sender_username END
             ) FROM messages
-            WHERE (sender_username = ? OR recipient_username = ?) AND deleted_at IS NULL
+            WHERE (sender_username = %s OR recipient_username = %s) AND deleted_at IS NULL
         ''', (username, username, username)).fetchone()[0]
         
         conn.close()
@@ -11194,8 +11194,8 @@ def get_conversation(recipient_username):
         rows = cur.execute('''
             SELECT id, sender_username, recipient_username, content, subject, is_read, read_at, sent_at
             FROM messages
-            WHERE (sender_username = ? AND recipient_username = ?)
-               OR (sender_username = ? AND recipient_username = ?)
+            WHERE (sender_username = %s AND recipient_username = %s)
+               OR (sender_username = %s AND recipient_username = %s)
             AND deleted_at IS NULL
             ORDER BY sent_at ASC
             LIMIT ?
@@ -11214,8 +11214,8 @@ def get_conversation(recipient_username):
         rows = cur.execute('''
             SELECT id, sender_username, recipient_username, content, subject, is_read, read_at, sent_at
             FROM messages
-            WHERE (sender_username = ? AND recipient_username = ?)
-               OR (sender_username = ? AND recipient_username = ?)
+            WHERE (sender_username = %s AND recipient_username = %s)
+               OR (sender_username = %s AND recipient_username = %s)
             AND deleted_at IS NULL
             ORDER BY sent_at ASC
             LIMIT ?
@@ -11417,7 +11417,7 @@ def update_feedback_status(feedback_id):
         resolved_at = 'CURRENT_TIMESTAMP' if new_status == 'resolved' else 'NULL'
         cur.execute(f'''
             UPDATE feedback 
-            SET status=?, admin_notes=?, resolved_at={resolved_at}
+            SET status=%s, admin_notes=%s, resolved_at={resolved_at}
             WHERE id=?
         ''', (new_status, admin_notes, feedback_id))
 
