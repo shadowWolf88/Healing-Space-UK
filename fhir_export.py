@@ -1,3 +1,16 @@
+"""
+DEPRECATED: FHIR Export Module
+
+This module is for reference only and not actively used.
+FHIR export functionality is integrated into the main Flask API.
+
+Note: Uses legacy SQLite code - not updated for PostgreSQL migration.
+"""
+
+import sys
+raise ImportError("This module is deprecated. FHIR functionality moved to Flask API.")
+
+# === Legacy SQLite code below - DO NOT USE ===
 import sqlite3
 import json
 import os
@@ -7,6 +20,7 @@ from datetime import datetime, timezone
 from cryptography.fernet import Fernet
 from secrets_manager import SecretsManager
 from typing import Tuple, List
+
 
 # Determine debug mode locally
 DEBUG = os.environ.get('DEBUG', '').lower() in ('1', 'true', 'yes')

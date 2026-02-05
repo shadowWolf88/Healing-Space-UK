@@ -10765,8 +10765,8 @@ def mark_daily_task_complete(username, task_type):
         # Use INSERT OR REPLACE to handle duplicates
         cur.execute('''
             INSERT INTO daily_tasks (username, task_type, completed, completed_at, task_date)
-            VALUES (%s, %s, 1, datetime('now'), %s)
-            ON CONFLICT(username, task_type, task_date) DO UPDATE SET completed=1, completed_at=datetime('now')
+            VALUES (%s, %s, 1, CURRENT_TIMESTAMP, %s)
+            ON CONFLICT(username, task_type, task_date) DO UPDATE SET completed=1, completed_at=CURRENT_TIMESTAMP
         ''', (username, task_type, today))
 
         # Check if all tasks completed
@@ -10855,10 +10855,11 @@ def save_cbt_tool_entry():
             cur.execute('''
                 INSERT INTO cbt_tool_entries (username, tool_type, data, mood_rating, notes)
                 VALUES (%s, %s, %s, %s, %s)
+                RETURNING id
             ''', (username, tool_type, entry_data, mood_rating, notes))
 
         conn.commit()
-        entry_id = existing[0] if existing else cur.lastrowid
+        entry_id = existing[0] if existing else cur.fetchone()[0]
         conn.close()
 
         # Update AI memory with CBT activity

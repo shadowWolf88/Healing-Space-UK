@@ -1,22 +1,26 @@
 #!/usr/bin/env python3
 """
-Automated Training Data Export Script
+DEPRECATED: Automated Training Data Export Script
 
-Runs periodically (e.g., via cron) to export anonymized training data
-from all users who have given consent.
+This script is for reference only and is not currently used.
+Training data export is handled by the TrainingDataManager class
+and integrated into the Flask API.
 
-Usage:
+Original usage:
     python3 export_training_data.py
 
-Cron example (runs nightly at 2 AM):
-    0 2 * * * cd /path/to/app && python3 export_training_data.py >> /var/log/training_export.log 2>&1
+Note: Uses legacy SQLite code - not updated for PostgreSQL migration.
 """
 
+import sys
+print("ERROR: This script is deprecated. Use TrainingDataManager directly via the Flask API.")
+sys.exit(1)
+
+# === Legacy SQLite code below - DO NOT USE ===
 import sqlite3
 from datetime import datetime
 from training_data_manager import TrainingDataManager
 import os
-import sys
 
 def main():
     """Export training data for all consented users"""
