@@ -106,7 +106,7 @@ def normalize_pet_row(pet_row):
 # Import existing modules
 from secrets_manager import SecretsManager
 from audit import log_event
-import fhir_export
+# NOTE: No longer importing fhir_export (FHIR functionality moved to Flask API)
 # NOTE: No longer importing TRAINING_DB_PATH (using PostgreSQL only)
 
 # Import password hashing libraries with fallbacks (same logic as main.py)
