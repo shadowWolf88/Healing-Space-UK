@@ -6814,27 +6814,18 @@ def pet_status():
     """Get pet status"""
     try:
         username = request.args.get('username')
-        
         # SECURITY: Verify user exists
         valid, error = verify_pet_user(username)
         if not valid:
             return jsonify({'exists': False, 'error': error}), 200
-        
-        # Ensure table exists first
-        try:
-            ensure_pet_table()
-        except Exception as e:
-            print(f"[PET STATUS] Error ensuring pet table: {e}")
-        
         conn = get_pet_db_connection()
         cur = get_wrapped_cursor(conn)
+        ensure_pet_table()
         
         pet = cur.execute("SELECT * FROM pet WHERE username = %s", (username,)).fetchone()
         conn.close()
-        
         if not pet:
             return jsonify({'exists': False, 'error': 'No pet found for user'}), 200
-        
         return jsonify({
             'exists': True,
             'pet': {
@@ -6846,9 +6837,7 @@ def pet_status():
             }
         }), 200
     except Exception as e:
-        print(f"[PET STATUS] Pet status error: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"Pet status error: {e}")
         return jsonify({'exists': False, 'error': 'Unable to fetch pet status'}), 200
 
 @app.route('/api/ai/trigger-training', methods=['POST'])
@@ -6900,97 +6889,69 @@ def pet_create():
         species = data.get('species', 'Dog')
         gender = data.get('gender', 'Neutral')
 
-        print(f"[PET CREATE] Starting pet creation for {username}, name={name}")
-
         # SECURITY: Verify user exists
         valid, error = verify_pet_user(username)
         if not valid:
-            print(f"[PET CREATE] User verification failed: {error}")
             return jsonify({'error': error}), 401
 
         if not name:
-            print(f"[PET CREATE] No pet name provided")
             return jsonify({'error': 'Pet name required'}), 400
 
-        # Ensure table exists
         try:
             ensure_pet_table()
-            print(f"[PET CREATE] Pet table ensured")
         except Exception as e:
-            print(f"[PET CREATE] Error ensuring pet table: {e}")
+            print(f"Error ensuring pet table: {e}")
+            pass  # Table might already exist
         
         conn = None
         try:
-            # Get connection
             conn = get_pet_db_connection()
             if not conn:
-                print(f"[PET CREATE] Failed to get database connection for {username}")
+                print(f"Failed to get pet database connection for {username}")
                 return jsonify({'error': 'Database connection error'}), 503
-            
-            print(f"[PET CREATE] Got database connection")
+                
             cur = get_wrapped_cursor(conn)
             
-            # First, check if user already has a pet
-            cur.execute("SELECT id FROM pet WHERE username = %s", (username,))
-            existing = cur.fetchone()
-            
-            if existing:
-                # Update existing pet
-                print(f"[PET CREATE] Updating existing pet for {username}")
-                cur.execute("""
-                    UPDATE pet SET 
-                        name = %s,
-                        species = %s,
-                        gender = %s,
-                        hunger = 70,
-                        happiness = 70,
-                        energy = 70,
-                        hygiene = 80,
-                        coins = 0,
-                        xp = 0,
-                        stage = 'Baby',
-                        adventure_end = 0,
-                        last_updated = %s,
-                        hat = 'None'
-                    WHERE username = %s
-                """, (name, species, gender, datetime.now().timestamp(), username))
-            else:
-                # Insert new pet
-                print(f"[PET CREATE] Inserting new pet for {username}")
-                cur.execute("""
-                    INSERT INTO pet (username, name, species, gender, hunger, happiness, energy, hygiene, 
-                                   coins, xp, stage, adventure_end, last_updated, hat)
-                    VALUES (%s, %s, %s, %s, 70, 70, 70, 80, 0, 0, 'Baby', 0, %s, 'None')
-                """, (username, name, species, gender, datetime.now().timestamp()))
-            
+            # Use PostgreSQL INSERT ... ON CONFLICT for safe upsert (no race condition)
+            cur.execute("""
+                INSERT INTO pet (username, name, species, gender, hunger, happiness, energy, hygiene, 
+                               coins, xp, stage, adventure_end, last_updated, hat)
+                VALUES (%s, %s, %s, %s, 70, 70, 70, 80, 0, 0, 'Baby', 0, %s, 'None')
+                ON CONFLICT(username) DO UPDATE SET
+                    name = EXCLUDED.name,
+                    species = EXCLUDED.species,
+                    gender = EXCLUDED.gender,
+                    hunger = 70,
+                    happiness = 70,
+                    energy = 70,
+                    hygiene = 80,
+                    coins = 0,
+                    xp = 0,
+                    stage = 'Baby',
+                    adventure_end = 0,
+                    last_updated = EXCLUDED.last_updated,
+                    hat = 'None'
+            """, (username, name, species, gender, datetime.now().timestamp()))
             conn.commit()
-            print(f"[PET CREATE] ✓ Pet created/updated for user: {username}")
-            return jsonify({
-                'success': True, 
-                'message': 'Pet created!' if not existing else 'Pet updated!',
-                'pet': {
-                    'username': username,
-                    'name': name,
-                    'species': species,
-                    'gender': gender
-                }
-            }), 201
+            print(f"✓ Pet created for user: {username}")
+            return jsonify({'success': True, 'message': 'Pet created!'}), 201
         except Exception as e:
-            print(f"[PET CREATE] ✗ Error in pet creation for {username}: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"Error in pet creation for {username}: {e}")
             if conn:
                 try:
                     conn.rollback()
                 except:
                     pass
-            return jsonify({'error': f'Pet creation failed: {str(e)}'}), 500
+            raise
         finally:
             if conn:
                 try:
                     conn.close()
                 except:
                     pass
+    except Exception as e:
+        print(f"Pet creation error: {str(e)}")
+        return handle_exception(e, request.endpoint or 'pet_create')
     
     except Exception as e:
         print(f"[PET CREATE] ✗ Outer error: {e}")
