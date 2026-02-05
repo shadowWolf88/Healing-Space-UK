@@ -828,10 +828,35 @@
             z-index: 1001;
             pointer-events: auto;
             transition: background 0.3s ease, box-shadow 0.3s ease;
+            color: var(--text-color);
         }
 
         .auth-box * {
             pointer-events: auto;
+        }
+        
+        .auth-box h1, .auth-box h2, .auth-box h3 {
+            color: var(--text-color);
+        }
+        
+        .auth-box label {
+            color: var(--text-color);
+        }
+        
+        .auth-box p {
+            color: var(--text-color);
+        }
+        
+        .auth-box input[type="text"],
+        .auth-box input[type="password"],
+        .auth-box input[type="email"] {
+            color: var(--text-color) !important;
+            background: var(--bg-secondary) !important;
+            border: 2px solid var(--border-color) !important;
+        }
+        
+        .auth-box a {
+            color: var(--primary-color);
         }
 
         .auth-box h1 {
@@ -3189,6 +3214,11 @@
 <body>
     <!-- Auth Screen -->
     <div id="authScreen" class="auth-container">
+        <!-- Theme Toggle for Login Page -->
+        <label class="theme-toggle" style="position: fixed; top: 20px; right: 20px; z-index: 5000; vertical-align: middle;">
+            <input type="checkbox" id="authDarkModeToggle" onchange="toggleDarkMode()">
+            <span class="theme-toggle-slider"></span>
+        </label>
         <div class="auth-box">
             <h1>🌿 Healing Space UK</h1>
             <p class="subtitle">Complete Mental Health Companion</p>
@@ -14290,23 +14320,32 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     document.getElementById('wellnessConversation').style.display = 'none';
                     document.getElementById('wellnessAlreadyLogged').style.display = 'block';
                     document.querySelector('.wellness-input-area').style.display = 'none';
+                    document.querySelector('.wellness-chat-header').style.display = 'flex';
                     return;
                 }
 
+                // Show all wellness components
+                const header = document.querySelector('.wellness-chat-header');
+                if (header) header.style.display = 'flex';
+                
                 document.getElementById('wellnessAlreadyLogged').style.display = 'none';
                 document.getElementById('wellnessConversation').style.display = 'flex';
                 document.querySelector('.wellness-input-area').style.display = 'flex';
                 
                 // Clear conversation and initialize
-                document.getElementById('wellnessConversation').innerHTML = '';
+                const conversationDiv = document.getElementById('wellnessConversation');
+                conversationDiv.innerHTML = '';
+                
                 wellnessRitualState.currentStep = 0;
                 wellnessRitualState.data = {};
                 wellnessRitualState.skipped = [];
                 wellnessRitualState.startTime = Date.now();
                 wellnessRitualState.conversationHistory = [];
 
-                // Start the conversation
-                showWellnessStep();
+                // Ensure div is in DOM and visible before rendering
+                setTimeout(() => {
+                    showWellnessStep();
+                }, 100);
                 
             } catch (error) {
                 console.error('Error initializing wellness ritual:', error);
