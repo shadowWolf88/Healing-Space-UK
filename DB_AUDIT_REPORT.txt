@@ -5,7 +5,7 @@ THERAPIST_APP.DB (Main Application)
 
 --- TABLE SUMMARY ---
 ai_memory
-alerts
+alerts 
 appointments
 audit_logs
 breathing_exercises
