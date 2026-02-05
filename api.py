@@ -103,7 +103,7 @@ def normalize_pet_row(pet_row):
         pet_row[14]           # hat (text)
     )
 
-# Import existing modules (avoid importing main.py which has tkinter)
+# Import existing modules
 from secrets_manager import SecretsManager
 from audit import log_event
 import fhir_export
@@ -2135,7 +2135,7 @@ except RuntimeError as e:
     if not DEBUG:
         raise
 
-# Password/PIN hashing functions (copied from main.py to avoid tkinter import)
+# Password/PIN hashing functions
 def hash_password(password: str) -> str:
     """Hash password using Argon2 > bcrypt > PBKDF2 fallback"""
     if HAS_ARGON2 and _ph:
