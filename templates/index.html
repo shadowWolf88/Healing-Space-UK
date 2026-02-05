@@ -3183,6 +3183,7 @@
                 <button class="btn btn-secondary" onclick="showClinicianAuth();" style="width: 100%; padding: 20px; font-size: 18px;">
                     👨‍⚕️ I'm a Clinician
                 </button>
+            </div>
                 
             <!-- Developer Access Button (fixed to window) -->
             <button id="devAccessBtn" onclick="showDevLogin()" style="position: fixed; bottom: 18px; right: 18px; background: #222; color: #fff; opacity: 0.6; font-size: 13px; padding: 7px 16px; border-radius: 16px; border: none; z-index: 3000; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: opacity 0.2s; min-width: 0; width: auto; height: auto;">
@@ -3191,23 +3192,23 @@
 
             <!-- Developer Login Form (modal overlay) -->
             <div id="devLoginForm" class="hidden" style="position: fixed; bottom: 0; right: 0; left: 0; top: 0; background: rgba(0,0,0,0.45); z-index: 4000; display: flex; align-items: center; justify-content: center;">
-                <div style="background: #fff; border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); padding: 36px 32px; min-width: 320px; max-width: 95vw; width: 100%; max-width: 350px;">
-                    <h3 style="text-align: center; margin-bottom: 20px;">Developer Login</h3>
+                <div style="background: var(--bg-color); border-radius: 16px; box-shadow: 0 8px 32px rgba(0,0,0,0.18); padding: 36px 32px; min-width: 320px; max-width: 95vw; width: 100%; max-width: 350px; color: var(--text-color);">
+                    <h3 style="text-align: center; margin-bottom: 20px; color: var(--text-color);">Developer Login</h3>
                     <div class="form-group">
-                        <label>Username</label>
-                        <input type="text" id="devLoginUsername" placeholder="Enter developer username">
+                        <label style="color: var(--text-color);">Username</label>
+                        <input type="text" id="devLoginUsername" placeholder="Enter developer username" style="background: var(--bg-secondary); color: var(--text-color); border: 2px solid var(--border-color);">
                     </div>
                     <div class="form-group">
-                        <label>Password</label>
+                        <label style="color: var(--text-color);">Password</label>
                         <div class="password-field-wrapper">
-                            <input type="password" id="devLoginPassword" placeholder="Enter password">
+                            <input type="password" id="devLoginPassword" placeholder="Enter password" style="background: var(--bg-secondary); color: var(--text-color); border: 2px solid var(--border-color);">
                             <button type="button" class="password-toggle" onclick="togglePassword('devLoginPassword', this)" title="Show/Hide password">👁️</button>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>PIN (4 digits) - 2FA</label>
+                        <label style="color: var(--text-color);">PIN (4 digits) - 2FA</label>
                         <div class="password-field-wrapper">
-                            <input type="password" id="devLoginPin" placeholder="Enter your 4-digit PIN" maxlength="4">
+                            <input type="password" id="devLoginPin" placeholder="Enter your 4-digit PIN" maxlength="4" style="background: var(--bg-secondary); color: var(--text-color); border: 2px solid var(--border-color);">
                             <button type="button" class="password-toggle" onclick="togglePassword('devLoginPin', this)" title="Show/Hide PIN">👁️</button>
                         </div>
                     </div>
@@ -3215,70 +3216,69 @@
                     <button class="btn btn-secondary" onclick="closeDevLogin()" style="margin-top: 10px;">Cancel</button>
                 </div>
             </div>
-            </div>
             
             <!-- Patient Login Form -->
             <div id="patientLoginForm" class="hidden">
-                <h3 style="text-align: center; margin-bottom: 20px;">Patient Login</h3>
+                <h3 style="text-align: center; margin-bottom: 20px; color: var(--text-color);">Patient Login</h3>
                 <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" id="loginUsername" placeholder="Enter username">
+                    <label style="color: var(--text-color);">Username</label>
+                    <input type="text" id="loginUsername" placeholder="Enter username" style="background: var(--bg-secondary); color: var(--text-color); border: 2px solid var(--border-color);">
                 </div>
                 <div class="form-group">
-                    <label>Password</label>
+                    <label style="color: var(--text-color);">Password</label>
                     <div class="password-field-wrapper">
-                        <input type="password" id="loginPassword" placeholder="Enter password">
+                        <input type="password" id="loginPassword" placeholder="Enter password" style="background: var(--bg-secondary); color: var(--text-color); border: 2px solid var(--border-color);">
                         <button type="button" class="password-toggle" onclick="togglePassword('loginPassword', this)" title="Show/Hide password">
                             👁️
                         </button>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>PIN (4 digits) - 2FA</label>
+                    <label style="color: var(--text-color);">PIN (4 digits) - 2FA</label>
                     <div class="password-field-wrapper">
-                        <input type="password" id="loginPin" placeholder="Enter your 4-digit PIN" maxlength="4">
+                        <input type="password" id="loginPin" placeholder="Enter your 4-digit PIN" maxlength="4" style="background: var(--bg-secondary); color: var(--text-color); border: 2px solid var(--border-color);">
                         <button type="button" class="password-toggle" onclick="togglePassword('loginPin', this)" title="Show/Hide PIN">👁️</button>
                     </div>
                 </div>
                 <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
                     <input type="checkbox" id="rememberMe" style="width: auto; margin: 0;">
-                    <label for="rememberMe" style="margin: 0; cursor: pointer;">Remember Me</label>
+                    <label for="rememberMe" style="margin: 0; cursor: pointer; color: var(--text-color);">Remember Me</label>
                 </div>
                 <button class="btn" onclick="login('user')">Login</button>
-                <a href="#" onclick="showForgotPassword('patient'); return false;" style="display: block; text-align: center; margin: 15px 0; color: #667eea; text-decoration: none;">Forgot Password or PIN?</a>
+                <a href="#" onclick="showForgotPassword('patient'); return false;" style="display: block; text-align: center; margin: 15px 0; color: var(--primary-color); text-decoration: none;">Forgot Password or PIN?</a>
                 <button class="btn btn-secondary" onclick="showPatientRegister()">Create Patient Account</button>
                 <button class="btn btn-secondary" onclick="showLanding()">Back</button>
             </div>
             
             <!-- Clinician Login Form -->
             <div id="clinicianLoginForm" class="hidden">
-                <h3 style="text-align: center; margin-bottom: 20px;">Clinician Login</h3>
+                <h3 style="text-align: center; margin-bottom: 20px; color: var(--text-color);">Clinician Login</h3>
                 <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" id="clinicianLoginUsername" placeholder="Enter username">
+                    <label style="color: var(--text-color);">Username</label>
+                    <input type="text" id="clinicianLoginUsername" placeholder="Enter username" style="background: var(--bg-secondary); color: var(--text-color); border: 2px solid var(--border-color);">
                 </div>
                 <div class="form-group">
-                    <label>Password</label>
+                    <label style="color: var(--text-color);">Password</label>
                     <div class="password-field-wrapper">
-                        <input type="password" id="clinicianLoginPassword" placeholder="Enter password">
+                        <input type="password" id="clinicianLoginPassword" placeholder="Enter password" style="background: var(--bg-secondary); color: var(--text-color); border: 2px solid var(--border-color);">
                         <button type="button" class="password-toggle" onclick="togglePassword('clinicianLoginPassword', this)" title="Show/Hide password">
                             👁️
                         </button>
                     </div>
                 </div>
                 <div class="form-group">
-                    <label>PIN (4 digits) - 2FA</label>
+                    <label style="color: var(--text-color);">PIN (4 digits) - 2FA</label>
                     <div class="password-field-wrapper">
-                        <input type="password" id="clinicianLoginPin" placeholder="Enter your 4-digit PIN" maxlength="4">
+                        <input type="password" id="clinicianLoginPin" placeholder="Enter your 4-digit PIN" maxlength="4" style="background: var(--bg-secondary); color: var(--text-color); border: 2px solid var(--border-color);">
                         <button type="button" class="password-toggle" onclick="togglePassword('clinicianLoginPin', this)" title="Show/Hide PIN">👁️</button>
                     </div>
                 </div>
                 <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
                     <input type="checkbox" id="clinicianRememberMe" style="width: auto; margin: 0;">
-                    <label for="clinicianRememberMe" style="margin: 0; cursor: pointer;">Remember Me</label>
+                    <label for="clinicianRememberMe" style="margin: 0; cursor: pointer; color: var(--text-color);">Remember Me</label>
                 </div>
                 <button class="btn" onclick="login('clinician')">Login</button>
-                <a href="#" onclick="showForgotPassword('clinician'); return false;" style="display: block; text-align: center; margin: 15px 0; color: #667eea; text-decoration: none;">Forgot Password or PIN?</a>
+                <a href="#" onclick="showForgotPassword('clinician'); return false;" style="display: block; text-align: center; margin: 15px 0; color: var(--primary-color); text-decoration: none;">Forgot Password or PIN?</a>
                 <button class="btn btn-secondary" onclick="showClinicianRegister()">Create Clinician Account</button>
                 <button class="btn btn-secondary" onclick="showLanding()">Back</button>
             </div>
