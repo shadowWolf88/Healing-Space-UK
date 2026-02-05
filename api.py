@@ -3060,13 +3060,13 @@ def login():
         
         # Check disclaimer acceptance
         disclaimer_accepted = cur.execute(
-            "SELECT disclaimer_accepted FROM users WHERE username=?",
+            "SELECT disclaimer_accepted FROM users WHERE username=%s",
             (username,)
         ).fetchone()[0]
         
         # Update last_login timestamp
         cur.execute(
-            "UPDATE users SET last_login=datetime('now') WHERE username=?",
+            "UPDATE users SET last_login=CURRENT_TIMESTAMP WHERE username=%s",
             (username,)
         )
         conn.commit()
@@ -3076,7 +3076,7 @@ def login():
         clinician_name = None
         if role == 'user':
             approval = cur.execute(
-                "SELECT status FROM patient_approvals WHERE patient_username=? ORDER BY request_date DESC LIMIT 1",
+                "SELECT status FROM patient_approvals WHERE patient_username=%s ORDER BY request_date DESC LIMIT 1",
                 (username,)
             ).fetchone()
             if approval:
@@ -3085,8 +3085,8 @@ def login():
             # Get clinician's name if assigned
             if clinician_id:
                 clinician_info = cur.execute(
-                    "SELECT username FROM users WHERE username=? AND role='clinician'",
-                    (clinician_id,)
+                    "SELECT username FROM users WHERE username=%s AND role=%s",
+                    (clinician_id, 'clinician')
                 ).fetchone()
                 if clinician_info:
                     # Format clinician name nicely (capitalize, add Dr. prefix)
