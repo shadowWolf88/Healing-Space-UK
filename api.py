@@ -455,7 +455,7 @@ def update_goal(entry_id):
             return jsonify({'error': 'Entry not found'}), 404
         fields = ['goal_title', 'goal_description', 'goal_type', 'target_date', 'related_value_id', 'status', 'progress_percentage']
         updates = {k: data[k] for k in fields if k in data}
-        set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
+        set_clause = ', '.join([f"{k}= %s" for k in updates.keys()])
         values = list(updates.values()) + [entry_id, username]
         cur.execute(f'UPDATE goals SET {set_clause} WHERE id=%s AND username=%s', values)
         conn.commit()
@@ -660,7 +660,7 @@ def update_value(entry_id):
             return jsonify({'error': 'Entry not found'}), 404
         fields = ['value_name', 'value_description', 'importance_rating', 'current_alignment', 'life_area', 'related_goals', 'is_active']
         updates = {k: data[k] for k in fields if k in data}
-        set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
+        set_clause = ', '.join([f"{k}= %s" for k in updates.keys()])
         values = list(updates.values()) + [entry_id, username]
         cur.execute(f'UPDATE values_clarification SET {set_clause} WHERE id=%s AND username=%s', values)
         conn.commit()
@@ -785,7 +785,7 @@ def update_self_compassion(entry_id):
             return jsonify({'error': 'Entry not found'}), 404
         fields = ['difficult_situation', 'self_critical_thoughts', 'common_humanity', 'kind_response', 'self_care_action', 'mood_before', 'mood_after']
         updates = {k: data[k] for k in fields if k in data}
-        set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
+        set_clause = ', '.join([f"{k}= %s" for k in updates.keys()])
         values = list(updates.values()) + [entry_id, username]
         cur.execute(f'UPDATE self_compassion_journal SET {set_clause} WHERE id=%s AND username=%s', values)
         conn.commit()
@@ -914,7 +914,7 @@ def update_coping_card(entry_id):
             return jsonify({'error': 'Entry not found'}), 404
         fields = ['card_title', 'situation_trigger', 'unhelpful_thought', 'helpful_response', 'coping_strategies', 'is_favorite', 'times_used']
         updates = {k: data[k] for k in fields if k in data}
-        set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
+        set_clause = ', '.join([f"{k}= %s" for k in updates.keys()])
         values = list(updates.values()) + [entry_id, username]
         cur.execute(f'UPDATE coping_cards SET {set_clause} WHERE id=%s AND username=%s', values)
         conn.commit()
@@ -1043,7 +1043,7 @@ def update_problem_solving(entry_id):
             return jsonify({'error': 'Entry not found'}), 404
         fields = ['problem_description', 'problem_importance', 'brainstormed_solutions', 'chosen_solution', 'action_steps', 'outcome', 'status']
         updates = {k: data[k] for k in fields if k in data}
-        set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
+        set_clause = ', '.join([f"{k}= %s" for k in updates.keys()])
         values = list(updates.values()) + [entry_id, username]
         cur.execute(f'UPDATE problem_solving SET {set_clause} WHERE id=%s AND username=%s', values)
         conn.commit()
@@ -1170,7 +1170,7 @@ def update_exposure_hierarchy(entry_id):
             return jsonify({'error': 'Entry not found'}), 404
         fields = ['fear_situation', 'initial_suds', 'target_suds', 'hierarchy_rank', 'status']
         updates = {k: data[k] for k in fields if k in data}
-        set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
+        set_clause = ', '.join([f"{k}= %s" for k in updates.keys()])
         values = list(updates.values()) + [entry_id, username]
         cur.execute(f'UPDATE exposure_hierarchy SET {set_clause} WHERE id=%s AND username=%s', values)
         conn.commit()
@@ -1343,7 +1343,7 @@ def update_core_belief(entry_id):
         # Only update provided fields
         fields = ['old_belief', 'belief_origin', 'evidence_for', 'evidence_against', 'new_balanced_belief', 'belief_strength_before', 'belief_strength_after', 'is_active']
         updates = {k: data[k] for k in fields if k in data}
-        set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
+        set_clause = ', '.join([f"{k}= %s" for k in updates.keys()])
         values = list(updates.values()) + [entry_id, username]
         cur.execute(f'UPDATE core_beliefs SET {set_clause} WHERE id=%s AND username=%s', values)
         conn.commit()
@@ -1477,7 +1477,7 @@ def update_sleep_diary(entry_id):
         # Only update provided fields
         fields = ['sleep_date', 'bedtime', 'wake_time', 'time_to_fall_asleep', 'times_woken', 'total_sleep_hours', 'sleep_quality', 'dreams_nightmares', 'factors_affecting', 'morning_mood', 'notes']
         updates = {k: data[k] for k in fields if k in data}
-        set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
+        set_clause = ', '.join([f"{k}= %s" for k in updates.keys()])
         values = list(updates.values()) + [entry_id, username]
         cur.execute(f'UPDATE sleep_diary SET {set_clause} WHERE id=%s AND username=%s', values)
         conn.commit()
@@ -1605,7 +1605,7 @@ def update_relaxation_technique(entry_id):
         # Only update provided fields
         fields = ['technique_type', 'duration_minutes', 'effectiveness_rating', 'body_scan_areas', 'notes']
         updates = {k: data[k] for k in fields if k in data}
-        set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
+        set_clause = ', '.join([f"{k}= %s" for k in updates.keys()])
         values = list(updates.values()) + [entry_id, username]
         cur.execute(f'UPDATE relaxation_techniques SET {set_clause} WHERE id=%s AND username=%s', values)
         conn.commit()
@@ -2183,7 +2183,7 @@ def validate_password_strength(password: str) -> tuple:
     if not any(c.isdigit() for c in password):
         return False, 'Password must contain at least one number'
 
-    special_chars = '!@#$%^&*()_+-=[]{}|;:,.<>?'
+    special_chars = '!@#$%^&*()_+-=[]{}|;:,.<> %s'
     if not any(c in special_chars for c in password):
         return False, 'Password must contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>%s)'
 
@@ -2394,7 +2394,7 @@ def get_authenticated_username():
             conn = get_db_connection()
             cur = get_wrapped_cursor(conn)
             result = cur.execute(
-                "SELECT role FROM users WHERE username=? AND role=?",
+                "SELECT role FROM users WHERE username = %s AND role = %s",
                 (username, role)
             ).fetchone()
             conn.close()
@@ -2499,7 +2499,7 @@ def update_breathing_exercise(entry_id):
         # Only update provided fields
         fields = ['exercise_type', 'duration_seconds', 'pre_anxiety_level', 'post_anxiety_level', 'notes', 'completed']
         updates = {k: data[k] for k in fields if k in data}
-        set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
+        set_clause = ', '.join([f"{k}= %s" for k in updates.keys()])
         values = list(updates.values()) + [entry_id, username]
         cur.execute(f'UPDATE breathing_exercises SET {set_clause} WHERE id=%s AND username=%s', values)
         conn.commit()
@@ -2612,7 +2612,7 @@ def debug_analytics(clinician):
         
         # Verify user is a developer
         user_role = cur.execute(
-            "SELECT role FROM users WHERE username=?",
+            "SELECT role FROM users WHERE username = %s",
             (username,)
         ).fetchone()
         
@@ -2627,7 +2627,7 @@ def debug_analytics(clinician):
         
         # Check if clinician exists
         clinician_exists = cur.execute(
-            "SELECT username, role FROM users WHERE username=?",
+            "SELECT username, role FROM users WHERE username = %s",
             (clinician,)
         ).fetchone()
         debug_info['clinician_exists'] = bool(clinician_exists)
@@ -2638,7 +2638,7 @@ def debug_analytics(clinician):
         patients = cur.execute("""
             SELECT u.username, u.role FROM users u
             JOIN patient_approvals pa ON u.username = pa.patient_username
-            WHERE pa.clinician_username=? AND pa.status='approved'
+            WHERE pa.clinician_username= %s AND pa.status='approved'
         """, (clinician,)).fetchall()
         
         debug_info['total_patients'] = len(patients)
@@ -2646,7 +2646,7 @@ def debug_analytics(clinician):
         
         # Get all approvals for this clinician
         all_approvals = cur.execute(
-            "SELECT patient_username, status, request_date FROM patient_approvals WHERE clinician_username=?",
+            "SELECT patient_username, status, request_date FROM patient_approvals WHERE clinician_username = %s",
             (clinician,)
         ).fetchall()
         debug_info['all_approvals'] = [
@@ -2833,7 +2833,7 @@ def verify_code():
         
         # Find valid code
         result = cur.execute(
-            "SELECT id, expires_at FROM verification_codes WHERE identifier=? AND code=? AND verified=0",
+            "SELECT id, expires_at FROM verification_codes WHERE identifier = %s AND code = %s AND verified=0",
             (identifier, code)
         ).fetchone()
         
@@ -2889,7 +2889,7 @@ def register():
             
             # Check if verification exists and is valid
             verified = cur.execute(
-                "SELECT id FROM verification_codes WHERE identifier=? AND verified=1 AND datetime(expires_at) > CURRENT_TIMESTAMP",
+                "SELECT id FROM verification_codes WHERE identifier = %s AND verified=1 AND datetime(expires_at) > CURRENT_TIMESTAMP",
                 (verified_identifier,)
             ).fetchone()
             
@@ -2930,7 +2930,7 @@ def register():
             conn = get_db_connection()
             cur = get_wrapped_cursor(conn)
             clinician = cur.execute(
-                "SELECT username FROM users WHERE username=? AND role='clinician'",
+                "SELECT username FROM users WHERE username = %s AND role='clinician'",
                 (clinician_id,)
             ).fetchone()
             
@@ -3145,7 +3145,7 @@ def verify_clinician_patient_relationship(clinician_username, patient_username):
         
         # Get clinician's ID
         clinician = cur.execute(
-            "SELECT id FROM users WHERE username=? AND role='clinician'",
+            "SELECT id FROM users WHERE username = %s AND role='clinician'",
             (clinician_username,)
         ).fetchone()
         
@@ -3157,7 +3157,7 @@ def verify_clinician_patient_relationship(clinician_username, patient_username):
         
         # Check if clinician is assigned to patient
         patient = cur.execute(
-            "SELECT clinician_id FROM users WHERE username=? AND role='user'",
+            "SELECT clinician_id FROM users WHERE username = %s AND role='user'",
             (patient_username,)
         ).fetchone()
         
@@ -3187,7 +3187,7 @@ def validate_session():
         
         # Check if user still exists and get their current role
         user = cur.execute(
-            "SELECT username, role FROM users WHERE username=?",
+            "SELECT username, role FROM users WHERE username = %s",
             (username,)
         ).fetchone()
         
@@ -3230,7 +3230,7 @@ def forgot_password():
         
         # Verify user exists and email matches
         user = cur.execute(
-            "SELECT email FROM users WHERE username=? AND email=?",
+            "SELECT email FROM users WHERE username = %s AND email = %s",
             (username, email)
         ).fetchone()
         
@@ -3248,7 +3248,7 @@ def forgot_password():
         
         # Store token
         cur.execute(
-            "UPDATE users SET reset_token=%s, reset_token_expiry=? WHERE username=?",
+            "UPDATE users SET reset_token=%s, reset_token_expiry= %s WHERE username = %s",
             (reset_token, expiry, username)
         )
         conn.commit()
@@ -3365,7 +3365,7 @@ def confirm_password_reset():
 
         # Verify token and expiry
         user = cur.execute(
-            "SELECT reset_token, reset_token_expiry FROM users WHERE username=?",
+            "SELECT reset_token, reset_token_expiry FROM users WHERE username = %s",
             (username,)
         ).fetchone()
 
@@ -3396,7 +3396,7 @@ def confirm_password_reset():
         # Update password and clear reset token
         hashed_password = hash_password(new_password)
         cur.execute(
-            "UPDATE users SET password=%s, reset_token=NULL, reset_token_expiry=NULL WHERE username=?",
+            "UPDATE users SET password=%s, reset_token=NULL, reset_token_expiry=NULL WHERE username = %s",
             (hashed_password, username)
         )
 
@@ -3758,7 +3758,7 @@ def developer_ai_chat():
 
         # Get chat history
         history = cur.execute(
-            "SELECT role, message FROM dev_ai_chats WHERE username=? AND session_id=? ORDER BY created_at DESC LIMIT 10",
+            "SELECT role, message FROM dev_ai_chats WHERE username = %s AND session_id = %s ORDER BY created_at DESC LIMIT 10",
             (username, session_id)
         ).fetchall()
 
@@ -3950,7 +3950,7 @@ def list_dev_messages():
             messages = cur.execute("""
                 SELECT id, from_username, to_username, message, message_type, read, parent_message_id, created_at
                 FROM dev_messages
-                WHERE from_username=? OR to_username=?
+                WHERE from_username = %s OR to_username= %s
                 ORDER BY created_at DESC
             """, (username, username)).fetchall()
         else:
@@ -3958,7 +3958,7 @@ def list_dev_messages():
             messages = cur.execute("""
                 SELECT id, from_username, to_username, message, message_type, read, parent_message_id, created_at
                 FROM dev_messages
-                WHERE to_username=? OR from_username=?
+                WHERE to_username = %s OR from_username= %s
                 ORDER BY created_at DESC
             """, (username, username)).fetchall()
 
@@ -3997,7 +3997,7 @@ def reply_dev_message():
 
         # Get original message to determine recipient
         original = cur.execute(
-            "SELECT from_username, to_username FROM dev_messages WHERE id=?",
+            "SELECT from_username, to_username FROM dev_messages WHERE id = %s",
             (parent_message_id,)
         ).fetchone()
 
@@ -4088,7 +4088,7 @@ def list_all_users():
         params = []
 
         if role_filter != 'all':
-            query += " AND role=?"
+            query += " AND role = %s"
             params.append(role_filter)
 
         if search:
@@ -4235,7 +4235,7 @@ def get_notifications():
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
         notifications = cur.execute(
-            "SELECT id, message, notification_type, read, created_at FROM notifications WHERE recipient_username=? ORDER BY created_at DESC LIMIT 20",
+            "SELECT id, message, notification_type, read, created_at FROM notifications WHERE recipient_username = %s ORDER BY created_at DESC LIMIT 20",
             (username,)
         ).fetchall()
         conn.close()
@@ -4315,7 +4315,7 @@ def get_pending_approvals():
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
         approvals = cur.execute(
-            "SELECT id, patient_username, request_date FROM patient_approvals WHERE clinician_username=? AND status='pending' ORDER BY request_date DESC",
+            "SELECT id, patient_username, request_date FROM patient_approvals WHERE clinician_username = %s AND status='pending' ORDER BY request_date DESC",
             (clinician,)
         ).fetchall()
         conn.close()
@@ -4341,7 +4341,7 @@ def approve_patient(approval_id):
         
         # Get approval details
         approval = cur.execute(
-            "SELECT patient_username, clinician_username FROM patient_approvals WHERE id=?",
+            "SELECT patient_username, clinician_username FROM patient_approvals WHERE id = %s",
             (approval_id,)
         ).fetchone()
         
@@ -4353,13 +4353,13 @@ def approve_patient(approval_id):
         
         # Update approval status
         cur.execute(
-            "UPDATE patient_approvals SET status='approved', approval_date=? WHERE id=?",
+            "UPDATE patient_approvals SET status='approved', approval_date= %s WHERE id = %s",
             (datetime.now(), approval_id)
         )
         
         # Link patient to clinician
         cur.execute(
-            "UPDATE users SET clinician_id=? WHERE username=?",
+            "UPDATE users SET clinician_id= %s WHERE username = %s",
             (clinician_username, patient_username)
         )
         
@@ -4377,7 +4377,7 @@ def approve_patient(approval_id):
 
         # Clear any prior "approval_pending" notifications for this patient
         cur.execute(
-            "UPDATE notifications SET read=1 WHERE recipient_username=? AND notification_type='approval_pending'",
+            "UPDATE notifications SET read=1 WHERE recipient_username = %s AND notification_type='approval_pending'",
             (patient_username,)
         )
         
@@ -4397,7 +4397,7 @@ def reject_patient(approval_id):
         
         # Get approval details
         approval = cur.execute(
-            "SELECT patient_username, clinician_username FROM patient_approvals WHERE id=?",
+            "SELECT patient_username, clinician_username FROM patient_approvals WHERE id = %s",
             (approval_id,)
         ).fetchone()
         
@@ -4409,7 +4409,7 @@ def reject_patient(approval_id):
         
         # Update approval status
         cur.execute(
-            "UPDATE patient_approvals SET status='rejected' WHERE id=?",
+            "UPDATE patient_approvals SET status='rejected' WHERE id = %s",
             (approval_id,)
         )
         
@@ -4421,7 +4421,7 @@ def reject_patient(approval_id):
 
         # Clear any prior "approval_pending" notifications for this patient when rejected
         cur.execute(
-            "UPDATE notifications SET read=1 WHERE recipient_username=? AND notification_type='approval_pending'",
+            "UPDATE notifications SET read=1 WHERE recipient_username = %s AND notification_type='approval_pending'",
             (patient_username,)
         )
         
@@ -4440,40 +4440,40 @@ def update_ai_memory(username):
         
         # Get recent activities
         recent_moods = cur.execute(
-            "SELECT mood_val, notes, entrestamp FROM mood_logs WHERE username=? ORDER BY entrestamp DESC LIMIT 5",
+            "SELECT mood_val, notes, entrestamp FROM mood_logs WHERE username = %s ORDER BY entrestamp DESC LIMIT 5",
             (username,)
         ).fetchall()
         
         recent_assessments = cur.execute(
-            "SELECT scale_name, score, severity FROM clinical_scales WHERE username=? ORDER BY entry_timestamp DESC LIMIT 3",
+            "SELECT scale_name, score, severity FROM clinical_scales WHERE username = %s ORDER BY entry_timestamp DESC LIMIT 3",
             (username,)
         ).fetchall()
         
         recent_cbt = cur.execute(
-            "SELECT thought, evidence FROM cbt_records WHERE username=? ORDER BY entry_timestamp DESC LIMIT 3",
+            "SELECT thought, evidence FROM cbt_records WHERE username = %s ORDER BY entry_timestamp DESC LIMIT 3",
             (username,)
         ).fetchall()
         
         recent_alerts = cur.execute(
-            "SELECT alert_type, details FROM alerts WHERE username=? ORDER BY created_at DESC LIMIT 3",
+            "SELECT alert_type, details FROM alerts WHERE username = %s ORDER BY created_at DESC LIMIT 3",
             (username,)
         ).fetchall()
         
         # Get clinician notes (including face-to-face appointment notes)
         clinician_notes = cur.execute(
-            "SELECT note_text, created_at FROM clinician_notes WHERE patient_username=? ORDER BY created_at DESC LIMIT 5",
+            "SELECT note_text, created_at FROM clinician_notes WHERE patient_username = %s ORDER BY created_at DESC LIMIT 5",
             (username,)
         ).fetchall()
         
         # Get gratitude entries
         recent_gratitude = cur.execute(
-            "SELECT entry FROM gratitude_logs WHERE username=? ORDER BY entry_timestamp DESC LIMIT 3",
+            "SELECT entry FROM gratitude_logs WHERE username = %s ORDER BY entry_timestamp DESC LIMIT 3",
             (username,)
         ).fetchall()
 
         # Get CBT Dashboard tool entries
         recent_cbt_tools = cur.execute(
-            "SELECT tool_type, mood_rating, notes, created_at FROM cbt_tool_entries WHERE username=? ORDER BY created_at DESC LIMIT 5",
+            "SELECT tool_type, mood_rating, notes, created_at FROM cbt_tool_entries WHERE username = %s ORDER BY created_at DESC LIMIT 5",
             (username,)
         ).fetchall()
 
@@ -4500,7 +4500,7 @@ def update_ai_memory(username):
             memory_parts.append(f"Clinician notes: {len(clinician_notes)} recent entries")
             # Include most recent highlighted note
             highlighted = cur.execute(
-                "SELECT note_text FROM clinician_notes WHERE patient_username=? AND is_highlighted=1 ORDER BY created_at DESC LIMIT 1",
+                "SELECT note_text FROM clinician_notes WHERE patient_username = %s AND is_highlighted=1 ORDER BY created_at DESC LIMIT 1",
                 (username,)
             ).fetchone()
             if highlighted:
@@ -4636,7 +4636,7 @@ def reward_pet(action, activity_type=None):
             stage = 'Adult'
         
         cur.execute(
-            "UPDATE pet SET hunger=%s, happiness=%s, energy=%s, hygiene=%s, coins=%s, xp=%s, stage=%s, last_updated=? WHERE id=?",
+            "UPDATE pet SET hunger=%s, happiness=%s, energy=%s, hygiene=%s, coins=%s, xp=%s, stage=%s, last_updated= %s WHERE id = %s",
             (new_hunger, new_happiness, new_energy, new_hygiene, new_coins, new_xp, stage, time.time(), pet[0])
         )
         conn.commit()
@@ -4676,7 +4676,7 @@ def therapy_chat():
         
         try:
             active_session = cur.execute(
-                "SELECT id FROM chat_sessions WHERE username=? AND is_active=1",
+                "SELECT id FROM chat_sessions WHERE username = %s AND is_active=1",
                 (username,)
             ).fetchone()
             
@@ -4708,7 +4708,7 @@ def therapy_chat():
         # Get conversation history from current session
         try:
             history = cur.execute(
-                "SELECT sender, message FROM chat_history WHERE chat_session_id=? ORDER BY timestamp DESC LIMIT 10",
+                "SELECT sender, message FROM chat_history WHERE chat_session_id = %s ORDER BY timestamp DESC LIMIT 10",
                 (chat_session_id,)
             ).fetchall()
         except Exception as hist_error:
@@ -4718,7 +4718,7 @@ def therapy_chat():
         # Get AI memory to include in context
         try:
             memory = cur.execute(
-                "SELECT memory_summary FROM ai_memory WHERE username=?",
+                "SELECT memory_summary FROM ai_memory WHERE username = %s",
                 (username,)
             ).fetchone()
         except Exception as mem_error:
@@ -4744,7 +4744,7 @@ def therapy_chat():
         
         # Get or create active session
         active_session = cur.execute(
-            "SELECT id FROM chat_sessions WHERE username=? AND is_active=1",
+            "SELECT id FROM chat_sessions WHERE username = %s AND is_active=1",
             (username,)
         ).fetchone()
         
@@ -4765,7 +4765,7 @@ def therapy_chat():
         
         # Update session last_active
         cur.execute(
-            "UPDATE chat_sessions SET last_active=? WHERE id=?",
+            "UPDATE chat_sessions SET last_active= %s WHERE id = %s",
             (datetime.now(), chat_session_id)
         )
         
@@ -4779,7 +4779,7 @@ def therapy_chat():
                 conn = get_db_connection()
                 cur = get_wrapped_cursor(conn)
                 recent_mood = cur.execute(
-                    "SELECT mood_val FROM mood_logs WHERE username=? ORDER BY entrestamp DESC LIMIT 1",
+                    "SELECT mood_val FROM mood_logs WHERE username = %s ORDER BY entrestamp DESC LIMIT 1",
                     (username,)
                 ).fetchone()
                 conn.close()
@@ -4819,7 +4819,7 @@ def therapy_chat():
                                 pass
                         
                         new_count = cur.execute(
-                            "SELECT COUNT(*) FROM training_chats WHERE id > ?",
+                            "SELECT COUNT(*) FROM training_chats WHERE id > %s",
                             (last_trained_id,)
                         ).fetchone()[0]
                         conn.close()
@@ -4879,25 +4879,25 @@ def get_chat_history():
         if chat_session_id:
             # Get history for specific chat session
             history = cur.execute(
-                "SELECT sender, message, timestamp FROM chat_history WHERE chat_session_id=? ORDER BY timestamp ASC",
+                "SELECT sender, message, timestamp FROM chat_history WHERE chat_session_id = %s ORDER BY timestamp ASC",
                 (chat_session_id,)
             ).fetchall()
         else:
             # Get history from active session, or all history if no sessions exist yet
             active_session = cur.execute(
-                "SELECT id FROM chat_sessions WHERE username=? AND is_active=1",
+                "SELECT id FROM chat_sessions WHERE username = %s AND is_active=1",
                 (username,)
             ).fetchone()
             
             if active_session:
                 history = cur.execute(
-                    "SELECT sender, message, timestamp FROM chat_history WHERE chat_session_id=? ORDER BY timestamp ASC",
+                    "SELECT sender, message, timestamp FROM chat_history WHERE chat_session_id = %s ORDER BY timestamp ASC",
                     (active_session[0],)
                 ).fetchall()
             else:
                 # Backward compatibility: get all messages with old session_id
                 history = cur.execute(
-                    "SELECT sender, message, timestamp FROM chat_history WHERE session_id=? ORDER BY timestamp ASC",
+                    "SELECT sender, message, timestamp FROM chat_history WHERE session_id = %s ORDER BY timestamp ASC",
                     (f"{username}_session",)
                 ).fetchall()
         
@@ -5020,7 +5020,7 @@ def get_chat_sessions():
         
         # Create default session if none exist
         existing = cur.execute(
-            "SELECT COUNT(*) FROM chat_sessions WHERE username=?",
+            "SELECT COUNT(*) FROM chat_sessions WHERE username = %s",
             (username,)
         ).fetchone()[0]
         
@@ -5034,7 +5034,7 @@ def get_chat_sessions():
         sessions = cur.execute(
             """SELECT id, session_name, created_at, last_active, is_active,
                (SELECT COUNT(*) FROM chat_history WHERE chat_session_id = chat_sessions.id) as message_count
-               FROM chat_sessions WHERE username=? ORDER BY last_active DESC""",
+               FROM chat_sessions WHERE username = %s ORDER BY last_active DESC""",
             (username,)
         ).fetchall()
         conn.close()
@@ -5111,7 +5111,7 @@ def update_chat_session(session_id):
         
         # Verify session belongs to user
         owner = cur.execute(
-            "SELECT username FROM chat_sessions WHERE id=?",
+            "SELECT username FROM chat_sessions WHERE id = %s",
             (session_id,)
         ).fetchone()
         
@@ -5121,7 +5121,7 @@ def update_chat_session(session_id):
         
         if session_name:
             cur.execute(
-                "UPDATE chat_sessions SET session_name=? WHERE id=?",
+                "UPDATE chat_sessions SET session_name= %s WHERE id = %s",
                 (session_name, session_id)
             )
         
@@ -5152,7 +5152,7 @@ def delete_chat_session(session_id):
         
         # Verify session belongs to user
         owner = cur.execute(
-            "SELECT username FROM chat_sessions WHERE id=?",
+            "SELECT username FROM chat_sessions WHERE id = %s",
             (session_id,)
         ).fetchone()
         
@@ -5162,7 +5162,7 @@ def delete_chat_session(session_id):
         
         # Check if this is the only session
         session_count = cur.execute(
-            "SELECT COUNT(*) FROM chat_sessions WHERE username=?",
+            "SELECT COUNT(*) FROM chat_sessions WHERE username = %s",
             (username,)
         ).fetchone()[0]
         
@@ -5178,13 +5178,13 @@ def delete_chat_session(session_id):
         
         # If deleted session was active, activate the most recent one
         is_active = cur.execute(
-            "SELECT is_active FROM chat_sessions WHERE username=? LIMIT 1",
+            "SELECT is_active FROM chat_sessions WHERE username = %s LIMIT 1",
             (username,)
         ).fetchone()
         
         if is_active and is_active[0] == 0:
             most_recent = cur.execute(
-                "SELECT id FROM chat_sessions WHERE username=? ORDER BY last_active DESC LIMIT 1",
+                "SELECT id FROM chat_sessions WHERE username = %s ORDER BY last_active DESC LIMIT 1",
                 (username,)
             ).fetchone()
             if most_recent:
@@ -5218,13 +5218,13 @@ def get_therapy_greeting():
         cur = get_wrapped_cursor(conn)
         
         memory = cur.execute(
-            "SELECT memory_summary FROM ai_memory WHERE username=?",
+            "SELECT memory_summary FROM ai_memory WHERE username = %s",
             (username,)
         ).fetchone()
         
         # Check if they logged mood today
         logged_today = cur.execute(
-            "SELECT mood_val FROM mood_logs WHERE username=? AND date(entrestamp) = date('now', 'localtime')",
+            "SELECT mood_val FROM mood_logs WHERE username = %s AND date(entrestamp) = date('now', 'localtime')",
             (username,)
         ).fetchone()
         
@@ -5266,7 +5266,7 @@ def initialize_chat():
         
         # Check if chat already initialized (has any chat history)
         existing_chat = cur.execute(
-            "SELECT COUNT(*) FROM chat_history WHERE session_id=?",
+            "SELECT COUNT(*) FROM chat_history WHERE session_id = %s",
             (f"{username}_session",)
         ).fetchone()[0]
         
@@ -5280,7 +5280,7 @@ def initialize_chat():
         
         # Get user profile info
         user_info = cur.execute(
-            "SELECT full_name, dob, conditions FROM users WHERE username=?",
+            "SELECT full_name, dob, conditions FROM users WHERE username = %s",
             (username,)
         ).fetchone()
         
@@ -5401,7 +5401,7 @@ def log_mood():
         # Check if user already logged mood today
         existing_today = cur.execute(
             """SELECT id FROM mood_logs 
-               WHERE username=? AND date(entrestamp) = date('now', 'localtime')""",
+               WHERE username = %s AND date(entrestamp) = date('now', 'localtime')""",
             (username,)
         ).fetchone()
         
@@ -5463,7 +5463,7 @@ def mood_history():
         logs = cur.execute(
             """SELECT id, mood_val, sleep_val, meds, notes, entrestamp, 
                water_pints, exercise_mins, outside_mins 
-               FROM mood_logs WHERE username=? ORDER BY entrestamp DESC LIMIT ?""",
+               FROM mood_logs WHERE username = %s ORDER BY entrestamp DESC LIMIT ?""",
             (username, limit)
         ).fetchall()
         conn.close()
@@ -5554,7 +5554,7 @@ def get_breathing_exercises():
         exercises = cur.execute(
             """SELECT id, exercise_type, duration_seconds, pre_anxiety_level,
                       post_anxiety_level, notes, completed, entry_timestamp
-               FROM breathing_exercises WHERE username=?
+               FROM breathing_exercises WHERE username = %s
                ORDER BY entry_timestamp DESC LIMIT 50""",
             (username,)
         ).fetchall()
@@ -5629,7 +5629,7 @@ def get_relaxation_sessions():
         sessions = cur.execute(
             """SELECT id, technique_type, duration_minutes, effectiveness_rating,
                       body_scan_areas, notes, entry_timestamp
-               FROM relaxation_techniques WHERE username=?
+               FROM relaxation_techniques WHERE username = %s
                ORDER BY entry_timestamp DESC LIMIT 50""",
             (username,)
         ).fetchall()
@@ -5699,7 +5699,7 @@ def get_sleep_diary_list():
             """SELECT id, sleep_date, bedtime, wake_time, time_to_fall_asleep,
                       times_woken, total_sleep_hours, sleep_quality, dreams_nightmares,
                       factors_affecting, morning_mood, notes, entry_timestamp
-               FROM sleep_diary WHERE username=?
+               FROM sleep_diary WHERE username = %s
                ORDER BY sleep_date DESC LIMIT ?""",
             (username, days)
         ).fetchall()
@@ -5779,7 +5779,7 @@ def get_core_beliefs():
         query = """SELECT id, old_belief, belief_origin, evidence_for, evidence_against,
                           new_balanced_belief, belief_strength_before, belief_strength_after,
                           is_active, entry_timestamp, last_reviewed
-                   FROM core_beliefs WHERE username=?"""
+                   FROM core_beliefs WHERE username = %s"""
         if active_only:
             query += " AND is_active=1"
         query += " ORDER BY entry_timestamp DESC"
@@ -5857,7 +5857,7 @@ def get_exposure_hierarchy_list():
 
         exposures = cur.execute(
             """SELECT id, fear_situation, initial_suds, target_suds, hierarchy_rank, status, entry_timestamp
-               FROM exposure_hierarchy WHERE username=?
+               FROM exposure_hierarchy WHERE username = %s
                ORDER BY hierarchy_rank ASC""",
             (username,)
         ).fetchall()
@@ -5868,7 +5868,7 @@ def get_exposure_hierarchy_list():
             attempts = cur.execute(
                 """SELECT id, pre_suds, peak_suds, post_suds, duration_minutes,
                           coping_strategies_used, notes, attempt_timestamp
-                   FROM exposure_attempts WHERE exposure_id=? AND username=?
+                   FROM exposure_attempts WHERE exposure_id = %s AND username = %s
                    ORDER BY attempt_timestamp DESC""",
                 (exp[0], username)
             ).fetchall()
@@ -5946,7 +5946,7 @@ def log_exposure_attempt(exposure_id):
 
         # Verify exposure exists and belongs to user
         exposure = cur.execute(
-            "SELECT id FROM exposure_hierarchy WHERE id=? AND username=?", (exposure_id, username)
+            "SELECT id FROM exposure_hierarchy WHERE id = %s AND username = %s", (exposure_id, username)
         ).fetchone()
         if not exposure:
             conn.close()
@@ -5995,10 +5995,10 @@ def get_problem_solving_list():
 
         query = """SELECT id, problem_description, problem_importance, brainstormed_solutions,
                           chosen_solution, action_steps, outcome, status, entry_timestamp, completed_timestamp
-                   FROM problem_solving WHERE username=?"""
+                   FROM problem_solving WHERE username = %s"""
         params = [username]
         if status:
-            query += " AND status=?"
+            query += " AND status = %s"
             params.append(status)
         query += " ORDER BY entry_timestamp DESC"
 
@@ -6033,7 +6033,7 @@ def get_coping_cards():
         query = """SELECT id, card_title, situation_trigger, unhelpful_thought,
                           helpful_response, coping_strategies, is_favorite, times_used,
                           entry_timestamp, last_used
-                   FROM coping_cards WHERE username=?"""
+                   FROM coping_cards WHERE username = %s"""
         if favorites_only:
             query += " AND is_favorite=1"
         query += " ORDER BY times_used DESC, entry_timestamp DESC"
@@ -6105,7 +6105,7 @@ def use_coping_card(card_id):
         # Verify ownership and update
         result = cur.execute(
             """UPDATE coping_cards SET times_used = times_used + 1, last_used = CURRENT_TIMESTAMP
-               WHERE id=? AND username=?""",
+               WHERE id = %s AND username = %s""",
             (card_id, username)
         )
 
@@ -6139,7 +6139,7 @@ def update_coping_card_alt(card_id):
         for field in ['card_title', 'situation_trigger', 'unhelpful_thought',
                       'helpful_response', 'coping_strategies', 'is_favorite']:
             if field in data:
-                updates.append(f"{field}=?")
+                updates.append(f"{field}= %s")
                 values.append(data[field])
 
         if updates:
@@ -6193,7 +6193,7 @@ def get_self_compassion_entries():
         entries = cur.execute(
             """SELECT id, difficult_situation, self_critical_thoughts, common_humanity,
                       kind_response, self_care_action, mood_before, mood_after, entry_timestamp
-               FROM self_compassion_journal WHERE username=?
+               FROM self_compassion_journal WHERE username = %s
                ORDER BY entry_timestamp DESC LIMIT 50""",
             (username,)
         ).fetchall()
@@ -6265,7 +6265,7 @@ def get_values():
         query = """SELECT id, value_name, value_description, importance_rating,
                           current_alignment, life_area, related_goals, is_active,
                           entry_timestamp, last_reviewed
-                   FROM values_clarification WHERE username=?"""
+                   FROM values_clarification WHERE username = %s"""
         if active_only:
             query += " AND is_active=1"
         query += " ORDER BY importance_rating DESC"
@@ -6301,10 +6301,10 @@ def get_goals():
 
         query = """SELECT id, goal_title, goal_description, goal_type, target_date,
                           related_value_id, status, progress_percentage, entry_timestamp, completed_timestamp
-                   FROM goals WHERE username=?"""
+                   FROM goals WHERE username = %s"""
         params = [username]
         if status:
-            query += " AND status=?"
+            query += " AND status = %s"
             params.append(status)
         query += " ORDER BY entry_timestamp DESC"
 
@@ -6316,7 +6316,7 @@ def get_goals():
             milestones = cur.execute(
                 """SELECT id, milestone_title, milestone_description, target_date,
                           is_completed, completed_timestamp, entry_timestamp
-                   FROM goal_milestones WHERE goal_id=? AND username=?
+                   FROM goal_milestones WHERE goal_id = %s AND username = %s
                    ORDER BY target_date""",
                 (goal[0], username)
             ).fetchall()
@@ -6324,7 +6324,7 @@ def get_goals():
             # Get recent check-ins
             checkins = cur.execute(
                 """SELECT id, progress_notes, obstacles, next_steps, motivation_level, checkin_timestamp
-                   FROM goal_checkins WHERE goal_id=? AND username=?
+                   FROM goal_checkins WHERE goal_id = %s AND username = %s
                    ORDER BY checkin_timestamp DESC LIMIT 5""",
                 (goal[0], username)
             ).fetchall()
@@ -6333,7 +6333,7 @@ def get_goals():
             value_name = None
             if goal[5]:
                 value = cur.execute(
-                    "SELECT value_name FROM values_clarification WHERE id=?", (goal[5],)
+                    "SELECT value_name FROM values_clarification WHERE id = %s", (goal[5],)
                 ).fetchone()
                 value_name = value[0] if value else None
 
@@ -6377,7 +6377,7 @@ def add_goal_milestone(goal_id):
 
         # Verify goal ownership
         goal = cur.execute(
-            "SELECT id FROM goals WHERE id=? AND username=?", (goal_id, username)
+            "SELECT id FROM goals WHERE id = %s AND username = %s", (goal_id, username)
         ).fetchone()
         if not goal:
             conn.close()
@@ -6415,7 +6415,7 @@ def update_milestone(goal_id, milestone_id):
         values = []
         for field in ['milestone_title', 'milestone_description', 'target_date', 'is_completed']:
             if field in data:
-                updates.append(f"{field}=?")
+                updates.append(f"{field}= %s")
                 values.append(data[field])
 
         # Set completed_timestamp if marking as complete
@@ -6427,17 +6427,17 @@ def update_milestone(goal_id, milestone_id):
             values.append(goal_id)
             values.append(username)
             cur.execute(
-                f"UPDATE goal_milestones SET {', '.join(updates)} WHERE id=? AND goal_id=? AND username=?",
+                f"UPDATE goal_milestones SET {', '.join(updates)} WHERE id = %s AND goal_id = %s AND username = %s",
                 values
             )
             conn.commit()
 
             # Update goal progress based on completed milestones
             total = cur.execute(
-                "SELECT COUNT(*) FROM goal_milestones WHERE goal_id=?", (goal_id,)
+                "SELECT COUNT(*) FROM goal_milestones WHERE goal_id = %s", (goal_id,)
             ).fetchone()[0]
             completed = cur.execute(
-                "SELECT COUNT(*) FROM goal_milestones WHERE goal_id=? AND is_completed=1", (goal_id,)
+                "SELECT COUNT(*) FROM goal_milestones WHERE goal_id = %s AND is_completed=1", (goal_id,)
             ).fetchone()[0]
 
             if total > 0:
@@ -6475,7 +6475,7 @@ def add_goal_checkin(goal_id):
 
         # Verify goal ownership
         goal = cur.execute(
-            "SELECT id FROM goals WHERE id=? AND username=?", (goal_id, username)
+            "SELECT id FROM goals WHERE id = %s AND username = %s", (goal_id, username)
         ).fetchone()
         if not goal:
             conn.close()
@@ -6517,28 +6517,28 @@ def get_cbt_summary():
 
         # Breathing exercises
         breathing = cur.execute(
-            "SELECT COUNT(*), AVG(post_anxiety_level - pre_anxiety_level) FROM breathing_exercises WHERE username=?",
+            "SELECT COUNT(*), AVG(post_anxiety_level - pre_anxiety_level) FROM breathing_exercises WHERE username = %s",
             (username,)
         ).fetchone()
         summary['breathing_exercises'] = {'total': breathing[0], 'avg_anxiety_reduction': round(breathing[1] or 0, 1)}
 
         # Relaxation techniques
         relaxation = cur.execute(
-            "SELECT COUNT(*), AVG(effectiveness_rating) FROM relaxation_techniques WHERE username=?",
+            "SELECT COUNT(*), AVG(effectiveness_rating) FROM relaxation_techniques WHERE username = %s",
             (username,)
         ).fetchone()
         summary['relaxation_techniques'] = {'total': relaxation[0], 'avg_effectiveness': round(relaxation[1] or 0, 1)}
 
         # Sleep diary
         sleep = cur.execute(
-            "SELECT COUNT(*), AVG(sleep_quality), AVG(total_sleep_hours) FROM sleep_diary WHERE username=?",
+            "SELECT COUNT(*), AVG(sleep_quality), AVG(total_sleep_hours) FROM sleep_diary WHERE username = %s",
             (username,)
         ).fetchone()
         summary['sleep_diary'] = {'total': sleep[0], 'avg_quality': round(sleep[1] or 0, 1), 'avg_hours': round(sleep[2] or 0, 1)}
 
         # Core beliefs
         beliefs = cur.execute(
-            "SELECT COUNT(*) FROM core_beliefs WHERE username=? AND is_active=1",
+            "SELECT COUNT(*) FROM core_beliefs WHERE username = %s AND is_active=1",
             (username,)
         ).fetchone()
         summary['core_beliefs'] = {'active': beliefs[0]}
@@ -6546,7 +6546,7 @@ def get_cbt_summary():
         # Exposure hierarchy
         exposures = cur.execute(
             """SELECT COUNT(*), SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END)
-               FROM exposure_hierarchy WHERE username=?""",
+               FROM exposure_hierarchy WHERE username = %s""",
             (username,)
         ).fetchone()
         summary['exposure_hierarchy'] = {'total': exposures[0], 'completed': exposures[1] or 0}
@@ -6554,28 +6554,28 @@ def get_cbt_summary():
         # Problem-solving
         problems = cur.execute(
             """SELECT COUNT(*), SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END)
-               FROM problem_solving WHERE username=?""",
+               FROM problem_solving WHERE username = %s""",
             (username,)
         ).fetchone()
         summary['problem_solving'] = {'total': problems[0], 'completed': problems[1] or 0}
 
         # Coping cards
         cards = cur.execute(
-            "SELECT COUNT(*), SUM(times_used) FROM coping_cards WHERE username=?",
+            "SELECT COUNT(*), SUM(times_used) FROM coping_cards WHERE username = %s",
             (username,)
         ).fetchone()
         summary['coping_cards'] = {'total': cards[0], 'total_uses': cards[1] or 0}
 
         # Self-compassion
         compassion = cur.execute(
-            "SELECT COUNT(*), AVG(mood_after - mood_before) FROM self_compassion_journal WHERE username=?",
+            "SELECT COUNT(*), AVG(mood_after - mood_before) FROM self_compassion_journal WHERE username = %s",
             (username,)
         ).fetchone()
         summary['self_compassion'] = {'total': compassion[0], 'avg_mood_improvement': round(compassion[1] or 0, 1)}
 
         # Values
         values = cur.execute(
-            "SELECT COUNT(*), AVG(current_alignment) FROM values_clarification WHERE username=? AND is_active=1",
+            "SELECT COUNT(*), AVG(current_alignment) FROM values_clarification WHERE username = %s AND is_active=1",
             (username,)
         ).fetchone()
         summary['values'] = {'total': values[0], 'avg_alignment': round(values[1] or 0, 1)}
@@ -6583,7 +6583,7 @@ def get_cbt_summary():
         # Goals
         goals = cur.execute(
             """SELECT COUNT(*), SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END), AVG(progress_percentage)
-               FROM goals WHERE username=?""",
+               FROM goals WHERE username = %s""",
             (username,)
         ).fetchone()
         summary['goals'] = {'total': goals[0], 'completed': goals[1] or 0, 'avg_progress': round(goals[2] or 0, 1)}
@@ -6700,7 +6700,7 @@ def trigger_background_training():
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
         user = cur.execute(
-            "SELECT role FROM users WHERE username=?",
+            "SELECT role FROM users WHERE username = %s",
             (username,)
         ).fetchone()
         conn.close()
@@ -6871,7 +6871,7 @@ def pet_reward():
             stage = 'Adult'
         
         cur.execute(
-            "UPDATE pet SET hunger=%s, happiness=%s, energy=%s, hygiene=%s, coins=%s, xp=%s, stage=%s, last_updated=? WHERE id=?",
+            "UPDATE pet SET hunger=%s, happiness=%s, energy=%s, hygiene=%s, coins=%s, xp=%s, stage=%s, last_updated= %s WHERE id = %s",
             (new_hunger, new_happiness, new_energy, new_hygiene, new_coins, new_xp, stage, time.time(), pet[0])
         )
         conn.commit()
@@ -6958,7 +6958,7 @@ def pet_buy():
             new_hat = item['value']
         
         cur.execute(
-            "UPDATE pet SET hunger=%s, happiness=%s, coins=%s, hat=%s, last_updated=? WHERE id=?",
+            "UPDATE pet SET hunger=%s, happiness=%s, coins=%s, hat=%s, last_updated= %s WHERE id = %s",
             (new_hunger, new_happiness, new_coins, new_hat, time.time(), pet[0])
         )
         conn.commit()
@@ -7010,7 +7010,7 @@ def pet_declutter():
         new_coins = pet[9] + 5
         
         cur.execute(
-            "UPDATE pet SET hygiene=%s, happiness=%s, xp=%s, coins=%s, last_updated=? WHERE id=?",
+            "UPDATE pet SET hygiene=%s, happiness=%s, xp=%s, coins=%s, last_updated= %s WHERE id = %s",
             (new_hygiene, new_happiness, new_xp, new_coins, time.time(), pet[0])
         )
         conn.commit()
@@ -7055,7 +7055,7 @@ def pet_adventure():
         new_energy = pet[7] - 20
         
         cur.execute(
-            "UPDATE pet SET energy=%s, adventure_end=%s, last_updated=? WHERE id=?",
+            "UPDATE pet SET energy=%s, adventure_end=%s, last_updated= %s WHERE id = %s",
             (new_energy, adventure_end, time.time(), pet[0])
         )
         conn.commit()
@@ -7105,7 +7105,7 @@ def pet_check_return():
             new_xp = pet[10] + 20
             
             cur.execute(
-                "UPDATE pet SET coins=%s, xp=%s, adventure_end=0, last_updated=? WHERE id=?",
+                "UPDATE pet SET coins=%s, xp=%s, adventure_end=0, last_updated= %s WHERE id = %s",
                 (new_coins, new_xp, time.time(), pet[0])
             )
             conn.commit()
@@ -7163,7 +7163,7 @@ def pet_apply_decay():
             new_hygiene = max(20, pet[8] - int(decay / 3))
             
             cur.execute(
-                "UPDATE pet SET hunger=%s, energy=%s, hygiene=%s, last_updated=? WHERE id=?",
+                "UPDATE pet SET hunger=%s, energy=%s, hygiene=%s, last_updated= %s WHERE id = %s",
                 (new_hunger, new_energy, new_hygiene, now, pet[0])
             )
             conn.commit()
@@ -7223,7 +7223,7 @@ def get_cbt_records():
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
         records = cur.execute(
-            "SELECT id, situation, thought, evidence, entry_timestamp FROM cbt_records WHERE username=? ORDER BY entry_timestamp DESC LIMIT 20",
+            "SELECT id, situation, thought, evidence, entry_timestamp FROM cbt_records WHERE username = %s ORDER BY entry_timestamp DESC LIMIT 20",
             (username,)
         ).fetchall()
         conn.close()
@@ -7254,7 +7254,7 @@ def submit_phq9():
         cur = get_wrapped_cursor(conn)
         last_assessment = cur.execute(
             """SELECT entry_timestamp FROM clinical_scales 
-               WHERE username=? AND scale_name='PHQ-9' 
+               WHERE username = %s AND scale_name='PHQ-9' 
                ORDER BY entry_timestamp DESC LIMIT 1""",
             (username,)
         ).fetchone()
@@ -7287,7 +7287,7 @@ def submit_phq9():
         
         # Get clinician for notification
         clinician = cur.execute(
-            "SELECT clinician_id FROM users WHERE username=?",
+            "SELECT clinician_id FROM users WHERE username = %s",
             (username,)
         ).fetchone()
         
@@ -7334,7 +7334,7 @@ def submit_gad7():
         cur = get_wrapped_cursor(conn)
         last_assessment = cur.execute(
             """SELECT entry_timestamp FROM clinical_scales 
-               WHERE username=? AND scale_name='GAD-7' 
+               WHERE username = %s AND scale_name='GAD-7' 
                ORDER BY entry_timestamp DESC LIMIT 1""",
             (username,)
         ).fetchone()
@@ -7365,7 +7365,7 @@ def submit_gad7():
         
         # Get clinician for notification
         clinician = cur.execute(
-            "SELECT clinician_id FROM users WHERE username=?",
+            "SELECT clinician_id FROM users WHERE username = %s",
             (username,)
         ).fetchone()
         
@@ -7417,7 +7417,7 @@ def get_community_posts():
         # Build query with optional category filter - pinned posts first, then by timestamp
         if category and category in VALID_CATEGORIES:
             posts = cur.execute(
-                "SELECT id, username, message, likes, entry_timestamp, category, is_pinned FROM community_posts WHERE category=? ORDER BY is_pinned DESC, entry_timestamp DESC LIMIT 100",
+                "SELECT id, username, message, likes, entry_timestamp, category, is_pinned FROM community_posts WHERE category = %s ORDER BY is_pinned DESC, entry_timestamp DESC LIMIT 100",
                 (category,)
             ).fetchall()
             # Mark channel as read for this user
@@ -7438,7 +7438,7 @@ def get_community_posts():
 
             # Get reaction counts by type
             reactions = cur.execute(
-                "SELECT reaction_type, COUNT(*) FROM community_likes WHERE post_id=? GROUP BY reaction_type",
+                "SELECT reaction_type, COUNT(*) FROM community_likes WHERE post_id = %s GROUP BY reaction_type",
                 (post_id,)
             ).fetchall()
             reaction_counts = {r[0]: r[1] for r in reactions}
@@ -7447,14 +7447,14 @@ def get_community_posts():
             user_reactions = []
             if username:
                 user_reacts = cur.execute(
-                    "SELECT reaction_type FROM community_likes WHERE post_id=? AND username=?",
+                    "SELECT reaction_type FROM community_likes WHERE post_id = %s AND username = %s",
                     (post_id, username)
                 ).fetchall()
                 user_reactions = [r[0] for r in user_reacts]
 
             # Get replies inline
             replies = cur.execute(
-                "SELECT id, username, message, timestamp FROM community_replies WHERE post_id=? ORDER BY timestamp ASC",
+                "SELECT id, username, message, timestamp FROM community_replies WHERE post_id = %s ORDER BY timestamp ASC",
                 (post_id,)
             ).fetchall()
             reply_list = [
@@ -7524,24 +7524,24 @@ def get_community_channels():
 
             # Get post count for this channel
             count = cur.execute(
-                "SELECT COUNT(*) FROM community_posts WHERE category=?", (cat,)
+                "SELECT COUNT(*) FROM community_posts WHERE category = %s", (cat,)
             ).fetchone()[0]
 
             # Get latest post timestamp
             latest = cur.execute(
-                "SELECT MAX(entry_timestamp) FROM community_posts WHERE category=?", (cat,)
+                "SELECT MAX(entry_timestamp) FROM community_posts WHERE category = %s", (cat,)
             ).fetchone()[0]
 
             # Check for unread posts
             unread_count = 0
             if username and latest:
                 last_read = cur.execute(
-                    "SELECT last_read FROM community_channel_reads WHERE username=? AND channel=?",
+                    "SELECT last_read FROM community_channel_reads WHERE username = %s AND channel = %s",
                     (username, cat)
                 ).fetchone()
                 if last_read:
                     unread = cur.execute(
-                        "SELECT COUNT(*) FROM community_posts WHERE category=? AND entry_timestamp > ?",
+                        "SELECT COUNT(*) FROM community_posts WHERE category = %s AND entry_timestamp > %s",
                         (cat, last_read[0])
                     ).fetchone()[0]
                     unread_count = unread
@@ -7586,7 +7586,7 @@ def pin_community_post(post_id):
 
         # Update pin status
         cur.execute(
-            "UPDATE community_posts SET is_pinned=? WHERE id=?",
+            "UPDATE community_posts SET is_pinned= %s WHERE id = %s",
             (1 if pin else 0, post_id)
         )
         conn.commit()
@@ -7664,14 +7664,14 @@ def react_to_post(post_id):
 
         # Check if user already has this reaction on this post
         existing_reaction = cur.execute(
-            "SELECT 1 FROM community_likes WHERE post_id=? AND username=? AND reaction_type=?",
+            "SELECT 1 FROM community_likes WHERE post_id = %s AND username = %s AND reaction_type = %s",
             (post_id, username, reaction_type)
         ).fetchone()
 
         if existing_reaction:
             # Remove reaction (toggle off)
             cur.execute(
-                "DELETE FROM community_likes WHERE post_id=? AND username=? AND reaction_type=?",
+                "DELETE FROM community_likes WHERE post_id = %s AND username = %s AND reaction_type = %s",
                 (post_id, username, reaction_type)
             )
             action = 'removed'
@@ -7685,7 +7685,7 @@ def react_to_post(post_id):
 
         # Get updated reaction counts for this post
         reactions = cur.execute(
-            "SELECT reaction_type, COUNT(*) FROM community_likes WHERE post_id=? GROUP BY reaction_type",
+            "SELECT reaction_type, COUNT(*) FROM community_likes WHERE post_id = %s GROUP BY reaction_type",
             (post_id,)
         ).fetchall()
 
@@ -7724,7 +7724,7 @@ def like_community_post(post_id):
 
         # Check if already liked
         existing_like = cur.execute(
-            "SELECT 1 FROM community_likes WHERE post_id=? AND username=? AND reaction_type='like'",
+            "SELECT 1 FROM community_likes WHERE post_id = %s AND username = %s AND reaction_type='like'",
             (post_id, username)
         ).fetchone()
 
@@ -7761,7 +7761,7 @@ def delete_community_post(post_id):
         
         # Verify post belongs to user
         post = cur.execute(
-            "SELECT username FROM community_posts WHERE id=?",
+            "SELECT username FROM community_posts WHERE id = %s",
             (post_id,)
         ).fetchone()
         
@@ -7847,7 +7847,7 @@ def delete_reply(reply_id):
 
         # Verify reply belongs to user
         reply = cur.execute(
-            "SELECT username FROM community_replies WHERE id=?",
+            "SELECT username FROM community_replies WHERE id = %s",
             (reply_id,)
         ).fetchone()
 
@@ -7886,7 +7886,7 @@ def report_community_post(post_id):
 
         # Check if post exists
         post = cur.execute(
-            "SELECT username, message FROM community_posts WHERE id=?",
+            "SELECT username, message FROM community_posts WHERE id = %s",
             (post_id,)
         ).fetchone()
 
@@ -7938,7 +7938,7 @@ def get_replies(post_id):
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
         replies = cur.execute(
-            "SELECT id, username, message, timestamp FROM community_replies WHERE post_id=? ORDER BY timestamp ASC",
+            "SELECT id, username, message, timestamp FROM community_replies WHERE post_id = %s ORDER BY timestamp ASC",
             (post_id,)
         ).fetchall()
         conn.close()
@@ -7966,7 +7966,7 @@ def get_safety_plan():
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
         plan = cur.execute(
-            "SELECT triggers, coping_strategies, support_contacts, professional_contacts FROM safety_plans WHERE username=?",
+            "SELECT triggers, coping_strategies, support_contacts, professional_contacts FROM safety_plans WHERE username = %s",
             (username,)
         ).fetchone()
         conn.close()
@@ -8003,7 +8003,7 @@ def save_safety_plan():
         existing = cur.execute("SELECT username FROM safety_plans WHERE username=%s", (username,)).fetchone()
         if existing:
             cur.execute(
-                "UPDATE safety_plans SET triggers=%s, coping_strategies=%s, support_contacts=%s, professional_contacts=? WHERE username=?",
+                "UPDATE safety_plans SET triggers=%s, coping_strategies=%s, support_contacts=%s, professional_contacts= %s WHERE username = %s",
                 (triggers, coping, support, professional, username)
             )
         else:
@@ -8132,7 +8132,7 @@ def export_pdf():
         
         # Mood Summary
         moods = cur.execute(
-            "SELECT entrestamp, mood_val, sleep_val, meds, exercise_mins FROM mood_logs WHERE username=? ORDER BY entrestamp DESC LIMIT 15",
+            "SELECT entrestamp, mood_val, sleep_val, meds, exercise_mins FROM mood_logs WHERE username = %s ORDER BY entrestamp DESC LIMIT 15",
             (username,)
         ).fetchall()
         
@@ -8164,7 +8164,7 @@ def export_pdf():
         
         # Gratitude entries
         gratitudes = cur.execute(
-            "SELECT entry_timestamp, entry FROM gratitude_logs WHERE username=? ORDER BY entry_timestamp DESC LIMIT 10",
+            "SELECT entry_timestamp, entry FROM gratitude_logs WHERE username = %s ORDER BY entry_timestamp DESC LIMIT 10",
             (username,)
         ).fetchall()
         
@@ -8226,7 +8226,7 @@ def get_insights():
 
             # Verify clinician exists and has correct role
             clinician_check = cur.execute(
-                "SELECT role FROM users WHERE username=?", (clinician_username,)
+                "SELECT role FROM users WHERE username = %s", (clinician_username,)
             ).fetchone()
             if not clinician_check or clinician_check[0] != 'clinician':
                 conn.close()
@@ -8234,7 +8234,7 @@ def get_insights():
 
             # Verify clinician has approved access to this patient
             approval_check = cur.execute(
-                "SELECT status FROM patient_approvals WHERE patient_username=? AND clinician_username=? AND status='approved'",
+                "SELECT status FROM patient_approvals WHERE patient_username = %s AND clinician_username = %s AND status='approved'",
                 (username, clinician_username)
             ).fetchone()
             if not approval_check:
@@ -8245,11 +8245,11 @@ def get_insights():
             if requesting_user and requesting_user != username:
                 # Check if requesting_user is a clinician with approval
                 clinician_check = cur.execute(
-                    "SELECT role FROM users WHERE username=?", (requesting_user,)
+                    "SELECT role FROM users WHERE username = %s", (requesting_user,)
                 ).fetchone()
                 if clinician_check and clinician_check[0] == 'clinician':
                     approval_check = cur.execute(
-                        "SELECT status FROM patient_approvals WHERE patient_username=? AND clinician_username=? AND status='approved'",
+                        "SELECT status FROM patient_approvals WHERE patient_username = %s AND clinician_username = %s AND status='approved'",
                         (username, requesting_user)
                     ).fetchone()
                     if not approval_check:
@@ -8260,7 +8260,7 @@ def get_insights():
                     return jsonify({'error': 'Not authorized to view this data'}), 403
 
         # Build mood log query with date range
-        mood_query = "SELECT mood_val, sleep_val, entrestamp, notes FROM mood_logs WHERE username=?"
+        mood_query = "SELECT mood_val, sleep_val, entrestamp, notes FROM mood_logs WHERE username = %s"
         params = [username]
         if from_date:
             mood_query += " AND date(entrestamp) >= date(%s)"
@@ -8272,7 +8272,7 @@ def get_insights():
         moods = cur.execute(mood_query, tuple(params)).fetchall()
 
         # Get chat history in date range
-        chat_query = "SELECT sender, message, timestamp FROM chat_history WHERE session_id=?"
+        chat_query = "SELECT sender, message, timestamp FROM chat_history WHERE session_id = %s"
         chat_params = [f"{username}_session"]
         if from_date:
             chat_query += " AND date(timestamp) >= date(%s)"
@@ -8284,7 +8284,7 @@ def get_insights():
         chat_history = cur.execute(chat_query, tuple(chat_params)).fetchall()
 
         # Get gratitude entries
-        grat_query = "SELECT entry, entry_timestamp FROM gratitude_logs WHERE username=?"
+        grat_query = "SELECT entry, entry_timestamp FROM gratitude_logs WHERE username = %s"
         grat_params = [username]
         if from_date:
             grat_query += " AND date(entry_timestamp) >= date(%s)"
@@ -8296,7 +8296,7 @@ def get_insights():
         gratitudes = cur.execute(grat_query, tuple(grat_params)).fetchall()
 
         # Get CBT records
-        cbt_query = "SELECT situation, thought, evidence, entry_timestamp FROM cbt_records WHERE username=?"
+        cbt_query = "SELECT situation, thought, evidence, entry_timestamp FROM cbt_records WHERE username = %s"
         cbt_params = [username]
         if from_date:
             cbt_query += " AND date(entry_timestamp) >= date(%s)"
@@ -8309,7 +8309,7 @@ def get_insights():
 
         # Get safety plan
         safety = cur.execute(
-            "SELECT triggers, coping FROM safety_plans WHERE username=?", (username,)
+            "SELECT triggers, coping FROM safety_plans WHERE username = %s", (username,)
         ).fetchone()
 
         conn.close()
@@ -8422,7 +8422,7 @@ def get_patients():
 
         # SECURITY: Verify the clinician exists and has the clinician role
         clinician_check = cur.execute(
-            "SELECT role FROM users WHERE username=?", (clinician_username,)
+            "SELECT role FROM users WHERE username = %s", (clinician_username,)
         ).fetchone()
 
         if not clinician_check:
@@ -8467,7 +8467,7 @@ def get_patients():
             FROM users u
             JOIN patient_approvals pa ON u.username = pa.patient_username
             WHERE u.role = 'user'
-              AND pa.clinician_username = ?
+              AND pa.clinician_username = %s
               AND pa.status = 'approved'
             ORDER BY alert_count_7d DESC, u.username ASC
         """, (clinician_username,)).fetchall()
@@ -8512,7 +8512,7 @@ def get_patient_detail(username):
         
         # Verify user is a clinician
         clinician = cur.execute(
-            "SELECT role FROM users WHERE username=?",
+            "SELECT role FROM users WHERE username = %s",
             (clinician_username,)
         ).fetchone()
         
@@ -8528,49 +8528,49 @@ def get_patient_detail(username):
 
         # Profile
         profile = cur.execute(
-            "SELECT full_name, dob, conditions, email, phone FROM users WHERE username=?",
+            "SELECT full_name, dob, conditions, email, phone FROM users WHERE username = %s",
             (username,)
         ).fetchone()
         
         # Recent moods with ALL habit data
         moods = cur.execute(
-            "SELECT mood_val, sleep_val, exercise_mins, outside_mins, water_pints, meds, notes, entrestamp FROM mood_logs WHERE username=? ORDER BY entrestamp DESC LIMIT 30",
+            "SELECT mood_val, sleep_val, exercise_mins, outside_mins, water_pints, meds, notes, entrestamp FROM mood_logs WHERE username = %s ORDER BY entrestamp DESC LIMIT 30",
             (username,)
         ).fetchall()
         
         # AI Chat history
         chat_history = cur.execute(
-            "SELECT sender, message, timestamp FROM chat_history WHERE session_id=? ORDER BY timestamp DESC LIMIT 50",
+            "SELECT sender, message, timestamp FROM chat_history WHERE session_id = %s ORDER BY timestamp DESC LIMIT 50",
             (f"{username}_session",)
         ).fetchall()
         
         # Gratitude entries
         gratitude = cur.execute(
-            "SELECT entry, entry_timestamp FROM gratitude_logs WHERE username=? ORDER BY entry_timestamp DESC LIMIT 20",
+            "SELECT entry, entry_timestamp FROM gratitude_logs WHERE username = %s ORDER BY entry_timestamp DESC LIMIT 20",
             (username,)
         ).fetchall()
         
         # CBT records
         cbt_records = cur.execute(
-            "SELECT situation, thought, evidence, entry_timestamp FROM cbt_records WHERE username=? ORDER BY entry_timestamp DESC LIMIT 20",
+            "SELECT situation, thought, evidence, entry_timestamp FROM cbt_records WHERE username = %s ORDER BY entry_timestamp DESC LIMIT 20",
             (username,)
         ).fetchall()
         
         # Recent alerts (use alerts table with correct columns)
         alerts = cur.execute(
-            "SELECT alert_type, details, created_at FROM alerts WHERE username=? ORDER BY created_at DESC LIMIT 10",
+            "SELECT alert_type, details, created_at FROM alerts WHERE username = %s ORDER BY created_at DESC LIMIT 10",
             (username,)
         ).fetchall()
         
         # Clinical scales
         scales = cur.execute(
-            "SELECT scale_name, score, severity, entry_timestamp FROM clinical_scales WHERE username=? ORDER BY entry_timestamp DESC LIMIT 10",
+            "SELECT scale_name, score, severity, entry_timestamp FROM clinical_scales WHERE username = %s ORDER BY entry_timestamp DESC LIMIT 10",
             (username,)
         ).fetchall()
         
         # Clinician notes
         notes = cur.execute(
-            "SELECT id, note_text, is_highlighted, created_at FROM clinician_notes WHERE patient_username=? ORDER BY created_at DESC LIMIT 20",
+            "SELECT id, note_text, is_highlighted, created_at FROM clinician_notes WHERE patient_username = %s ORDER BY created_at DESC LIMIT 20",
             (username,)
         ).fetchall()
         
@@ -8645,7 +8645,7 @@ def generate_ai_summary():
 
         # SECURITY: Verify clinician has approved access to this patient
         approval = cur.execute(
-            "SELECT status FROM patient_approvals WHERE clinician_username=? AND patient_username=? AND status='approved'",
+            "SELECT status FROM patient_approvals WHERE clinician_username = %s AND patient_username = %s AND status='approved'",
             (clinician_username, username)
         ).fetchone()
 
@@ -8656,7 +8656,7 @@ def generate_ai_summary():
 
         # Get profile info
         profile = cur.execute(
-            "SELECT full_name, conditions FROM users WHERE username=?",
+            "SELECT full_name, conditions FROM users WHERE username = %s",
             (username,)
         ).fetchone()
         print(f"[AI SUMMARY] Profile: {profile}")
@@ -8664,7 +8664,7 @@ def generate_ai_summary():
         # Get join date from first mood log (users table doesn't have created_at)
         join_date = None
         first_mood = cur.execute(
-            "SELECT entrestamp FROM mood_logs WHERE username=? ORDER BY entrestamp ASC LIMIT 1",
+            "SELECT entrestamp FROM mood_logs WHERE username = %s ORDER BY entrestamp ASC LIMIT 1",
             (username,)
         ).fetchone()
         if first_mood and first_mood[0]:
@@ -8679,17 +8679,17 @@ def generate_ai_summary():
                 days_since_join = 30
         # Get moods and alerts since join (or 30 days, whichever is less)
         moods = cur.execute(
-            "SELECT mood_val, sleep_val, exercise_mins, outside_mins, water_pints, meds, notes, entrestamp FROM mood_logs WHERE username=? AND entrestamp >= datetime('now', ? || ' days') ORDER BY entrestamp DESC",
+            "SELECT mood_val, sleep_val, exercise_mins, outside_mins, water_pints, meds, notes, entrestamp FROM mood_logs WHERE username = %s AND entrestamp >= datetime('now', %s || ' days') ORDER BY entrestamp DESC",
             (username, f"-{min(days_since_join,30)}"),
         ).fetchall() or []
         alerts = cur.execute(
-            "SELECT alert_type, details, created_at FROM alerts WHERE username=? AND created_at >= datetime('now', ? || ' days') ORDER BY created_at DESC",
+            "SELECT alert_type, details, created_at FROM alerts WHERE username = %s AND created_at >= datetime('now', %s || ' days') ORDER BY created_at DESC",
             (username, f"-{min(days_since_join,30)}"),
         ).fetchall() or []
 
         # Get latest assessments
         scales = cur.execute(
-            "SELECT scale_name, score, severity FROM clinical_scales WHERE username=? ORDER BY entry_timestamp DESC LIMIT 5",
+            "SELECT scale_name, score, severity FROM clinical_scales WHERE username = %s ORDER BY entry_timestamp DESC LIMIT 5",
             (username,)
         ).fetchall() or []
 
@@ -8709,19 +8709,19 @@ def generate_ai_summary():
 
         # Get gratitude entries
         gratitude = cur.execute(
-            "SELECT entry FROM gratitude_logs WHERE username=? ORDER BY entry_timestamp DESC LIMIT 5",
+            "SELECT entry FROM gratitude_logs WHERE username = %s ORDER BY entry_timestamp DESC LIMIT 5",
             (username,)
         ).fetchall() or []
 
         # Get CBT exercises
         cbt_records = cur.execute(
-            "SELECT situation, thought, evidence FROM cbt_records WHERE username=? ORDER BY entry_timestamp DESC LIMIT 5",
+            "SELECT situation, thought, evidence FROM cbt_records WHERE username = %s ORDER BY entry_timestamp DESC LIMIT 5",
             (username,)
         ).fetchall() or []
 
         # Get clinician notes (especially highlighted ones)
         clinician_notes = cur.execute(
-            "SELECT note_text, is_highlighted FROM clinician_notes WHERE patient_username=? ORDER BY created_at DESC LIMIT 5",
+            "SELECT note_text, is_highlighted FROM clinician_notes WHERE patient_username = %s ORDER BY created_at DESC LIMIT 5",
             (username,)
         ).fetchall() or []
 
@@ -8950,7 +8950,7 @@ def get_clinician_notes(patient_username):
             return jsonify({'error': 'Unauthorized: Patient not assigned to clinician'}), 403
         
         notes = cur.execute(
-            "SELECT id, note_text, is_highlighted, created_at FROM clinician_notes WHERE clinician_username=? AND patient_username=? ORDER BY created_at DESC",
+            "SELECT id, note_text, is_highlighted, created_at FROM clinician_notes WHERE clinician_username = %s AND patient_username = %s ORDER BY created_at DESC",
             (clinician_username, patient_username)
         ).fetchall()
         conn.close()
@@ -8980,7 +8980,7 @@ def delete_clinician_note(note_id):
         
         # Verify note belongs to clinician
         note = cur.execute(
-            "SELECT clinician_username FROM clinician_notes WHERE id=?",
+            "SELECT clinician_username FROM clinician_notes WHERE id = %s",
             (note_id,)
         ).fetchone()
         
@@ -9018,7 +9018,7 @@ def export_patient_summary():
 
         # SECURITY: Verify clinician has approved access to this patient
         approval = cur.execute(
-            "SELECT status FROM patient_approvals WHERE clinician_username=? AND patient_username=? AND status='approved'",
+            "SELECT status FROM patient_approvals WHERE clinician_username = %s AND patient_username = %s AND status='approved'",
             (clinician_username, patient_username)
         ).fetchone()
 
@@ -9028,7 +9028,7 @@ def export_patient_summary():
 
         # Get patient profile
         profile = cur.execute(
-            "SELECT full_name, dob, conditions FROM users WHERE username=?",
+            "SELECT full_name, dob, conditions FROM users WHERE username = %s",
             (patient_username,)
         ).fetchone()
         
@@ -9036,15 +9036,15 @@ def export_patient_summary():
         mood_filter = ""
         mood_params = [patient_username]
         if start_date:
-            mood_filter += " AND entrestamp >= ?"
+            mood_filter += " AND entrestamp >= %s"
             mood_params.append(start_date)
         if end_date:
-            mood_filter += " AND entrestamp <= ?"
+            mood_filter += " AND entrestamp <= %s"
             mood_params.append(end_date)
         
         # Get moods
         moods = cur.execute(
-            f"SELECT mood_val, sleep_val, exercise_mins, notes, entrestamp FROM mood_logs WHERE username=?{mood_filter} ORDER BY entrestamp DESC",
+            f"SELECT mood_val, sleep_val, exercise_mins, notes, entrestamp FROM mood_logs WHERE username = %s{mood_filter} ORDER BY entrestamp DESC",
             tuple(mood_params)
         ).fetchall()
         
@@ -9052,20 +9052,20 @@ def export_patient_summary():
         assess_params = [patient_username]
         assess_filter = ""
         if start_date:
-            assess_filter += " AND entry_timestamp >= ?"
+            assess_filter += " AND entry_timestamp >= %s"
             assess_params.append(start_date)
         if end_date:
-            assess_filter += " AND entry_timestamp <= ?"
+            assess_filter += " AND entry_timestamp <= %s"
             assess_params.append(end_date)
         
         assessments = cur.execute(
-            f"SELECT scale_name, score, severity, entry_timestamp FROM clinical_scales WHERE username=?{assess_filter} ORDER BY entry_timestamp DESC",
+            f"SELECT scale_name, score, severity, entry_timestamp FROM clinical_scales WHERE username = %s{assess_filter} ORDER BY entry_timestamp DESC",
             tuple(assess_params)
         ).fetchall()
         
         # Get clinician notes
         notes = cur.execute(
-            "SELECT note_text, is_highlighted, created_at FROM clinician_notes WHERE clinician_username=? AND patient_username=? ORDER BY created_at DESC",
+            "SELECT note_text, is_highlighted, created_at FROM clinician_notes WHERE clinician_username = %s AND patient_username = %s ORDER BY created_at DESC",
             (clinician_username, patient_username)
         ).fetchall()
         
@@ -9073,14 +9073,14 @@ def export_patient_summary():
         alert_params = [patient_username]
         alert_filter = ""
         if start_date:
-            alert_filter += " AND created_at >= ?"
+            alert_filter += " AND created_at >= %s"
             alert_params.append(start_date)
         if end_date:
-            alert_filter += " AND created_at <= ?"
+            alert_filter += " AND created_at <= %s"
             alert_params.append(end_date)
         
         alerts = cur.execute(
-            f"SELECT alert_type, details, created_at FROM alerts WHERE username=?{alert_filter} ORDER BY created_at DESC",
+            f"SELECT alert_type, details, created_at FROM alerts WHERE username = %s{alert_filter} ORDER BY created_at DESC",
             tuple(alert_params)
         ).fetchall()
         
@@ -9210,7 +9210,7 @@ def reset_all_users():
         cur = get_wrapped_cursor(conn)
 
         admin = cur.execute(
-            "SELECT password, role FROM users WHERE username=?",
+            "SELECT password, role FROM users WHERE username = %s",
             (admin_username,)
         ).fetchone()
 
@@ -9305,7 +9305,7 @@ def check_mood_reminder():
             # Check if user logged mood today
             logged_today = cur.execute(
                 """SELECT id FROM mood_logs 
-                   WHERE username=? AND date(entrestamp) = date('now', 'localtime')""",
+                   WHERE username = %s AND date(entrestamp) = date('now', 'localtime')""",
                 (username,)
             ).fetchone()
             
@@ -9343,7 +9343,7 @@ def check_mood_today():
         
         logged_today = cur.execute(
             """SELECT id, entrestamp FROM mood_logs 
-               WHERE username=? AND date(entrestamp) = date('now', 'localtime')""",
+               WHERE username = %s AND date(entrestamp) = date('now', 'localtime')""",
             (username,)
         ).fetchone()
         
@@ -9505,7 +9505,7 @@ def manage_appointments():
                            pdf_generated, notification_sent, created_at, patient_acknowledged,
                            patient_response, patient_response_date, attendance_status, attendance_confirmed_by, attendance_confirmed_at
                     FROM appointments 
-                    WHERE clinician_username=? AND appointment_date >= datetime('now', '-30 days')
+                    WHERE clinician_username = %s AND appointment_date >= datetime('now', '-30 days')
                     ORDER BY appointment_date DESC
                 """, (clinician_username,)).fetchall()
             else:
@@ -9515,7 +9515,7 @@ def manage_appointments():
                            pdf_generated, notification_sent, created_at, patient_acknowledged,
                            patient_response, patient_response_date, attendance_status, attendance_confirmed_by, attendance_confirmed_at
                     FROM appointments 
-                    WHERE patient_username=? AND appointment_date >= datetime('now', '-7 days')
+                    WHERE patient_username = %s AND appointment_date >= datetime('now', '-7 days')
                     ORDER BY appointment_date ASC
                 """, (patient_username,)).fetchall()
             
@@ -9599,7 +9599,7 @@ def cancel_appointment(appointment_id):
         
         # Get appointment details before deleting
         apt = cur.execute(
-            "SELECT patient_username, clinician_username, appointment_date, appointment_time FROM appointments WHERE id=?",
+            "SELECT patient_username, clinician_username, appointment_date, appointment_time FROM appointments WHERE id = %s",
             (appointment_id,)
         ).fetchone()
         
@@ -9649,7 +9649,7 @@ def respond_to_appointment(appointment_id):
         
         # Verify appointment belongs to patient
         apt = cur.execute(
-            "SELECT clinician_username FROM appointments WHERE id=? AND patient_username=?",
+            "SELECT clinician_username FROM appointments WHERE id = %s AND patient_username = %s",
             (appointment_id, patient_username)
         ).fetchone()
         
@@ -9660,8 +9660,8 @@ def respond_to_appointment(appointment_id):
         # Update appointment
         cur.execute("""
             UPDATE appointments 
-            SET patient_acknowledged=1, patient_response=%s, patient_response_date=?
-            WHERE id=?
+            SET patient_acknowledged=1, patient_response=%s, patient_response_date= %s
+            WHERE id = %s
         """, (response, datetime.now(), appointment_id))
         
         # Notify clinician
@@ -9705,7 +9705,7 @@ def confirm_appointment_attendance(appointment_id):
 
         # Verify appointment and clinician ownership
         apt = cur.execute(
-            "SELECT patient_username, clinician_username FROM appointments WHERE id=?",
+            "SELECT patient_username, clinician_username FROM appointments WHERE id = %s",
             (appointment_id,)
         ).fetchone()
 
@@ -9720,7 +9720,7 @@ def confirm_appointment_attendance(appointment_id):
 
         # Update attendance fields
         cur.execute(
-            "UPDATE appointments SET attendance_status=%s, attendance_confirmed_by=%s, attendance_confirmed_at=? WHERE id=?",
+            "UPDATE appointments SET attendance_status=%s, attendance_confirmed_by=%s, attendance_confirmed_at= %s WHERE id = %s",
             (status, clinician_username, datetime.now(), appointment_id)
         )
 
@@ -9762,7 +9762,7 @@ def patient_profile():
             # Get profile
             profile = cur.execute("""
                 SELECT full_name, dob, email, phone, conditions, clinician_id
-                FROM users WHERE username=?
+                FROM users WHERE username = %s
             """, (username,)).fetchone()
             
             if not profile:
@@ -9779,7 +9779,7 @@ def patient_profile():
             clinician_info = None
             if profile[5]:  # clinician_id exists
                 clinician = cur.execute("""
-                    SELECT full_name, email FROM users WHERE username=? AND role='clinician'
+                    SELECT full_name, email FROM users WHERE username = %s AND role='clinician'
                 """, (profile[5],)).fetchone()
                 if clinician:
                     try:
@@ -9816,8 +9816,8 @@ def patient_profile():
             data = request.json
             
             cur.execute("""
-                UPDATE users SET full_name=%s, dob=%s, email=%s, phone=%s, conditions=?
-                WHERE username=?
+                UPDATE users SET full_name=%s, dob=%s, email=%s, phone=%s, conditions= %s
+                WHERE username = %s
             """, (
                 encrypt_text(data.get('full_name', '')),
                 encrypt_text(data.get('dob', '')),
@@ -9853,7 +9853,7 @@ def get_analytics_dashboard():
         patients = cur.execute("""
             SELECT u.username FROM users u
             JOIN patient_approvals pa ON u.username = pa.patient_username
-            WHERE pa.clinician_username=? AND pa.status='approved'
+            WHERE pa.clinician_username= %s AND pa.status='approved'
         """, (clinician,)).fetchall()
         
         patient_usernames = [p[0] for p in patients]
@@ -9928,7 +9928,7 @@ def get_analytics_dashboard():
             # Latest PHQ-9
             phq9 = cur.execute("""
                 SELECT score FROM clinical_scales
-                WHERE username=? AND scale_name='PHQ-9'
+                WHERE username = %s AND scale_name='PHQ-9'
                 ORDER BY entry_timestamp DESC LIMIT 1
             """, (username,)).fetchone()
             
@@ -9946,7 +9946,7 @@ def get_analytics_dashboard():
             # Latest GAD-7
             gad7 = cur.execute("""
                 SELECT score FROM clinical_scales
-                WHERE username=? AND scale_name='GAD-7'
+                WHERE username = %s AND scale_name='GAD-7'
                 ORDER BY entry_timestamp DESC LIMIT 1
             """, (username,)).fetchone()
             
@@ -10002,7 +10002,7 @@ def get_active_patients():
         patients = cur.execute("""
             SELECT u.username, u.full_name FROM users u
             JOIN patient_approvals pa ON u.username = pa.patient_username
-            WHERE pa.clinician_username=? AND pa.status='approved'
+            WHERE pa.clinician_username= %s AND pa.status='approved'
         """, (clinician,)).fetchall()
         
         active_patients = []
@@ -10013,17 +10013,17 @@ def get_active_patients():
             
             # Get most recent activity from multiple sources
             last_login = cur.execute(
-                "SELECT last_login FROM users WHERE username=?",
+                "SELECT last_login FROM users WHERE username = %s",
                 (username,)
             ).fetchone()[0]
             
             last_mood = cur.execute(
-                "SELECT MAX(entrestamp) FROM mood_logs WHERE username=?",
+                "SELECT MAX(entrestamp) FROM mood_logs WHERE username = %s",
                 (username,)
             ).fetchone()[0]
             
             last_chat = cur.execute(
-                "SELECT MAX(timestamp) FROM chat_history WHERE sender=?",
+                "SELECT MAX(timestamp) FROM chat_history WHERE sender = %s",
                 (username,)
             ).fetchone()[0]
             
@@ -10081,7 +10081,7 @@ def get_patient_analytics(username):
         
         # Verify user is a clinician
         clinician = cur.execute(
-            "SELECT role FROM users WHERE username=?",
+            "SELECT role FROM users WHERE username = %s",
             (clinician_username,)
         ).fetchone()
         
@@ -10099,7 +10099,7 @@ def get_patient_analytics(username):
         mood_trend = cur.execute("""
             SELECT DATE(entrestamp) as date, mood_val, notes
             FROM mood_logs
-            WHERE username=?
+            WHERE username = %s
             AND datetime(entrestamp) > datetime('now', '-90 days')
             ORDER BY date
         """, (username,)).fetchall()
@@ -10108,7 +10108,7 @@ def get_patient_analytics(username):
         assessments = cur.execute("""
             SELECT scale_name, score, entry_timestamp
             FROM clinical_scales
-            WHERE username=?
+            WHERE username = %s
             ORDER BY entry_timestamp DESC
             LIMIT 20
         """, (username,)).fetchall()
@@ -10127,14 +10127,14 @@ def get_patient_analytics(username):
         risk_data = cur.execute("""
             SELECT COUNT(*) as alert_count, MAX(created_at) as last_alert
             FROM alerts
-            WHERE username=? AND (status IS NULL OR status != 'resolved')
+            WHERE username = %s AND (status IS NULL OR status != 'resolved')
         """, (username,)).fetchone()
 
         # Upcoming appointments (next 30 days)
         upcoming = cur.execute("""
             SELECT id, clinician_username, appointment_date, appointment_type, notes, attendance_status, attendance_confirmed_by, attendance_confirmed_at
             FROM appointments
-            WHERE patient_username=? AND datetime(appointment_date) >= CURRENT_TIMESTAMP
+            WHERE patient_username = %s AND datetime(appointment_date) >= CURRENT_TIMESTAMP
             ORDER BY datetime(appointment_date) ASC
             LIMIT 10
         """, (username,)).fetchall()
@@ -10143,7 +10143,7 @@ def get_patient_analytics(username):
         recent_past = cur.execute("""
             SELECT id, clinician_username, appointment_date, appointment_type, notes, attendance_status, attendance_confirmed_by, attendance_confirmed_at
             FROM appointments
-            WHERE patient_username=? AND datetime(appointment_date) < CURRENT_TIMESTAMP AND datetime(appointment_date) >= datetime('now', '-7 days')
+            WHERE patient_username = %s AND datetime(appointment_date) < CURRENT_TIMESTAMP AND datetime(appointment_date) >= datetime('now', '-7 days')
             ORDER BY datetime(appointment_date) DESC
             LIMIT 10
         """, (username,)).fetchall()
@@ -10219,7 +10219,7 @@ def generate_clinical_report():
 
         # SECURITY: Verify clinician has approved access to this patient
         approval = cur.execute(
-            "SELECT status FROM patient_approvals WHERE clinician_username=? AND patient_username=? AND status='approved'",
+            "SELECT status FROM patient_approvals WHERE clinician_username = %s AND patient_username = %s AND status='approved'",
             (clinician, username)
         ).fetchone()
 
@@ -10230,7 +10230,7 @@ def generate_clinical_report():
         # Get patient info
         patient = cur.execute("""
             SELECT full_name, dob, email, phone, conditions, created_at
-            FROM users WHERE username=?
+            FROM users WHERE username = %s
         """, (username,)).fetchone()
 
         if not patient:
@@ -10245,13 +10245,13 @@ def generate_clinical_report():
         # Get latest assessments
         phq9 = cur.execute("""
             SELECT score, entry_timestamp FROM clinical_scales
-            WHERE username=? AND scale_name='PHQ-9'
+            WHERE username = %s AND scale_name='PHQ-9'
             ORDER BY entry_timestamp DESC LIMIT 1
         """, (username,)).fetchone()
         
         gad7 = cur.execute("""
             SELECT score, entry_timestamp FROM clinical_scales
-            WHERE username=? AND scale_name='GAD-7'
+            WHERE username = %s AND scale_name='GAD-7'
             ORDER BY entry_timestamp DESC LIMIT 1
         """, (username,)).fetchone()
         
@@ -10259,7 +10259,7 @@ def generate_clinical_report():
         notes = cur.execute("""
             SELECT note_text, created_at, is_highlighted
             FROM clinician_notes
-            WHERE patient_username=?
+            WHERE patient_username = %s
             ORDER BY created_at DESC
             LIMIT 10
         """, (username,)).fetchall()
@@ -10267,7 +10267,7 @@ def generate_clinical_report():
         # Get mood average (using correct column names: mood_val and entrestamp)
         mood_avg = cur.execute("""
             SELECT AVG(mood_val) FROM mood_logs
-            WHERE username=?
+            WHERE username = %s
             AND datetime(entrestamp) > datetime('now', '-30 days')
         """, (username,)).fetchone()[0]
         
@@ -10402,7 +10402,7 @@ def search_patients():
                    (SELECT score FROM clinical_scales WHERE username=u.username AND scale_name='PHQ-9' ORDER BY entry_timestamp DESC LIMIT 1) as phq9_score
             FROM users u
             JOIN patient_approvals pa ON u.username = pa.patient_username
-            WHERE pa.clinician_username=? AND pa.status='approved' AND u.role='user'
+            WHERE pa.clinician_username= %s AND pa.status='approved' AND u.role='user'
         """
         params = [clinician]
 
@@ -10467,13 +10467,13 @@ def get_home_data():
         # Get today's completed tasks
         today = datetime.now().strftime('%Y-%m-%d')
         tasks = cur.execute(
-            "SELECT task_type, completed_at FROM daily_tasks WHERE username=? AND task_date=? AND completed=1",
+            "SELECT task_type, completed_at FROM daily_tasks WHERE username = %s AND task_date = %s AND completed=1",
             (username, today)
         ).fetchall()
 
         # Get streak info
         streak = cur.execute(
-            "SELECT current_streak, longest_streak, last_complete_date FROM daily_streaks WHERE username=?",
+            "SELECT current_streak, longest_streak, last_complete_date FROM daily_streaks WHERE username = %s",
             (username,)
         ).fetchone()
 
@@ -10576,7 +10576,7 @@ def get_user_feedback():
         cur = get_wrapped_cursor(conn)
 
         feedback = cur.execute(
-            "SELECT id, category, message, status, created_at FROM feedback WHERE username=? ORDER BY created_at DESC LIMIT 50",
+            "SELECT id, category, message, status, created_at FROM feedback WHERE username = %s ORDER BY created_at DESC LIMIT 50",
             (username,)
         ).fetchall()
 
@@ -10615,14 +10615,14 @@ def complete_daily_task():
 
         # Check if already completed today
         existing = cur.execute(
-            "SELECT id FROM daily_tasks WHERE username=? AND task_type=? AND task_date=?",
+            "SELECT id FROM daily_tasks WHERE username = %s AND task_type = %s AND task_date = %s",
             (username, task_type, today)
         ).fetchone()
 
         if existing:
             # Update existing record
             cur.execute(
-                "UPDATE daily_tasks SET completed=1, completed_at=CURRENT_TIMESTAMP WHERE id=?",
+                "UPDATE daily_tasks SET completed=1, completed_at=CURRENT_TIMESTAMP WHERE id = %s",
                 (existing[0],)
             )
         else:
@@ -10634,7 +10634,7 @@ def complete_daily_task():
 
         # Check if all tasks completed today
         completed_count = cur.execute(
-            "SELECT COUNT(DISTINCT task_type) FROM daily_tasks WHERE username=? AND task_date=? AND completed=1",
+            "SELECT COUNT(DISTINCT task_type) FROM daily_tasks WHERE username = %s AND task_date = %s AND completed=1",
             (username, today)
         ).fetchone()[0]
 
@@ -10662,7 +10662,7 @@ def award_daily_completion_bonus(username, cursor, today):
     try:
         # Check streak record
         streak = cursor.execute(
-            "SELECT current_streak, longest_streak, last_complete_date FROM daily_streaks WHERE username=?",
+            "SELECT current_streak, longest_streak, last_complete_date FROM daily_streaks WHERE username = %s",
             (username,)
         ).fetchone()
 
@@ -10685,7 +10685,7 @@ def award_daily_completion_bonus(username, cursor, today):
                     longest_streak=MAX(longest_streak, %s),
                     total_bonus_coins=total_bonus_coins+50,
                     total_bonus_xp=total_bonus_xp+100
-                WHERE username=?
+                WHERE username = %s
             ''', (new_streak, today, new_streak, username))
         else:
             cursor.execute('''
@@ -10699,7 +10699,7 @@ def award_daily_completion_bonus(username, cursor, today):
             pet_cur = pet_conn.cursor()
             pet_cur.execute('''
                 UPDATE pet SET coins=coins+50, xp=xp+100, happiness=MIN(100, happiness+10)
-                WHERE id=?
+                WHERE id = %s
             ''', (username,))
             pet_conn.commit()
             pet_conn.close()
@@ -10726,7 +10726,7 @@ def get_daily_streak():
         cur = get_wrapped_cursor(conn)
 
         streak = cur.execute(
-            "SELECT current_streak, longest_streak, last_complete_date, total_bonus_coins, total_bonus_xp FROM daily_streaks WHERE username=?",
+            "SELECT current_streak, longest_streak, last_complete_date, total_bonus_coins, total_bonus_xp FROM daily_streaks WHERE username = %s",
             (username,)
         ).fetchone()
 
@@ -10771,7 +10771,7 @@ def mark_daily_task_complete(username, task_type):
 
         # Check if all tasks completed
         completed_count = cur.execute(
-            "SELECT COUNT(DISTINCT task_type) FROM daily_tasks WHERE username=? AND task_date=? AND completed=1",
+            "SELECT COUNT(DISTINCT task_type) FROM daily_tasks WHERE username = %s AND task_date = %s AND completed=1",
             (username, today)
         ).fetchone()[0]
 
@@ -10839,7 +10839,7 @@ def save_cbt_tool_entry():
 
         # Check if entry exists for this user and tool
         existing = cur.execute(
-            "SELECT id FROM cbt_tool_entries WHERE username=? AND tool_type=?",
+            "SELECT id FROM cbt_tool_entries WHERE username = %s AND tool_type = %s",
             (username, tool_type)
         ).fetchone()
 
@@ -10848,7 +10848,7 @@ def save_cbt_tool_entry():
             cur.execute('''
                 UPDATE cbt_tool_entries
                 SET data=%s, mood_rating=%s, notes=%s, updated_at=CURRENT_TIMESTAMP
-                WHERE id=?
+                WHERE id = %s
             ''', (entry_data, mood_rating, notes, existing[0]))
         else:
             # Insert new entry
@@ -10900,7 +10900,7 @@ def load_cbt_tool_entry():
         row = cur.execute('''
             SELECT id, data, mood_rating, notes, created_at, updated_at
             FROM cbt_tool_entries
-            WHERE username=? AND tool_type=?
+            WHERE username = %s AND tool_type = %s
             ORDER BY updated_at DESC
             LIMIT 1
         ''', (username, tool_type)).fetchone()
@@ -10942,7 +10942,7 @@ def get_cbt_tool_history():
             rows = cur.execute('''
                 SELECT id, tool_type, data, mood_rating, notes, created_at
                 FROM cbt_tool_entries
-                WHERE username=? AND tool_type=?
+                WHERE username = %s AND tool_type = %s
                 ORDER BY created_at DESC
                 LIMIT ?
             ''', (username, tool_type, limit)).fetchall()
@@ -10950,7 +10950,7 @@ def get_cbt_tool_history():
             rows = cur.execute('''
                 SELECT id, tool_type, data, mood_rating, notes, created_at
                 FROM cbt_tool_entries
-                WHERE username=?
+                WHERE username = %s
                 ORDER BY created_at DESC
                 LIMIT ?
             ''', (username, limit)).fetchall()
@@ -11110,7 +11110,7 @@ def get_inbox():
                 WHERE (sender_username = %s OR recipient_username = %s)
                 AND deleted_at IS NULL
                 AND is_read = 0
-                AND recipient_username = ?
+                AND recipient_username = %s
                 GROUP BY other_user
                 ORDER BY last_message_time DESC
                 LIMIT ? OFFSET ?
@@ -11143,7 +11143,7 @@ def get_inbox():
         # Get total unread count
         total_unread = cur.execute('''
             SELECT COUNT(*) FROM messages
-            WHERE recipient_username = ? AND is_read = 0 AND deleted_at IS NULL
+            WHERE recipient_username = %s AND is_read = 0 AND deleted_at IS NULL
         ''', (username,)).fetchone()[0]
         
         # Get total conversation count
@@ -11206,7 +11206,7 @@ def get_conversation(recipient_username):
         cur.execute('''
             UPDATE messages
             SET is_read = 1, read_at = CURRENT_TIMESTAMP
-            WHERE sender_username = ? AND recipient_username = ? AND is_read = 0
+            WHERE sender_username = %s AND recipient_username = %s AND is_read = 0
         ''', (recipient_username, username))
         
         conn.commit()
@@ -11257,7 +11257,7 @@ def mark_message_read(message_id):
         
         # Check message exists and user is recipient
         message = cur.execute('''
-            SELECT id, recipient_username FROM messages WHERE id = ?
+            SELECT id, recipient_username FROM messages WHERE id = %s
         ''', (message_id,)).fetchone()
         
         if not message:
@@ -11272,7 +11272,7 @@ def mark_message_read(message_id):
         cur.execute('''
             UPDATE messages
             SET is_read = 1, read_at = CURRENT_TIMESTAMP
-            WHERE id = ?
+            WHERE id = %s
         ''', (message_id,))
         
         conn.commit()
@@ -11303,7 +11303,7 @@ def get_sent_messages():
         messages = cur.execute('''
             SELECT id, sender_username, recipient_username, subject, content, sent_at, is_read, read_at
             FROM messages 
-            WHERE sender_username = ? AND is_deleted_by_sender = 0
+            WHERE sender_username = %s AND is_deleted_by_sender = 0
             ORDER BY sent_at DESC
         ''', (sender,)).fetchall()
 
@@ -11405,7 +11405,7 @@ def update_feedback_status(feedback_id):
 
         # Get feedback to find who submitted it
         feedback = cur.execute('''
-            SELECT username, category, message FROM feedback WHERE id=?
+            SELECT username, category, message FROM feedback WHERE id = %s
         ''', (feedback_id,)).fetchone()
 
         if not feedback:
@@ -11419,7 +11419,7 @@ def update_feedback_status(feedback_id):
         cur.execute(f'''
             UPDATE feedback 
             SET status=%s, admin_notes=%s, resolved_at={resolved_at}
-            WHERE id=?
+            WHERE id = %s
         ''', (new_status, admin_notes, feedback_id))
 
         conn.commit()
@@ -11464,7 +11464,7 @@ def delete_message(message_id):
         # Check message exists and user is sender or recipient
         message = cur.execute('''
             SELECT id, sender_username, recipient_username, is_deleted_by_sender, is_deleted_by_recipient
-            FROM messages WHERE id = ?
+            FROM messages WHERE id = %s
         ''', (message_id,)).fetchone()
         
         if not message:
@@ -11480,17 +11480,17 @@ def delete_message(message_id):
         # Mark as deleted by this user
         if username == sender:
             cur.execute('''
-                UPDATE messages SET is_deleted_by_sender = 1 WHERE id = ?
+                UPDATE messages SET is_deleted_by_sender = 1 WHERE id = %s
             ''', (message_id,))
         else:  # recipient
             cur.execute('''
-                UPDATE messages SET is_deleted_by_recipient = 1 WHERE id = ?
+                UPDATE messages SET is_deleted_by_recipient = 1 WHERE id = %s
             ''', (message_id,))
         
         # If both have marked deleted, hide the message permanently
         if (username == sender and deleted_by_recipient) or (username == recipient and deleted_by_sender):
             cur.execute('''
-                UPDATE messages SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?
+                UPDATE messages SET deleted_at = CURRENT_TIMESTAMP WHERE id = %s
             ''', (message_id,))
         
         conn.commit()
