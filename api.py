@@ -2889,7 +2889,7 @@ def register():
             
             # Check if verification exists and is valid
             verified = cur.execute(
-                "SELECT id FROM verification_codes WHERE identifier=? AND verified=1 AND datetime(expires_at) > datetime('now')",
+                "SELECT id FROM verification_codes WHERE identifier=? AND verified=1 AND datetime(expires_at) > CURRENT_TIMESTAMP",
                 (verified_identifier,)
             ).fetchone()
             
@@ -10134,7 +10134,7 @@ def get_patient_analytics(username):
         upcoming = cur.execute("""
             SELECT id, clinician_username, appointment_date, appointment_type, notes, attendance_status, attendance_confirmed_by, attendance_confirmed_at
             FROM appointments
-            WHERE patient_username=? AND datetime(appointment_date) >= datetime('now')
+            WHERE patient_username=? AND datetime(appointment_date) >= CURRENT_TIMESTAMP
             ORDER BY datetime(appointment_date) ASC
             LIMIT 10
         """, (username,)).fetchall()
@@ -10143,7 +10143,7 @@ def get_patient_analytics(username):
         recent_past = cur.execute("""
             SELECT id, clinician_username, appointment_date, appointment_type, notes, attendance_status, attendance_confirmed_by, attendance_confirmed_at
             FROM appointments
-            WHERE patient_username=? AND datetime(appointment_date) < datetime('now') AND datetime(appointment_date) >= datetime('now', '-7 days')
+            WHERE patient_username=? AND datetime(appointment_date) < CURRENT_TIMESTAMP AND datetime(appointment_date) >= datetime('now', '-7 days')
             ORDER BY datetime(appointment_date) DESC
             LIMIT 10
         """, (username,)).fetchall()
@@ -10622,13 +10622,13 @@ def complete_daily_task():
         if existing:
             # Update existing record
             cur.execute(
-                "UPDATE daily_tasks SET completed=1, completed_at=datetime('now') WHERE id=?",
+                "UPDATE daily_tasks SET completed=1, completed_at=CURRENT_TIMESTAMP WHERE id=?",
                 (existing[0],)
             )
         else:
             # Insert new record
             cur.execute(
-                "INSERT INTO daily_tasks (username, task_type, completed, completed_at, task_date) VALUES (%s, %s, 1, datetime('now'), %s)",
+                "INSERT INTO daily_tasks (username, task_type, completed, completed_at, task_date) VALUES (%s, %s, 1, CURRENT_TIMESTAMP, %s)",
                 (username, task_type, today)
             )
 
@@ -10847,7 +10847,7 @@ def save_cbt_tool_entry():
             # Update existing entry
             cur.execute('''
                 UPDATE cbt_tool_entries
-                SET data=%s, mood_rating=%s, notes=%s, updated_at=datetime('now')
+                SET data=%s, mood_rating=%s, notes=%s, updated_at=CURRENT_TIMESTAMP
                 WHERE id=?
             ''', (entry_data, mood_rating, notes, existing[0]))
         else:

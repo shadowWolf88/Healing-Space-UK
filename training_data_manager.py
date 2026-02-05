@@ -99,7 +99,7 @@ class TrainingDataManager:
         # Audit trail
         cur.execute(
             '''INSERT INTO training_audit (user_hash, action, details)
-               VALUES (?, ?, ?)''',
+               VALUES (%s, ?, %s)''',
             (user_hash, action, f'User consent status changed to: {consent}')
         )
         
@@ -117,7 +117,7 @@ class TrainingDataManager:
         
         result = cur.execute(
             '''SELECT consent_given, consent_withdrawn 
-               FROM data_consent WHERE user_hash=?''',
+               FROM data_consent WHERE user_hash=%s''',
             (user_hash,)
         ).fetchone()
         
@@ -151,7 +151,7 @@ class TrainingDataManager:
         # Get mood context
         mood = prod_cur.execute(
             '''SELECT mood_val FROM mood_logs 
-               WHERE username=? 
+               WHERE username=%s 
                ORDER BY entrestamp DESC LIMIT 1''',
             (username,)
         ).fetchone()
@@ -159,7 +159,7 @@ class TrainingDataManager:
         # Get assessment severity
         assessment = prod_cur.execute(
             '''SELECT severity FROM clinical_scales 
-               WHERE username=? 
+               WHERE username=%s 
                ORDER BY entry_timestamp DESC LIMIT 1''',
             (username,)
         ).fetchone()
@@ -181,7 +181,7 @@ class TrainingDataManager:
                 '''INSERT INTO training_chats 
                    (session_hash, user_hash, message_role, message_content, 
                     timestamp, mood_context, assessment_severity)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)''',
+                   VALUES (%s, ?, ?, ?, ?, ?, %s)''',
                 (session_hash, user_hash, sender, anonymized_message, 
                  timestamp, mood[0] if mood else None, 
                  assessment[0] if assessment else None)
@@ -190,7 +190,7 @@ class TrainingDataManager:
         # Audit
         train_cur.execute(
             '''INSERT INTO training_audit (user_hash, action, details)
-               VALUES (?, ?, ?)''',
+               VALUES (%s, ?, %s)''',
             (user_hash, 'data_exported', f'Exported {len(chats)} chat messages')
         )
         
@@ -213,14 +213,14 @@ class TrainingDataManager:
         # Get CBT patterns
         cbt_records = prod_cur.execute(
             '''SELECT situation, thought, evidence, entry_timestamp
-               FROM cbt_records WHERE username=?''',
+               FROM cbt_records WHERE username=%s''',
             (username,)
         ).fetchall()
         
         # Get gratitude patterns
         gratitude = prod_cur.execute(
             '''SELECT entry, entry_timestamp
-               FROM gratitude_logs WHERE username=?''',
+               FROM gratitude_logs WHERE username=%s''',
             (username,)
         ).fetchall()
         
@@ -241,7 +241,7 @@ class TrainingDataManager:
             train_cur.execute(
                 '''INSERT INTO training_patterns 
                    (user_hash, pattern_type, pattern_data, timestamp)
-                   VALUES (?, ?, ?, ?)''',
+                   VALUES (%s, ?, ?, %s)''',
                 (user_hash, 'cbt', json.dumps(pattern_data), cbt[3])
             )
         
@@ -254,7 +254,7 @@ class TrainingDataManager:
             train_cur.execute(
                 '''INSERT INTO training_patterns 
                    (user_hash, pattern_type, pattern_data, timestamp)
-                   VALUES (?, ?, ?, ?)''',
+                   VALUES (%s, ?, ?, %s)''',
                 (user_hash, 'gratitude', json.dumps(pattern_data), grat[1])
             )
         
@@ -278,7 +278,7 @@ class TrainingDataManager:
         assessments = prod_cur.execute(
             '''SELECT scale_name, score, entry_timestamp
                FROM clinical_scales 
-               WHERE username=?
+               WHERE username=%s
                ORDER BY entry_timestamp ASC''',
             (username,)
         ).fetchall()
@@ -304,7 +304,7 @@ class TrainingDataManager:
                     '''INSERT INTO training_outcomes 
                        (user_hash, baseline_phq9, followup_phq9, 
                         days_between, improvement_score, timestamp)
-                       VALUES (?, ?, ?, ?, ?, ?)''',
+                       VALUES (%s, ?, ?, ?, ?, %s)''',
                     (user_hash, baseline_phq9, followup_phq9, 
                      days_between, improvement, datetime.now())
                 )
@@ -320,7 +320,7 @@ class TrainingDataManager:
                     '''INSERT INTO training_outcomes 
                        (user_hash, baseline_gad7, followup_gad7, 
                         days_between, improvement_score, timestamp)
-                       VALUES (?, ?, ?, ?, ?, ?)''',
+                       VALUES (%s, ?, ?, ?, ?, %s)''',
                     (user_hash, baseline_gad7, followup_gad7, 
                      days_between, improvement, datetime.now())
                 )
@@ -347,7 +347,7 @@ class TrainingDataManager:
         # Audit
         cur.execute(
             '''INSERT INTO training_audit (user_hash, action, details)
-               VALUES (?, ?, ?)''',
+               VALUES (%s, ?, %s)''',
             (user_hash, 'data_deleted', 'User exercised right to deletion')
         )
         
