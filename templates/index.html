@@ -49,6 +49,25 @@
             document.getElementById('clinicianRegisterForm').classList.add('hidden');
             document.getElementById('forgotPasswordForm').classList.add('hidden');
         }
+
+        function togglePassword(inputId, button) {
+            const input = document.getElementById(inputId);
+            if (input) {
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    button.textContent = '🙈';
+                } else {
+                    input.type = 'password';
+                    button.textContent = '👁️';
+                }
+            }
+        }
+
+        async function login(userType) {
+            // Stub - will be properly defined later in body
+            // This ensures onclick handlers don't error on page load
+            console.log('Login called for:', userType);
+        }
     </script>
     <style>
         /* Theme CSS Variables */
@@ -14497,29 +14516,6 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     break;
                 case 'wrap_up':
                     showWellnessWrapUp();
-                    break;
-            }
-        }
-                case 'hydration':
-                    renderHydrationStep(container);
-                    break;
-                case 'exercise':
-                    renderExerciseStep(container);
-                    break;
-                case 'social':
-                    renderSocialStep(container);
-                    break;
-                case 'medication':
-                    renderMedicationStep(container);
-                    break;
-                case 'energy':
-                    renderEnergyStep(container);
-                    break;
-                case 'homework':
-                    renderHomeworkStep(container);
-                    break;
-                case 'wrap_up':
-                    renderWrapUpStep(container);
                     break;
             }
         }
