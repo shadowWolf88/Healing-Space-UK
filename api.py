@@ -396,7 +396,7 @@ def create_goal():
         progress_percentage = data.get('progress_percentage', 0)
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('''INSERT INTO goals (username, goal_title, goal_description, goal_type, target_date, related_value_id, status, progress_percentage) VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+        cur.execute('''INSERT INTO goals (username, goal_title, goal_description, goal_type, target_date, related_value_id, status, progress_percentage) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)''',
             (username, goal_title, goal_description, goal_type, target_date, related_value_id, status, progress_percentage))
         conn.commit()
         log_event(username, 'cbt', 'goal_created', f"Goal: {goal_title}")
@@ -414,7 +414,7 @@ def list_goals():
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT * FROM goals WHERE username=? ORDER BY entry_timestamp DESC', (username,)).fetchall()
+        rows = cur.execute('SELECT * FROM goals WHERE username=%s ORDER BY entry_timestamp DESC', (username,)).fetchall()
         conn.close()
         result = [dict(zip([c[0] for c in cur.description], row)) for row in rows]
         return jsonify({'entries': result}), 200
@@ -430,7 +430,7 @@ def get_goal(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM goals WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM goals WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         conn.close()
         if not row:
             return jsonify({'error': 'Entry not found'}), 404
@@ -449,7 +449,7 @@ def update_goal(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM goals WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM goals WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         if not row:
             conn.close()
             return jsonify({'error': 'Entry not found'}), 404
@@ -457,7 +457,7 @@ def update_goal(entry_id):
         updates = {k: data[k] for k in fields if k in data}
         set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
         values = list(updates.values()) + [entry_id, username]
-        cur.execute(f'UPDATE goals SET {set_clause} WHERE id=? AND username=?', values)
+        cur.execute(f'UPDATE goals SET {set_clause} WHERE id=%s AND username=%s', values)
         conn.commit()
         log_event(username, 'cbt', 'goal_updated', f"ID: {entry_id}")
         conn.close()
@@ -474,11 +474,11 @@ def delete_goal(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM goals WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM goals WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         if not row:
             conn.close()
             return jsonify({'error': 'Entry not found'}), 404
-        cur.execute('DELETE FROM goals WHERE id=? AND username=?', (entry_id, username))
+        cur.execute('DELETE FROM goals WHERE id=%s AND username=%s', (entry_id, username))
         conn.commit()
         log_event(username, 'cbt', 'goal_deleted', f"ID: {entry_id}")
         conn.close()
@@ -500,7 +500,7 @@ def create_goal_milestone(goal_id):
         is_completed = int(data.get('is_completed', 0))
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('''INSERT INTO goal_milestones (goal_id, username, milestone_title, milestone_description, target_date, is_completed) VALUES (?, ?, ?, ?, ?, ?)''',
+        cur.execute('''INSERT INTO goal_milestones (goal_id, username, milestone_title, milestone_description, target_date, is_completed) VALUES (%s, %s, %s, %s, %s, %s)''',
             (goal_id, username, milestone_title, milestone_description, target_date, is_completed))
         conn.commit()
         log_event(username, 'cbt', 'goal_milestone_created', f"Goal ID: {goal_id}, Title: {milestone_title}")
@@ -517,7 +517,7 @@ def list_goal_milestones(goal_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT * FROM goal_milestones WHERE goal_id=? AND username=? ORDER BY entry_timestamp DESC', (goal_id, username)).fetchall()
+        rows = cur.execute('SELECT * FROM goal_milestones WHERE goal_id=%s AND username=%s ORDER BY entry_timestamp DESC', (goal_id, username)).fetchall()
         conn.close()
         result = [dict(zip([c[0] for c in cur.description], row)) for row in rows]
         return jsonify({'entries': result}), 200
@@ -538,7 +538,7 @@ def create_goal_checkin(goal_id):
         motivation_level = data.get('motivation_level')
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('''INSERT INTO goal_checkins (goal_id, username, progress_notes, obstacles, next_steps, motivation_level) VALUES (?, ?, ?, ?, ?, ?)''',
+        cur.execute('''INSERT INTO goal_checkins (goal_id, username, progress_notes, obstacles, next_steps, motivation_level) VALUES (%s, %s, %s, %s, %s, %s)''',
             (goal_id, username, progress_notes, obstacles, next_steps, motivation_level))
         conn.commit()
         log_event(username, 'cbt', 'goal_checkin_created', f"Goal ID: {goal_id}")
@@ -555,7 +555,7 @@ def list_goal_checkins(goal_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT * FROM goal_checkins WHERE goal_id=? AND username=? ORDER BY checkin_timestamp DESC', (goal_id, username)).fetchall()
+        rows = cur.execute('SELECT * FROM goal_checkins WHERE goal_id=%s AND username=%s ORDER BY checkin_timestamp DESC', (goal_id, username)).fetchall()
         conn.close()
         result = [dict(zip([c[0] for c in cur.description], row)) for row in rows]
         return jsonify({'entries': result}), 200
@@ -568,7 +568,7 @@ def summarize_goals(username, limit=3):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT goal_title, status, progress_percentage, entry_timestamp FROM goals WHERE username=? ORDER BY entry_timestamp DESC LIMIT ?', (username, limit)).fetchall()
+        rows = cur.execute('SELECT goal_title, status, progress_percentage, entry_timestamp FROM goals WHERE username=%s ORDER BY entry_timestamp DESC LIMIT %s', (username, limit)).fetchall()
         conn.close()
         if not rows:
             return None
@@ -601,7 +601,7 @@ def create_value():
         is_active = int(data.get('is_active', 1))
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('''INSERT INTO values_clarification (username, value_name, value_description, importance_rating, current_alignment, life_area, related_goals, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+        cur.execute('''INSERT INTO values_clarification (username, value_name, value_description, importance_rating, current_alignment, life_area, related_goals, is_active) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)''',
             (username, value_name, value_description, importance_rating, current_alignment, life_area, related_goals, is_active))
         conn.commit()
         log_event(username, 'cbt', 'value_created', f"Value: {value_name}")
@@ -619,7 +619,7 @@ def list_values():
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT * FROM values_clarification WHERE username=? ORDER BY entry_timestamp DESC', (username,)).fetchall()
+        rows = cur.execute('SELECT * FROM values_clarification WHERE username=%s ORDER BY entry_timestamp DESC', (username,)).fetchall()
         conn.close()
         result = [dict(zip([c[0] for c in cur.description], row)) for row in rows]
         return jsonify({'entries': result}), 200
@@ -635,7 +635,7 @@ def get_value(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM values_clarification WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM values_clarification WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         conn.close()
         if not row:
             return jsonify({'error': 'Entry not found'}), 404
@@ -654,7 +654,7 @@ def update_value(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM values_clarification WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM values_clarification WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         if not row:
             conn.close()
             return jsonify({'error': 'Entry not found'}), 404
@@ -662,7 +662,7 @@ def update_value(entry_id):
         updates = {k: data[k] for k in fields if k in data}
         set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
         values = list(updates.values()) + [entry_id, username]
-        cur.execute(f'UPDATE values_clarification SET {set_clause} WHERE id=? AND username=?', values)
+        cur.execute(f'UPDATE values_clarification SET {set_clause} WHERE id=%s AND username=%s', values)
         conn.commit()
         log_event(username, 'cbt', 'value_updated', f"ID: {entry_id}")
         conn.close()
@@ -679,11 +679,11 @@ def delete_value(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM values_clarification WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM values_clarification WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         if not row:
             conn.close()
             return jsonify({'error': 'Entry not found'}), 404
-        cur.execute('DELETE FROM values_clarification WHERE id=? AND username=?', (entry_id, username))
+        cur.execute('DELETE FROM values_clarification WHERE id=%s AND username=%s', (entry_id, username))
         conn.commit()
         log_event(username, 'cbt', 'value_deleted', f"ID: {entry_id}")
         conn.close()
@@ -697,7 +697,7 @@ def summarize_values_clarification(username, limit=3):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT value_name, importance_rating, current_alignment, entry_timestamp FROM values_clarification WHERE username=? ORDER BY entry_timestamp DESC LIMIT ?', (username, limit)).fetchall()
+        rows = cur.execute('SELECT value_name, importance_rating, current_alignment, entry_timestamp FROM values_clarification WHERE username=%s ORDER BY entry_timestamp DESC LIMIT %s', (username, limit)).fetchall()
         conn.close()
         if not rows:
             return None
@@ -726,7 +726,7 @@ def create_self_compassion():
         mood_after = data.get('mood_after')
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('''INSERT INTO self_compassion_journal (username, difficult_situation, self_critical_thoughts, common_humanity, kind_response, self_care_action, mood_before, mood_after) VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+        cur.execute('''INSERT INTO self_compassion_journal (username, difficult_situation, self_critical_thoughts, common_humanity, kind_response, self_care_action, mood_before, mood_after) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)''',
             (username, difficult_situation, self_critical_thoughts, common_humanity, kind_response, self_care_action, mood_before, mood_after))
         conn.commit()
         log_event(username, 'cbt', 'self_compassion_created', f"Situation: {difficult_situation}")
@@ -744,7 +744,7 @@ def list_self_compassion():
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT * FROM self_compassion_journal WHERE username=? ORDER BY entry_timestamp DESC', (username,)).fetchall()
+        rows = cur.execute('SELECT * FROM self_compassion_journal WHERE username=%s ORDER BY entry_timestamp DESC', (username,)).fetchall()
         conn.close()
         result = [dict(zip([c[0] for c in cur.description], row)) for row in rows]
         return jsonify({'entries': result}), 200
@@ -760,7 +760,7 @@ def get_self_compassion(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM self_compassion_journal WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM self_compassion_journal WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         conn.close()
         if not row:
             return jsonify({'error': 'Entry not found'}), 404
@@ -779,7 +779,7 @@ def update_self_compassion(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM self_compassion_journal WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM self_compassion_journal WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         if not row:
             conn.close()
             return jsonify({'error': 'Entry not found'}), 404
@@ -787,7 +787,7 @@ def update_self_compassion(entry_id):
         updates = {k: data[k] for k in fields if k in data}
         set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
         values = list(updates.values()) + [entry_id, username]
-        cur.execute(f'UPDATE self_compassion_journal SET {set_clause} WHERE id=? AND username=?', values)
+        cur.execute(f'UPDATE self_compassion_journal SET {set_clause} WHERE id=%s AND username=%s', values)
         conn.commit()
         log_event(username, 'cbt', 'self_compassion_updated', f"ID: {entry_id}")
         conn.close()
@@ -804,11 +804,11 @@ def delete_self_compassion(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM self_compassion_journal WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM self_compassion_journal WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         if not row:
             conn.close()
             return jsonify({'error': 'Entry not found'}), 404
-        cur.execute('DELETE FROM self_compassion_journal WHERE id=? AND username=?', (entry_id, username))
+        cur.execute('DELETE FROM self_compassion_journal WHERE id=%s AND username=%s', (entry_id, username))
         conn.commit()
         log_event(username, 'cbt', 'self_compassion_deleted', f"ID: {entry_id}")
         conn.close()
@@ -822,7 +822,7 @@ def summarize_self_compassion(username, limit=3):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT difficult_situation, kind_response, mood_before, mood_after, entry_timestamp FROM self_compassion_journal WHERE username=? ORDER BY entry_timestamp DESC LIMIT ?', (username, limit)).fetchall()
+        rows = cur.execute('SELECT difficult_situation, kind_response, mood_before, mood_after, entry_timestamp FROM self_compassion_journal WHERE username=%s ORDER BY entry_timestamp DESC LIMIT %s', (username, limit)).fetchall()
         conn.close()
         if not rows:
             return None
@@ -855,7 +855,7 @@ def create_coping_card():
         times_used = int(data.get('times_used', 0))
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('''INSERT INTO coping_cards (username, card_title, situation_trigger, unhelpful_thought, helpful_response, coping_strategies, is_favorite, times_used) VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+        cur.execute('''INSERT INTO coping_cards (username, card_title, situation_trigger, unhelpful_thought, helpful_response, coping_strategies, is_favorite, times_used) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)''',
             (username, card_title, situation_trigger, unhelpful_thought, helpful_response, coping_strategies, is_favorite, times_used))
         conn.commit()
         log_event(username, 'cbt', 'coping_card_created', f"Title: {card_title}")
@@ -873,7 +873,7 @@ def list_coping_cards():
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT * FROM coping_cards WHERE username=? ORDER BY entry_timestamp DESC', (username,)).fetchall()
+        rows = cur.execute('SELECT * FROM coping_cards WHERE username=%s ORDER BY entry_timestamp DESC', (username,)).fetchall()
         conn.close()
         result = [dict(zip([c[0] for c in cur.description], row)) for row in rows]
         return jsonify({'entries': result}), 200
@@ -889,7 +889,7 @@ def get_coping_card(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM coping_cards WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM coping_cards WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         conn.close()
         if not row:
             return jsonify({'error': 'Entry not found'}), 404
@@ -908,7 +908,7 @@ def update_coping_card(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM coping_cards WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM coping_cards WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         if not row:
             conn.close()
             return jsonify({'error': 'Entry not found'}), 404
@@ -916,7 +916,7 @@ def update_coping_card(entry_id):
         updates = {k: data[k] for k in fields if k in data}
         set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
         values = list(updates.values()) + [entry_id, username]
-        cur.execute(f'UPDATE coping_cards SET {set_clause} WHERE id=? AND username=?', values)
+        cur.execute(f'UPDATE coping_cards SET {set_clause} WHERE id=%s AND username=%s', values)
         conn.commit()
         log_event(username, 'cbt', 'coping_card_updated', f"ID: {entry_id}")
         conn.close()
@@ -933,11 +933,11 @@ def delete_coping_card(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM coping_cards WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM coping_cards WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         if not row:
             conn.close()
             return jsonify({'error': 'Entry not found'}), 404
-        cur.execute('DELETE FROM coping_cards WHERE id=? AND username=?', (entry_id, username))
+        cur.execute('DELETE FROM coping_cards WHERE id=%s AND username=%s', (entry_id, username))
         conn.commit()
         log_event(username, 'cbt', 'coping_card_deleted', f"ID: {entry_id}")
         conn.close()
@@ -951,7 +951,7 @@ def summarize_coping_cards(username, limit=3):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT card_title, helpful_response, times_used, entry_timestamp FROM coping_cards WHERE username=? ORDER BY entry_timestamp DESC LIMIT ?', (username, limit)).fetchall()
+        rows = cur.execute('SELECT card_title, helpful_response, times_used, entry_timestamp FROM coping_cards WHERE username=%s ORDER BY entry_timestamp DESC LIMIT %s', (username, limit)).fetchall()
         conn.close()
         if not rows:
             return None
@@ -984,7 +984,7 @@ def create_problem_solving():
         status = data.get('status', 'in_progress')
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('''INSERT INTO problem_solving (username, problem_description, problem_importance, brainstormed_solutions, chosen_solution, action_steps, outcome, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+        cur.execute('''INSERT INTO problem_solving (username, problem_description, problem_importance, brainstormed_solutions, chosen_solution, action_steps, outcome, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)''',
             (username, problem_description, problem_importance, brainstormed_solutions, chosen_solution, action_steps, outcome, status))
         conn.commit()
         log_event(username, 'cbt', 'problem_solving_created', f"Problem: {problem_description}")
@@ -1002,7 +1002,7 @@ def list_problem_solving():
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT * FROM problem_solving WHERE username=? ORDER BY entry_timestamp DESC', (username,)).fetchall()
+        rows = cur.execute('SELECT * FROM problem_solving WHERE username=%s ORDER BY entry_timestamp DESC', (username,)).fetchall()
         conn.close()
         result = [dict(zip([c[0] for c in cur.description], row)) for row in rows]
         return jsonify({'entries': result}), 200
@@ -1018,7 +1018,7 @@ def get_problem_solving(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM problem_solving WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM problem_solving WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         conn.close()
         if not row:
             return jsonify({'error': 'Entry not found'}), 404
@@ -1037,7 +1037,7 @@ def update_problem_solving(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM problem_solving WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM problem_solving WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         if not row:
             conn.close()
             return jsonify({'error': 'Entry not found'}), 404
@@ -1045,7 +1045,7 @@ def update_problem_solving(entry_id):
         updates = {k: data[k] for k in fields if k in data}
         set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
         values = list(updates.values()) + [entry_id, username]
-        cur.execute(f'UPDATE problem_solving SET {set_clause} WHERE id=? AND username=?', values)
+        cur.execute(f'UPDATE problem_solving SET {set_clause} WHERE id=%s AND username=%s', values)
         conn.commit()
         log_event(username, 'cbt', 'problem_solving_updated', f"ID: {entry_id}")
         conn.close()
@@ -1062,11 +1062,11 @@ def delete_problem_solving(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM problem_solving WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM problem_solving WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         if not row:
             conn.close()
             return jsonify({'error': 'Entry not found'}), 404
-        cur.execute('DELETE FROM problem_solving WHERE id=? AND username=?', (entry_id, username))
+        cur.execute('DELETE FROM problem_solving WHERE id=%s AND username=%s', (entry_id, username))
         conn.commit()
         log_event(username, 'cbt', 'problem_solving_deleted', f"ID: {entry_id}")
         conn.close()
@@ -1080,7 +1080,7 @@ def summarize_problem_solving(username, limit=3):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT problem_description, chosen_solution, outcome, status, entry_timestamp FROM problem_solving WHERE username=? ORDER BY entry_timestamp DESC LIMIT ?', (username, limit)).fetchall()
+        rows = cur.execute('SELECT problem_description, chosen_solution, outcome, status, entry_timestamp FROM problem_solving WHERE username=%s ORDER BY entry_timestamp DESC LIMIT %s', (username, limit)).fetchall()
         conn.close()
         if not rows:
             return None
@@ -1111,7 +1111,7 @@ def create_exposure_hierarchy():
         status = data.get('status', 'not_started')
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('''INSERT INTO exposure_hierarchy (username, fear_situation, initial_suds, target_suds, hierarchy_rank, status) VALUES (?, ?, ?, ?, ?, ?)''',
+        cur.execute('''INSERT INTO exposure_hierarchy (username, fear_situation, initial_suds, target_suds, hierarchy_rank, status) VALUES (%s, %s, %s, %s, %s, %s)''',
             (username, fear_situation, initial_suds, target_suds, hierarchy_rank, status))
         conn.commit()
         log_event(username, 'cbt', 'exposure_hierarchy_created', f"Situation: {fear_situation}")
@@ -1129,7 +1129,7 @@ def list_exposure_hierarchy():
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT * FROM exposure_hierarchy WHERE username=? ORDER BY hierarchy_rank ASC, entry_timestamp DESC', (username,)).fetchall()
+        rows = cur.execute('SELECT * FROM exposure_hierarchy WHERE username=%s ORDER BY hierarchy_rank ASC, entry_timestamp DESC', (username,)).fetchall()
         conn.close()
         result = [dict(zip([c[0] for c in cur.description], row)) for row in rows]
         return jsonify({'entries': result}), 200
@@ -1145,7 +1145,7 @@ def get_exposure_hierarchy(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM exposure_hierarchy WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM exposure_hierarchy WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         conn.close()
         if not row:
             return jsonify({'error': 'Entry not found'}), 404
@@ -1164,7 +1164,7 @@ def update_exposure_hierarchy(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM exposure_hierarchy WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM exposure_hierarchy WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         if not row:
             conn.close()
             return jsonify({'error': 'Entry not found'}), 404
@@ -1172,7 +1172,7 @@ def update_exposure_hierarchy(entry_id):
         updates = {k: data[k] for k in fields if k in data}
         set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
         values = list(updates.values()) + [entry_id, username]
-        cur.execute(f'UPDATE exposure_hierarchy SET {set_clause} WHERE id=? AND username=?', values)
+        cur.execute(f'UPDATE exposure_hierarchy SET {set_clause} WHERE id=%s AND username=%s', values)
         conn.commit()
         log_event(username, 'cbt', 'exposure_hierarchy_updated', f"ID: {entry_id}")
         conn.close()
@@ -1189,11 +1189,11 @@ def delete_exposure_hierarchy(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM exposure_hierarchy WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM exposure_hierarchy WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         if not row:
             conn.close()
             return jsonify({'error': 'Entry not found'}), 404
-        cur.execute('DELETE FROM exposure_hierarchy WHERE id=? AND username=?', (entry_id, username))
+        cur.execute('DELETE FROM exposure_hierarchy WHERE id=%s AND username=%s', (entry_id, username))
         conn.commit()
         log_event(username, 'cbt', 'exposure_hierarchy_deleted', f"ID: {entry_id}")
         conn.close()
@@ -1218,7 +1218,7 @@ def create_exposure_attempt(exposure_id):
         notes = data.get('notes')
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('''INSERT INTO exposure_attempts (exposure_id, username, pre_suds, peak_suds, post_suds, duration_minutes, coping_strategies_used, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+        cur.execute('''INSERT INTO exposure_attempts (exposure_id, username, pre_suds, peak_suds, post_suds, duration_minutes, coping_strategies_used, notes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)''',
             (exposure_id, username, pre_suds, peak_suds, post_suds, duration_minutes, coping_strategies_used, notes))
         conn.commit()
         log_event(username, 'cbt', 'exposure_attempt_created', f"Exposure ID: {exposure_id}")
@@ -1236,7 +1236,7 @@ def list_exposure_attempts(exposure_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT * FROM exposure_attempts WHERE exposure_id=? AND username=? ORDER BY attempt_timestamp DESC', (exposure_id, username)).fetchall()
+        rows = cur.execute('SELECT * FROM exposure_attempts WHERE exposure_id=%s AND username=%s ORDER BY attempt_timestamp DESC', (exposure_id, username)).fetchall()
         conn.close()
         result = [dict(zip([c[0] for c in cur.description], row)) for row in rows]
         return jsonify({'entries': result}), 200
@@ -1249,7 +1249,7 @@ def summarize_exposure_hierarchy(username, limit=3):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT fear_situation, status, initial_suds, target_suds, entry_timestamp FROM exposure_hierarchy WHERE username=? ORDER BY entry_timestamp DESC LIMIT ?', (username, limit)).fetchall()
+        rows = cur.execute('SELECT fear_situation, status, initial_suds, target_suds, entry_timestamp FROM exposure_hierarchy WHERE username=%s ORDER BY entry_timestamp DESC LIMIT %s', (username, limit)).fetchall()
         conn.close()
         if not rows:
             return None
@@ -1283,7 +1283,7 @@ def create_core_belief():
         is_active = int(data.get('is_active', 1))
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('''INSERT INTO core_beliefs (username, old_belief, belief_origin, evidence_for, evidence_against, new_balanced_belief, belief_strength_before, belief_strength_after, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+        cur.execute('''INSERT INTO core_beliefs (username, old_belief, belief_origin, evidence_for, evidence_against, new_balanced_belief, belief_strength_before, belief_strength_after, is_active) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)''',
             (username, old_belief, belief_origin, evidence_for, evidence_against, new_balanced_belief, belief_strength_before, belief_strength_after, is_active))
         conn.commit()
         log_event(username, 'cbt', 'core_belief_created', f"Old: {old_belief}")
@@ -1301,7 +1301,7 @@ def list_core_beliefs():
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT * FROM core_beliefs WHERE username=? ORDER BY entry_timestamp DESC', (username,)).fetchall()
+        rows = cur.execute('SELECT * FROM core_beliefs WHERE username=%s ORDER BY entry_timestamp DESC', (username,)).fetchall()
         conn.close()
         result = [dict(zip([c[0] for c in cur.description], row)) for row in rows]
         return jsonify({'entries': result}), 200
@@ -1317,7 +1317,7 @@ def get_core_belief(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM core_beliefs WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM core_beliefs WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         conn.close()
         if not row:
             return jsonify({'error': 'Entry not found'}), 404
@@ -1336,7 +1336,7 @@ def update_core_belief(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM core_beliefs WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM core_beliefs WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         if not row:
             conn.close()
             return jsonify({'error': 'Entry not found'}), 404
@@ -1345,7 +1345,7 @@ def update_core_belief(entry_id):
         updates = {k: data[k] for k in fields if k in data}
         set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
         values = list(updates.values()) + [entry_id, username]
-        cur.execute(f'UPDATE core_beliefs SET {set_clause} WHERE id=? AND username=?', values)
+        cur.execute(f'UPDATE core_beliefs SET {set_clause} WHERE id=%s AND username=%s', values)
         conn.commit()
         log_event(username, 'cbt', 'core_belief_updated', f"ID: {entry_id}")
         conn.close()
@@ -1362,11 +1362,11 @@ def delete_core_belief(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM core_beliefs WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM core_beliefs WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         if not row:
             conn.close()
             return jsonify({'error': 'Entry not found'}), 404
-        cur.execute('DELETE FROM core_beliefs WHERE id=? AND username=?', (entry_id, username))
+        cur.execute('DELETE FROM core_beliefs WHERE id=%s AND username=%s', (entry_id, username))
         conn.commit()
         log_event(username, 'cbt', 'core_belief_deleted', f"ID: {entry_id}")
         conn.close()
@@ -1380,7 +1380,7 @@ def summarize_core_beliefs(username, limit=3):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT old_belief, new_balanced_belief, belief_strength_before, belief_strength_after, entry_timestamp FROM core_beliefs WHERE username=? ORDER BY entry_timestamp DESC LIMIT ?', (username, limit)).fetchall()
+        rows = cur.execute('SELECT old_belief, new_balanced_belief, belief_strength_before, belief_strength_after, entry_timestamp FROM core_beliefs WHERE username=%s ORDER BY entry_timestamp DESC LIMIT %s', (username, limit)).fetchall()
         conn.close()
         if not rows:
             return None
@@ -1417,7 +1417,7 @@ def create_sleep_diary():
         notes = data.get('notes')
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('''INSERT INTO sleep_diary (username, sleep_date, bedtime, wake_time, time_to_fall_asleep, times_woken, total_sleep_hours, sleep_quality, dreams_nightmares, factors_affecting, morning_mood, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+        cur.execute('''INSERT INTO sleep_diary (username, sleep_date, bedtime, wake_time, time_to_fall_asleep, times_woken, total_sleep_hours, sleep_quality, dreams_nightmares, factors_affecting, morning_mood, notes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''',
             (username, sleep_date, bedtime, wake_time, time_to_fall_asleep, times_woken, total_sleep_hours, sleep_quality, dreams_nightmares, factors_affecting, morning_mood, notes))
         conn.commit()
         log_event(username, 'cbt', 'sleep_diary_created', f"Date: {sleep_date}, Quality: {sleep_quality}")
@@ -1435,7 +1435,7 @@ def list_sleep_diary():
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT * FROM sleep_diary WHERE username=? ORDER BY entry_timestamp DESC', (username,)).fetchall()
+        rows = cur.execute('SELECT * FROM sleep_diary WHERE username=%s ORDER BY entry_timestamp DESC', (username,)).fetchall()
         conn.close()
         result = [dict(zip([c[0] for c in cur.description], row)) for row in rows]
         return jsonify({'entries': result}), 200
@@ -1451,7 +1451,7 @@ def get_sleep_diary(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM sleep_diary WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM sleep_diary WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         conn.close()
         if not row:
             return jsonify({'error': 'Entry not found'}), 404
@@ -1470,7 +1470,7 @@ def update_sleep_diary(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM sleep_diary WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM sleep_diary WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         if not row:
             conn.close()
             return jsonify({'error': 'Entry not found'}), 404
@@ -1479,7 +1479,7 @@ def update_sleep_diary(entry_id):
         updates = {k: data[k] for k in fields if k in data}
         set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
         values = list(updates.values()) + [entry_id, username]
-        cur.execute(f'UPDATE sleep_diary SET {set_clause} WHERE id=? AND username=?', values)
+        cur.execute(f'UPDATE sleep_diary SET {set_clause} WHERE id=%s AND username=%s', values)
         conn.commit()
         log_event(username, 'cbt', 'sleep_diary_updated', f"ID: {entry_id}")
         conn.close()
@@ -1496,11 +1496,11 @@ def delete_sleep_diary(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM sleep_diary WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM sleep_diary WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         if not row:
             conn.close()
             return jsonify({'error': 'Entry not found'}), 404
-        cur.execute('DELETE FROM sleep_diary WHERE id=? AND username=?', (entry_id, username))
+        cur.execute('DELETE FROM sleep_diary WHERE id=%s AND username=%s', (entry_id, username))
         conn.commit()
         log_event(username, 'cbt', 'sleep_diary_deleted', f"ID: {entry_id}")
         conn.close()
@@ -1514,7 +1514,7 @@ def summarize_sleep_diary(username, limit=3):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT sleep_date, total_sleep_hours, sleep_quality, morning_mood, entry_timestamp FROM sleep_diary WHERE username=? ORDER BY entry_timestamp DESC LIMIT ?', (username, limit)).fetchall()
+        rows = cur.execute('SELECT sleep_date, total_sleep_hours, sleep_quality, morning_mood, entry_timestamp FROM sleep_diary WHERE username=%s ORDER BY entry_timestamp DESC LIMIT %s', (username, limit)).fetchall()
         conn.close()
         if not rows:
             return None
@@ -1545,7 +1545,7 @@ def create_relaxation_technique():
         notes = data.get('notes')
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('''INSERT INTO relaxation_techniques (username, technique_type, duration_minutes, effectiveness_rating, body_scan_areas, notes) VALUES (?, ?, ?, ?, ?, ?)''',
+        cur.execute('''INSERT INTO relaxation_techniques (username, technique_type, duration_minutes, effectiveness_rating, body_scan_areas, notes) VALUES (%s, %s, %s, %s, %s, %s)''',
             (username, technique_type, duration_minutes, effectiveness_rating, body_scan_areas, notes))
         conn.commit()
         log_event(username, 'cbt', 'relaxation_technique_created', f"Type: {technique_type}, Duration: {duration_minutes}")
@@ -1563,7 +1563,7 @@ def list_relaxation_techniques():
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT * FROM relaxation_techniques WHERE username=? ORDER BY entry_timestamp DESC', (username,)).fetchall()
+        rows = cur.execute('SELECT * FROM relaxation_techniques WHERE username=%s ORDER BY entry_timestamp DESC', (username,)).fetchall()
         conn.close()
         result = [dict(zip([c[0] for c in cur.description], row)) for row in rows]
         return jsonify({'entries': result}), 200
@@ -1579,7 +1579,7 @@ def get_relaxation_technique(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM relaxation_techniques WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM relaxation_techniques WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         conn.close()
         if not row:
             return jsonify({'error': 'Entry not found'}), 404
@@ -1598,7 +1598,7 @@ def update_relaxation_technique(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM relaxation_techniques WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM relaxation_techniques WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         if not row:
             conn.close()
             return jsonify({'error': 'Entry not found'}), 404
@@ -1607,7 +1607,7 @@ def update_relaxation_technique(entry_id):
         updates = {k: data[k] for k in fields if k in data}
         set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
         values = list(updates.values()) + [entry_id, username]
-        cur.execute(f'UPDATE relaxation_techniques SET {set_clause} WHERE id=? AND username=?', values)
+        cur.execute(f'UPDATE relaxation_techniques SET {set_clause} WHERE id=%s AND username=%s', values)
         conn.commit()
         log_event(username, 'cbt', 'relaxation_technique_updated', f"ID: {entry_id}")
         conn.close()
@@ -1624,11 +1624,11 @@ def delete_relaxation_technique(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM relaxation_techniques WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM relaxation_techniques WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         if not row:
             conn.close()
             return jsonify({'error': 'Entry not found'}), 404
-        cur.execute('DELETE FROM relaxation_techniques WHERE id=? AND username=?', (entry_id, username))
+        cur.execute('DELETE FROM relaxation_techniques WHERE id=%s AND username=%s', (entry_id, username))
         conn.commit()
         log_event(username, 'cbt', 'relaxation_technique_deleted', f"ID: {entry_id}")
         conn.close()
@@ -1642,7 +1642,7 @@ def summarize_relaxation_techniques(username, limit=3):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT technique_type, duration_minutes, effectiveness_rating, entry_timestamp FROM relaxation_techniques WHERE username=? ORDER BY entry_timestamp DESC LIMIT ?', (username, limit)).fetchall()
+        rows = cur.execute('SELECT technique_type, duration_minutes, effectiveness_rating, entry_timestamp FROM relaxation_techniques WHERE username=%s ORDER BY entry_timestamp DESC LIMIT %s', (username, limit)).fetchall()
         conn.close()
         if not rows:
             return None
@@ -2367,7 +2367,7 @@ def create_breathing_exercise():
         completed = int(data.get('completed', 1))
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('''INSERT INTO breathing_exercises (username, exercise_type, duration_seconds, pre_anxiety_level, post_anxiety_level, notes, completed) VALUES (?, ?, ?, ?, ?, ?, ?)''',
+        cur.execute('''INSERT INTO breathing_exercises (username, exercise_type, duration_seconds, pre_anxiety_level, post_anxiety_level, notes, completed) VALUES (%s, %s, %s, %s, %s, %s, %s)''',
             (username, exercise_type, duration_seconds, pre_anxiety_level, post_anxiety_level, notes, completed))
         conn.commit()
         log_event(username, 'cbt', 'breathing_exercise_created', f"Type: {exercise_type}, Duration: {duration_seconds}")
@@ -2385,7 +2385,7 @@ def list_breathing_exercises():
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT * FROM breathing_exercises WHERE username=? ORDER BY entry_timestamp DESC', (username,)).fetchall()
+        rows = cur.execute('SELECT * FROM breathing_exercises WHERE username=%s ORDER BY entry_timestamp DESC', (username,)).fetchall()
         conn.close()
         result = [dict(zip([c[0] for c in cur.description], row)) for row in rows]
         return jsonify({'entries': result}), 200
@@ -2401,7 +2401,7 @@ def get_breathing_exercise(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM breathing_exercises WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM breathing_exercises WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         conn.close()
         if not row:
             return jsonify({'error': 'Entry not found'}), 404
@@ -2420,7 +2420,7 @@ def update_breathing_exercise(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM breathing_exercises WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM breathing_exercises WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         if not row:
             conn.close()
             return jsonify({'error': 'Entry not found'}), 404
@@ -2429,7 +2429,7 @@ def update_breathing_exercise(entry_id):
         updates = {k: data[k] for k in fields if k in data}
         set_clause = ', '.join([f"{k}=?" for k in updates.keys()])
         values = list(updates.values()) + [entry_id, username]
-        cur.execute(f'UPDATE breathing_exercises SET {set_clause} WHERE id=? AND username=?', values)
+        cur.execute(f'UPDATE breathing_exercises SET {set_clause} WHERE id=%s AND username=%s', values)
         conn.commit()
         log_event(username, 'cbt', 'breathing_exercise_updated', f"ID: {entry_id}")
         conn.close()
@@ -2446,11 +2446,11 @@ def delete_breathing_exercise(entry_id):
             return jsonify({'error': 'Authentication required'}), 401
         conn = get_db_connection()
         cur = conn.cursor()
-        row = cur.execute('SELECT * FROM breathing_exercises WHERE id=? AND username=?', (entry_id, username)).fetchone()
+        row = cur.execute('SELECT * FROM breathing_exercises WHERE id=%s AND username=%s', (entry_id, username)).fetchone()
         if not row:
             conn.close()
             return jsonify({'error': 'Entry not found'}), 404
-        cur.execute('DELETE FROM breathing_exercises WHERE id=? AND username=?', (entry_id, username))
+        cur.execute('DELETE FROM breathing_exercises WHERE id=%s AND username=%s', (entry_id, username))
         conn.commit()
         log_event(username, 'cbt', 'breathing_exercise_deleted', f"ID: {entry_id}")
         conn.close()
@@ -2464,7 +2464,7 @@ def summarize_breathing_exercises(username, limit=3):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        rows = cur.execute('SELECT exercise_type, duration_seconds, pre_anxiety_level, post_anxiety_level, entry_timestamp FROM breathing_exercises WHERE username=? ORDER BY entry_timestamp DESC LIMIT ?', (username, limit)).fetchall()
+        rows = cur.execute('SELECT exercise_type, duration_seconds, pre_anxiety_level, post_anxiety_level, entry_timestamp FROM breathing_exercises WHERE username=%s ORDER BY entry_timestamp DESC LIMIT %s', (username, limit)).fetchall()
         conn.close()
         if not rows:
             return None
@@ -2712,7 +2712,7 @@ def send_verification():
         cur = conn.cursor()
         
         # Clear old codes for this identifier
-        cur.execute("DELETE FROM verification_codes WHERE identifier=? AND verified=0", (identifier,))
+        cur.execute("DELETE FROM verification_codes WHERE identifier=%s AND verified=0", (identifier,))
         
         # Insert new code
         expires_at = datetime.now() + timedelta(minutes=10)
@@ -2772,7 +2772,7 @@ def verify_code():
             return jsonify({'error': 'Verification code expired. Please request a new one.'}), 400
         
         # Mark as verified
-        cur.execute("UPDATE verification_codes SET verified=1 WHERE id=?", (code_id,))
+        cur.execute("UPDATE verification_codes SET verified=1 WHERE id=%s", (code_id,))
         conn.commit()
         conn.close()
         
@@ -2867,17 +2867,17 @@ def register():
         cur = conn.cursor()
         
         # Check if username exists
-        if cur.execute("SELECT username FROM users WHERE username=?", (username,)).fetchone():
+        if cur.execute("SELECT username FROM users WHERE username=%s", (username,)).fetchone():
             conn.close()
             return jsonify({'error': 'Username already exists'}), 409
         
         # Check if email exists
-        if cur.execute("SELECT username FROM users WHERE email=?", (email,)).fetchone():
+        if cur.execute("SELECT username FROM users WHERE email=%s", (email,)).fetchone():
             conn.close()
             return jsonify({'error': 'Email already in use'}), 409
         
         # Check if phone exists
-        if cur.execute("SELECT username FROM users WHERE phone=?", (phone,)).fetchone():
+        if cur.execute("SELECT username FROM users WHERE phone=%s", (phone,)).fetchone():
             conn.close()
             return jsonify({'error': 'Phone number already in use'}), 409
         
@@ -2886,21 +2886,21 @@ def register():
         hashed_pin = hash_pin(pin)
         
         # Create user with full profile information
-        cur.execute("INSERT INTO users (username, password, pin, email, phone, full_name, dob, conditions, last_login, role, country, area, postcode, nhs_number, clinician_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        cur.execute("INSERT INTO users (username, password, pin, email, phone, full_name, dob, conditions, last_login, role, country, area, postcode, nhs_number, clinician_id) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                    (username, hashed_password, hashed_pin, email, phone, full_name, dob, conditions, datetime.now(), 'user', country, area, postcode, nhs_number, clinician_id))
         
         # Only create approval request if clinician is provided
         if clinician_id:
             # Create pending approval request
-            cur.execute("INSERT INTO patient_approvals (patient_username, clinician_username, status) VALUES (?,?,?)",
+            cur.execute("INSERT INTO patient_approvals (patient_username, clinician_username, status) VALUES (%s,%s,%s)",
                        (username, clinician_id, 'pending'))
             
             # Notify clinician of new patient request
-            cur.execute("INSERT INTO notifications (recipient_username, message, notification_type) VALUES (?,?,?)",
+            cur.execute("INSERT INTO notifications (recipient_username, message, notification_type) VALUES (%s,%s,%s)",
                        (clinician_id, f'New patient request from {full_name} ({username})', 'patient_request'))
             
             # Notify patient that request is pending
-            cur.execute("INSERT INTO notifications (recipient_username, message, notification_type) VALUES (?,?,?)",
+            cur.execute("INSERT INTO notifications (recipient_username, message, notification_type) VALUES (%s,%s,%s)",
                        (username, f'Your request to join {clinician_id} is pending approval', 'approval_pending'))
             
             log_msg = f'Registration via API, pending approval from clinician: {clinician_id}'
@@ -2908,7 +2908,7 @@ def register():
             pending = True
         else:
             # Notify patient that they can use the app independently
-            cur.execute("INSERT INTO notifications (recipient_username, message, notification_type) VALUES (?,?,?)",
+            cur.execute("INSERT INTO notifications (recipient_username, message, notification_type) VALUES (%s,%s,%s)",
                        (username, 'Account created! You can start using Healing Space independently. You can connect with a clinician anytime.', 'account_created'))
             
             log_msg = 'Registration via API without clinician assignment'
@@ -2952,7 +2952,7 @@ def login():
         
         conn = get_db_connection()
         cur = conn.cursor()
-        user = cur.execute("SELECT username, password, role, pin, clinician_id FROM users WHERE username=?", (username,)).fetchone()
+        user = cur.execute("SELECT username, password, role, pin, clinician_id FROM users WHERE username=%s", (username,)).fetchone()
         
         if not user:
             print(f"❌ User not found: {username}")
@@ -3324,8 +3324,8 @@ def confirm_password_reset():
         )
 
         # SECURITY: Invalidate all existing sessions for this user
-        cur.execute("DELETE FROM sessions WHERE username=?", (username,))
-        cur.execute("DELETE FROM chat_sessions WHERE username=?", (username,))
+        cur.execute("DELETE FROM sessions WHERE username=%s", (username,))
+        cur.execute("DELETE FROM chat_sessions WHERE username=%s", (username,))
 
         conn.commit()
         conn.close()
@@ -3472,17 +3472,17 @@ def clinician_register():
         cur = conn.cursor()
         
         # Check if username exists
-        if cur.execute("SELECT username FROM users WHERE username=?", (username,)).fetchone():
+        if cur.execute("SELECT username FROM users WHERE username=%s", (username,)).fetchone():
             conn.close()
             return jsonify({'error': 'Username already exists'}), 409
         
         # Check if email exists
-        if cur.execute("SELECT username FROM users WHERE email=?", (email,)).fetchone():
+        if cur.execute("SELECT username FROM users WHERE email=%s", (email,)).fetchone():
             conn.close()
             return jsonify({'error': 'Email already in use'}), 409
         
         # Check if phone exists
-        if cur.execute("SELECT username FROM users WHERE phone=?", (phone,)).fetchone():
+        if cur.execute("SELECT username FROM users WHERE phone=%s", (phone,)).fetchone():
             conn.close()
             return jsonify({'error': 'Phone number already in use'}), 409
         
@@ -3556,7 +3556,7 @@ def accept_disclaimer():
         
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("UPDATE users SET disclaimer_accepted=1 WHERE username=?", (username,))
+        cur.execute("UPDATE users SET disclaimer_accepted=1 WHERE username=%s", (username,))
         conn.commit()
         conn.close()
         
@@ -3577,7 +3577,7 @@ def execute_terminal():
         # Verify developer role
         conn = get_db_connection()
         cur = conn.cursor()
-        role = cur.execute("SELECT role FROM users WHERE username=?", (username,)).fetchone()
+        role = cur.execute("SELECT role FROM users WHERE username=%s", (username,)).fetchone()
 
         if not role or role[0] != 'developer':
             conn.close()
@@ -3673,7 +3673,7 @@ def developer_ai_chat():
         # Verify developer role
         conn = get_db_connection()
         cur = conn.cursor()
-        role = cur.execute("SELECT role FROM users WHERE username=?", (username,)).fetchone()
+        role = cur.execute("SELECT role FROM users WHERE username=%s", (username,)).fetchone()
 
         if not role or role[0] != 'developer':
             conn.close()
@@ -3760,7 +3760,7 @@ def send_dev_message():
         # Check sender exists and get role
         conn = get_db_connection()
         cur = conn.cursor()
-        sender_user = cur.execute("SELECT role FROM users WHERE username=?", (from_username,)).fetchone()
+        sender_user = cur.execute("SELECT role FROM users WHERE username=%s", (from_username,)).fetchone()
 
         if not sender_user:
             conn.close()
@@ -3789,7 +3789,7 @@ def send_dev_message():
                     )
             else:
                 # Message single user
-                recipient_user = cur.execute("SELECT username FROM users WHERE username=?", (to_username,)).fetchone()
+                recipient_user = cur.execute("SELECT username FROM users WHERE username=%s", (to_username,)).fetchone()
                 if not recipient_user:
                     conn.close()
                     return jsonify({'error': 'Recipient not found'}), 404
@@ -3808,7 +3808,7 @@ def send_dev_message():
         
         # Clinician: can only message patients
         elif sender_role == 'clinician':
-            recipient_user = cur.execute("SELECT role FROM users WHERE username=?", (to_username,)).fetchone()
+            recipient_user = cur.execute("SELECT role FROM users WHERE username=%s", (to_username,)).fetchone()
             if not recipient_user or recipient_user[0] != 'user':
                 conn.close()
                 return jsonify({'error': 'Clinicians can only send messages to patients'}), 403
@@ -3827,7 +3827,7 @@ def send_dev_message():
         
         # Patient: can only message developer
         elif sender_role == 'user':
-            recipient_user = cur.execute("SELECT role FROM users WHERE username=?", (to_username,)).fetchone()
+            recipient_user = cur.execute("SELECT role FROM users WHERE username=%s", (to_username,)).fetchone()
             if not recipient_user or recipient_user[0] != 'developer':
                 conn.close()
                 return jsonify({'error': 'Patients can only send messages to developers'}), 403
@@ -3866,7 +3866,7 @@ def list_dev_messages():
         cur = conn.cursor()
 
         # Get role
-        role = cur.execute("SELECT role FROM users WHERE username=?", (username,)).fetchone()
+        role = cur.execute("SELECT role FROM users WHERE username=%s", (username,)).fetchone()
 
         if role and role[0] == 'developer':
             # Developer sees all messages they sent + replies
@@ -3959,7 +3959,7 @@ def developer_stats():
         # Verify developer role
         conn = get_db_connection()
         cur = conn.cursor()
-        role = cur.execute("SELECT role FROM users WHERE username=?", (username,)).fetchone()
+        role = cur.execute("SELECT role FROM users WHERE username=%s", (username,)).fetchone()
 
         if not role or role[0] != 'developer':
             conn.close()
@@ -3997,7 +3997,7 @@ def list_all_users():
         # Verify developer role
         conn = get_db_connection()
         cur = conn.cursor()
-        role = cur.execute("SELECT role FROM users WHERE username=?", (username,)).fetchone()
+        role = cur.execute("SELECT role FROM users WHERE username=%s", (username,)).fetchone()
 
         if not role or role[0] != 'developer':
             conn.close()
@@ -4045,14 +4045,14 @@ def delete_user():
         # Verify developer role
         conn = get_db_connection()
         cur = conn.cursor()
-        role = cur.execute("SELECT role FROM users WHERE username=?", (dev_username,)).fetchone()
+        role = cur.execute("SELECT role FROM users WHERE username=%s", (dev_username,)).fetchone()
 
         if not role or role[0] != 'developer':
             conn.close()
             return jsonify({'error': 'Unauthorized'}), 403
 
         # Prevent deleting developer account
-        target_role = cur.execute("SELECT role FROM users WHERE username=?", (target_username,)).fetchone()
+        target_role = cur.execute("SELECT role FROM users WHERE username=%s", (target_username,)).fetchone()
         if not target_role:
             conn.close()
             return jsonify({'error': 'User not found'}), 404
@@ -4063,28 +4063,28 @@ def delete_user():
 
         # Delete user and all associated data (GDPR right to erasure)
         # Delete chat_history by session first (chat_history doesn't have username column)
-        cur.execute("DELETE FROM chat_history WHERE chat_session_id IN (SELECT id FROM chat_sessions WHERE username=?)", (target_username,))
-        cur.execute("DELETE FROM chat_sessions WHERE username=?", (target_username,))
-        cur.execute("DELETE FROM mood_logs WHERE username=?", (target_username,))
-        cur.execute("DELETE FROM clinical_scales WHERE username=?", (target_username,))
-        cur.execute("DELETE FROM gratitude_logs WHERE username=?", (target_username,))
-        cur.execute("DELETE FROM cbt_records WHERE username=?", (target_username,))
-        cur.execute("DELETE FROM safety_plans WHERE username=?", (target_username,))
+        cur.execute("DELETE FROM chat_history WHERE chat_session_id IN (SELECT id FROM chat_sessions WHERE username=%s)", (target_username,))
+        cur.execute("DELETE FROM chat_sessions WHERE username=%s", (target_username,))
+        cur.execute("DELETE FROM mood_logs WHERE username=%s", (target_username,))
+        cur.execute("DELETE FROM clinical_scales WHERE username=%s", (target_username,))
+        cur.execute("DELETE FROM gratitude_logs WHERE username=%s", (target_username,))
+        cur.execute("DELETE FROM cbt_records WHERE username=%s", (target_username,))
+        cur.execute("DELETE FROM safety_plans WHERE username=%s", (target_username,))
         # Pet is in separate database, skip deletion
-        cur.execute("DELETE FROM notifications WHERE recipient_username=?", (target_username,))
-        cur.execute("DELETE FROM ai_memory WHERE username=?", (target_username,))
-        cur.execute("DELETE FROM clinician_notes WHERE patient_username=?", (target_username,))
-        cur.execute("DELETE FROM audit_logs WHERE username=? OR actor=?", (target_username, target_username))
-        cur.execute("DELETE FROM alerts WHERE username=?", (target_username,))
-        cur.execute("DELETE FROM appointments WHERE patient_username=? OR clinician_username=?", (target_username, target_username))
-        cur.execute("DELETE FROM dev_messages WHERE from_username=? OR to_username=?", (target_username, target_username))
-        cur.execute("DELETE FROM dev_ai_chats WHERE username=?", (target_username,))
-        cur.execute("DELETE FROM community_posts WHERE username=?", (target_username,))
-        cur.execute("DELETE FROM community_likes WHERE username=?", (target_username,))
-        cur.execute("DELETE FROM community_replies WHERE username=?", (target_username,))
-        cur.execute("DELETE FROM patient_approvals WHERE patient_username=? OR clinician_username=?", (target_username, target_username))
-        cur.execute("DELETE FROM verification_codes WHERE identifier=?", (target_username,))
-        cur.execute("DELETE FROM users WHERE username=?", (target_username,))
+        cur.execute("DELETE FROM notifications WHERE recipient_username=%s", (target_username,))
+        cur.execute("DELETE FROM ai_memory WHERE username=%s", (target_username,))
+        cur.execute("DELETE FROM clinician_notes WHERE patient_username=%s", (target_username,))
+        cur.execute("DELETE FROM audit_logs WHERE username=%s OR actor=%s", (target_username, target_username))
+        cur.execute("DELETE FROM alerts WHERE username=%s", (target_username,))
+        cur.execute("DELETE FROM appointments WHERE patient_username=%s OR clinician_username=%s", (target_username, target_username))
+        cur.execute("DELETE FROM dev_messages WHERE from_username=%s OR to_username=%s", (target_username, target_username))
+        cur.execute("DELETE FROM dev_ai_chats WHERE username=%s", (target_username,))
+        cur.execute("DELETE FROM community_posts WHERE username=%s", (target_username,))
+        cur.execute("DELETE FROM community_likes WHERE username=%s", (target_username,))
+        cur.execute("DELETE FROM community_replies WHERE username=%s", (target_username,))
+        cur.execute("DELETE FROM patient_approvals WHERE patient_username=%s OR clinician_username=%s", (target_username, target_username))
+        cur.execute("DELETE FROM verification_codes WHERE identifier=%s", (target_username,))
+        cur.execute("DELETE FROM users WHERE username=%s", (target_username,))
 
         conn.commit()
         conn.close()
@@ -4180,7 +4180,7 @@ def mark_notification_read(notification_id):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("UPDATE notifications SET read=1 WHERE id=?", (notification_id,))
+        cur.execute("UPDATE notifications SET read=1 WHERE id=%s", (notification_id,))
         conn.commit()
         conn.close()
 
@@ -4194,7 +4194,7 @@ def delete_notification(notification_id):
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("DELETE FROM notifications WHERE id=?", (notification_id,))
+        cur.execute("DELETE FROM notifications WHERE id=%s", (notification_id,))
         conn.commit()
         conn.close()
 
@@ -4214,7 +4214,7 @@ def clear_read_notifications():
 
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("DELETE FROM notifications WHERE recipient_username=? AND read=1", (username,))
+        cur.execute("DELETE FROM notifications WHERE recipient_username=%s AND read=1", (username,))
         deleted_count = cur.rowcount
         conn.commit()
         conn.close()
@@ -4679,9 +4679,9 @@ def therapy_chat():
             chat_session_id = active_session[0]
         
         # Save messages with both session_id (for clinician access) and chat_session_id (for user organization)
-        cur.execute("INSERT INTO chat_history (session_id, chat_session_id, sender, message) VALUES (?,?,?,?)",
+        cur.execute("INSERT INTO chat_history (session_id, chat_session_id, sender, message) VALUES (%s,%s,%s,%s)",
                    (f"{username}_session", chat_session_id, "user", message))
-        cur.execute("INSERT INTO chat_history (session_id, chat_session_id, sender, message) VALUES (?,?,?,?)",
+        cur.execute("INSERT INTO chat_history (session_id, chat_session_id, sender, message) VALUES (%s,%s,%s,%s)",
                    (f"{username}_session", chat_session_id, "ai", response))
         
         # Update session last_active
@@ -4990,7 +4990,7 @@ def create_chat_session():
         
         try:
             # Deactivate all other sessions
-            cur.execute("UPDATE chat_sessions SET is_active=0 WHERE username=?", (username,))
+            cur.execute("UPDATE chat_sessions SET is_active=0 WHERE username=%s", (username,))
             
             # Create new session
             cur.execute(
@@ -5048,9 +5048,9 @@ def update_chat_session(session_id):
         
         if make_active:
             # Deactivate all other sessions
-            cur.execute("UPDATE chat_sessions SET is_active=0 WHERE username=?", (username,))
+            cur.execute("UPDATE chat_sessions SET is_active=0 WHERE username=%s", (username,))
             # Activate this session
-            cur.execute("UPDATE chat_sessions SET is_active=1, last_active=? WHERE id=?", 
+            cur.execute("UPDATE chat_sessions SET is_active=1, last_active=%s WHERE id=%s", 
                        (datetime.now(), session_id))
         
         conn.commit()
@@ -5092,10 +5092,10 @@ def delete_chat_session(session_id):
             return jsonify({'error': 'Cannot delete your only chat session'}), 400
         
         # Delete messages first (cascade)
-        cur.execute("DELETE FROM chat_history WHERE chat_session_id=?", (session_id,))
+        cur.execute("DELETE FROM chat_history WHERE chat_session_id=%s", (session_id,))
         
         # Delete session
-        cur.execute("DELETE FROM chat_sessions WHERE id=?", (session_id,))
+        cur.execute("DELETE FROM chat_sessions WHERE id=%s", (session_id,))
         
         # If deleted session was active, activate the most recent one
         is_active = cur.execute(
@@ -5109,7 +5109,7 @@ def delete_chat_session(session_id):
                 (username,)
             ).fetchone()
             if most_recent:
-                cur.execute("UPDATE chat_sessions SET is_active=1 WHERE id=?", (most_recent[0],))
+                cur.execute("UPDATE chat_sessions SET is_active=1 WHERE id=%s", (most_recent[0],))
         
         conn.commit()
         conn.close()
@@ -5428,7 +5428,7 @@ def log_gratitude():
 
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("INSERT INTO gratitude_logs (username, entry) VALUES (?,?)", (username, entry))
+        cur.execute("INSERT INTO gratitude_logs (username, entry) VALUES (%s,%s)", (username, entry))
         conn.commit()
         log_id = cur.lastrowid
         conn.close()
@@ -5881,11 +5881,11 @@ def log_exposure_attempt(exposure_id):
 
         # Update exposure status if post_suds meets target
         if post_suds is not None:
-            target = cur.execute("SELECT target_suds FROM exposure_hierarchy WHERE id=?", (exposure_id,)).fetchone()
+            target = cur.execute("SELECT target_suds FROM exposure_hierarchy WHERE id=%s", (exposure_id,)).fetchone()
             if target and post_suds <= target[0]:
-                cur.execute("UPDATE exposure_hierarchy SET status='completed' WHERE id=?", (exposure_id,))
+                cur.execute("UPDATE exposure_hierarchy SET status='completed' WHERE id=%s", (exposure_id,))
             else:
-                cur.execute("UPDATE exposure_hierarchy SET status='in_progress' WHERE id=?", (exposure_id,))
+                cur.execute("UPDATE exposure_hierarchy SET status='in_progress' WHERE id=%s", (exposure_id,))
 
         conn.commit()
         log_id = cur.lastrowid
@@ -6064,7 +6064,7 @@ def update_coping_card_alt(card_id):
         if updates:
             values.append(card_id)
             values.append(username)
-            cur.execute(f"UPDATE coping_cards SET {', '.join(updates)} WHERE id=? AND username=?", values)
+            cur.execute(f"UPDATE coping_cards SET {', '.join(updates)} WHERE id=%s AND username=%s", values)
             conn.commit()
 
         conn.close()
@@ -6084,7 +6084,7 @@ def delete_coping_card_alt(card_id):
 
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute("DELETE FROM coping_cards WHERE id=? AND username=?", (card_id, username))
+        cur.execute("DELETE FROM coping_cards WHERE id=%s AND username=%s", (card_id, username))
 
         if cur.rowcount == 0:
             conn.close()
@@ -6361,7 +6361,7 @@ def update_milestone(goal_id, milestone_id):
 
             if total > 0:
                 progress = int((completed / total) * 100)
-                cur.execute("UPDATE goals SET progress_percentage=? WHERE id=?", (progress, goal_id))
+                cur.execute("UPDATE goals SET progress_percentage=%s WHERE id=%s", (progress, goal_id))
                 conn.commit()
 
         conn.close()
@@ -6571,7 +6571,7 @@ def verify_pet_user(username):
         return False, "Username required"
     conn = get_db_connection()
     cur = conn.cursor()
-    user = cur.execute("SELECT username FROM users WHERE username=?", (username,)).fetchone()
+    user = cur.execute("SELECT username FROM users WHERE username=%s", (username,)).fetchone()
     conn.close()
     if not user:
         return False, "User not found"
@@ -6590,7 +6590,7 @@ def pet_status():
         cur = conn.cursor()
         ensure_pet_table()
         
-        pet = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
+        pet = cur.execute("SELECT * FROM pet WHERE username = %s", (username,)).fetchone()
         conn.close()
         if not pet:
             return jsonify({'exists': False, 'error': 'No pet found for user'}), 200
@@ -6670,7 +6670,7 @@ def pet_create():
         cur = conn.cursor()
         
         # Delete only THIS user's pet, not all pets
-        cur.execute("DELETE FROM pet WHERE username = ?", (username,))
+        cur.execute("DELETE FROM pet WHERE username = %s", (username,))
         cur.execute("""
             INSERT INTO pet (username, name, species, gender, hunger, happiness, energy, hygiene, 
                            coins, xp, stage, adventure_end, last_updated, hat)
@@ -6698,7 +6698,7 @@ def pet_feed():
 
         conn = get_pet_db_connection()
         cur = conn.cursor()
-        pet = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
+        pet = cur.execute("SELECT * FROM pet WHERE username = %s", (username,)).fetchone()
         
         if not pet:
             conn.close()
@@ -6712,7 +6712,7 @@ def pet_feed():
         # Update pet
         new_hunger = min(100, pet[5] + 30)
         new_coins = coins - item_cost
-        cur.execute("UPDATE pet SET hunger=?, coins=? WHERE id=?", (new_hunger, new_coins, pet[0]))
+        cur.execute("UPDATE pet SET hunger=%s, coins=%s WHERE id=%s", (new_hunger, new_coins, pet[0]))
         conn.commit()
         conn.close()
         
@@ -6740,7 +6740,7 @@ def pet_reward():
 
         conn = get_pet_db_connection()
         cur = conn.cursor()
-        pet_raw = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
+        pet_raw = cur.execute("SELECT * FROM pet WHERE username = %s", (username,)).fetchone()
         pet = normalize_pet_row(pet_raw)
         
         if not pet:
@@ -6852,7 +6852,7 @@ def pet_buy():
         
         conn = get_pet_db_connection()
         cur = conn.cursor()
-        pet = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
+        pet = cur.execute("SELECT * FROM pet WHERE username = %s", (username,)).fetchone()
         
         if not pet:
             conn.close()
@@ -6915,7 +6915,7 @@ def pet_declutter():
 
         conn = get_pet_db_connection()
         cur = conn.cursor()
-        pet_raw = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
+        pet_raw = cur.execute("SELECT * FROM pet WHERE username = %s", (username,)).fetchone()
         pet = normalize_pet_row(pet_raw)
         
         if not pet:
@@ -6958,7 +6958,7 @@ def pet_adventure():
 
         conn = get_pet_db_connection()
         cur = conn.cursor()
-        pet_raw = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
+        pet_raw = cur.execute("SELECT * FROM pet WHERE username = %s", (username,)).fetchone()
         pet = normalize_pet_row(pet_raw)
         
         if not pet:
@@ -7006,7 +7006,7 @@ def pet_check_return():
 
         conn = get_pet_db_connection()
         cur = conn.cursor()
-        pet_raw = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
+        pet_raw = cur.execute("SELECT * FROM pet WHERE username = %s", (username,)).fetchone()
         pet = normalize_pet_row(pet_raw)
         
         if not pet:
@@ -7061,7 +7061,7 @@ def pet_apply_decay():
 
         conn = get_pet_db_connection()
         cur = conn.cursor()
-        pet_raw = cur.execute("SELECT * FROM pet WHERE username = ?", (username,)).fetchone()
+        pet_raw = cur.execute("SELECT * FROM pet WHERE username = %s", (username,)).fetchone()
         pet = normalize_pet_row(pet_raw)
         
         if not pet:
@@ -7499,7 +7499,7 @@ def pin_community_post(post_id):
         cur = conn.cursor()
 
         # Check if user is a clinician
-        user = cur.execute("SELECT role FROM users WHERE username=?", (username,)).fetchone()
+        user = cur.execute("SELECT role FROM users WHERE username=%s", (username,)).fetchone()
         if not user or user[0] != 'clinician':
             conn.close()
             return jsonify({'error': 'Only clinicians can pin posts'}), 403
@@ -7613,7 +7613,7 @@ def react_to_post(post_id):
 
         # Update total likes count (sum of all reactions) for backwards compatibility
         total_reactions = sum(reaction_counts.values())
-        cur.execute("UPDATE community_posts SET likes=? WHERE id=?", (total_reactions, post_id))
+        cur.execute("UPDATE community_posts SET likes=%s WHERE id=%s", (total_reactions, post_id))
 
         conn.commit()
         conn.close()
@@ -7650,14 +7650,14 @@ def like_community_post(post_id):
 
         if existing_like:
             # Unlike - remove like
-            cur.execute("DELETE FROM community_likes WHERE post_id=? AND username=? AND reaction_type='like'", (post_id, username))
+            cur.execute("DELETE FROM community_likes WHERE post_id=%s AND username=%s AND reaction_type='like'", (post_id, username))
         else:
             # Like - add like
-            cur.execute("INSERT INTO community_likes (post_id, username, reaction_type) VALUES (?,?,'like')", (post_id, username))
+            cur.execute("INSERT INTO community_likes (post_id, username, reaction_type) VALUES (%s,%s,'like')", (post_id, username))
 
         # Update total count
-        total = cur.execute("SELECT COUNT(*) FROM community_likes WHERE post_id=?", (post_id,)).fetchone()[0]
-        cur.execute("UPDATE community_posts SET likes=? WHERE id=?", (total, post_id))
+        total = cur.execute("SELECT COUNT(*) FROM community_likes WHERE post_id=%s", (post_id,)).fetchone()[0]
+        cur.execute("UPDATE community_posts SET likes=%s WHERE id=%s", (total, post_id))
 
         conn.commit()
         conn.close()
@@ -7694,9 +7694,9 @@ def delete_community_post(post_id):
             return jsonify({'error': 'You can only delete your own posts'}), 403
         
         # Delete post and related data
-        cur.execute("DELETE FROM community_posts WHERE id=?", (post_id,))
-        cur.execute("DELETE FROM community_likes WHERE post_id=?", (post_id,))
-        cur.execute("DELETE FROM community_replies WHERE post_id=?", (post_id,))
+        cur.execute("DELETE FROM community_posts WHERE id=%s", (post_id,))
+        cur.execute("DELETE FROM community_likes WHERE post_id=%s", (post_id,))
+        cur.execute("DELETE FROM community_replies WHERE post_id=%s", (post_id,))
         
         conn.commit()
         conn.close()
@@ -7780,7 +7780,7 @@ def delete_reply(reply_id):
             return jsonify({'error': 'You can only delete your own replies'}), 403
 
         # Delete the reply
-        cur.execute("DELETE FROM community_replies WHERE id=?", (reply_id,))
+        cur.execute("DELETE FROM community_replies WHERE id=%s", (reply_id,))
 
         conn.commit()
         conn.close()
@@ -7920,7 +7920,7 @@ def save_safety_plan():
         conn = get_db_connection()
         cur = conn.cursor()
         # Check if plan exists
-        existing = cur.execute("SELECT username FROM safety_plans WHERE username=?", (username,)).fetchone()
+        existing = cur.execute("SELECT username FROM safety_plans WHERE username=%s", (username,)).fetchone()
         if existing:
             cur.execute(
                 "UPDATE safety_plans SET triggers=?, coping_strategies=?, support_contacts=?, professional_contacts=? WHERE username=?",
@@ -7961,7 +7961,7 @@ def export_csv():
         
         # Profile
         writer.writerow(["USER PROFILE"])
-        prof = cur.execute("SELECT full_name, dob, conditions FROM users WHERE username=?", (username,)).fetchone()
+        prof = cur.execute("SELECT full_name, dob, conditions FROM users WHERE username=%s", (username,)).fetchone()
         if prof:
             writer.writerow(["username", username])
             writer.writerow(["full_name", prof[0]])
@@ -7972,28 +7972,28 @@ def export_csv():
         # Mood logs
         writer.writerow(["MOOD_LOGS"])
         writer.writerow(["timestamp", "mood_val", "sleep_val", "meds", "notes", "sentiment", "exercise_mins", "outside_mins", "water_pints"])
-        for r in cur.execute("SELECT entrestamp, mood_val, sleep_val, meds, notes, sentiment, exercise_mins, outside_mins, water_pints FROM mood_logs WHERE username=? ORDER BY entrestamp DESC", (username,)).fetchall():
+        for r in cur.execute("SELECT entrestamp, mood_val, sleep_val, meds, notes, sentiment, exercise_mins, outside_mins, water_pints FROM mood_logs WHERE username=%s ORDER BY entrestamp DESC", (username,)).fetchall():
             writer.writerow([r[0], r[1], r[2], r[3], r[4] or "", r[5], r[6], r[7], r[8]])
         writer.writerow([])
         
         # Gratitude
         writer.writerow(["GRATITUDE_LOGS"])
         writer.writerow(["timestamp", "entry"])
-        for r in cur.execute("SELECT entry_timestamp, entry FROM gratitude_logs WHERE username=? ORDER BY entry_timestamp DESC", (username,)).fetchall():
+        for r in cur.execute("SELECT entry_timestamp, entry FROM gratitude_logs WHERE username=%s ORDER BY entry_timestamp DESC", (username,)).fetchall():
             writer.writerow([r[0], r[1]])
         writer.writerow([])
         
         # CBT
         writer.writerow(["CBT_RECORDS"])
         writer.writerow(["timestamp", "situation", "thought", "evidence"])
-        for r in cur.execute("SELECT entry_timestamp, situation, thought, evidence FROM cbt_records WHERE username=? ORDER BY entry_timestamp DESC", (username,)).fetchall():
+        for r in cur.execute("SELECT entry_timestamp, situation, thought, evidence FROM cbt_records WHERE username=%s ORDER BY entry_timestamp DESC", (username,)).fetchall():
             writer.writerow([r[0], r[1], r[2], r[3]])
         writer.writerow([])
         
         # Clinical Scales
         writer.writerow(["CLINICAL_SCALES"])
         writer.writerow(["timestamp", "scale_name", "score", "severity"])
-        for r in cur.execute("SELECT entry_timestamp, scale_name, score, severity FROM clinical_scales WHERE username=? ORDER BY entry_timestamp DESC", (username,)).fetchall():
+        for r in cur.execute("SELECT entry_timestamp, scale_name, score, severity FROM clinical_scales WHERE username=%s ORDER BY entry_timestamp DESC", (username,)).fetchall():
             writer.writerow([r[0], r[1], r[2], r[3]])
         
         conn.close()
@@ -8912,7 +8912,7 @@ def delete_clinician_note(note_id):
             conn.close()
             return jsonify({'error': 'Unauthorized'}), 403
         
-        cur.execute("DELETE FROM clinician_notes WHERE id=?", (note_id,))
+        cur.execute("DELETE FROM clinician_notes WHERE id=%s", (note_id,))
         conn.commit()
         conn.close()
         
@@ -9526,7 +9526,7 @@ def cancel_appointment(appointment_id):
             patient_username, clinician_username, apt_date, apt_time = apt
             
             # Delete the appointment
-            cur.execute("DELETE FROM appointments WHERE id=?", (appointment_id,))
+            cur.execute("DELETE FROM appointments WHERE id=%s", (appointment_id,))
             
             # Send notification to patient
             cur.execute(
@@ -9689,10 +9689,10 @@ def patient_profile():
                 return jsonify({'error': 'User not found'}), 404
             
             # Get statistics
-            mood_count = cur.execute("SELECT COUNT(*) FROM mood_logs WHERE username=?", (username,)).fetchone()[0]
-            grat_count = cur.execute("SELECT COUNT(*) FROM gratitude_logs WHERE username=?", (username,)).fetchone()[0]
-            cbt_count = cur.execute("SELECT COUNT(*) FROM cbt_records WHERE username=?", (username,)).fetchone()[0]
-            session_count = cur.execute("SELECT COUNT(*) FROM sessions WHERE username=?", (username,)).fetchone()[0]
+            mood_count = cur.execute("SELECT COUNT(*) FROM mood_logs WHERE username=%s", (username,)).fetchone()[0]
+            grat_count = cur.execute("SELECT COUNT(*) FROM gratitude_logs WHERE username=%s", (username,)).fetchone()[0]
+            cbt_count = cur.execute("SELECT COUNT(*) FROM cbt_records WHERE username=%s", (username,)).fetchone()[0]
+            session_count = cur.execute("SELECT COUNT(*) FROM sessions WHERE username=%s", (username,)).fetchone()[0]
             
             # Get clinician info if assigned
             clinician_info = None
@@ -10380,7 +10380,7 @@ def get_home_data():
         cur = conn.cursor()
 
         # Get last login
-        user = cur.execute("SELECT last_login FROM users WHERE username=?", (username,)).fetchone()
+        user = cur.execute("SELECT last_login FROM users WHERE username=%s", (username,)).fetchone()
         last_login = user[0] if user else None
 
         # Get today's completed tasks
@@ -10399,7 +10399,7 @@ def get_home_data():
         # Get pet info for quick display
         pet_conn = get_pet_db_connection()
         pet_cur = pet_conn.cursor()
-        pet = pet_cur.execute("SELECT name, coins, xp, stage FROM pet WHERE username=?", (username,)).fetchone()
+        pet = pet_cur.execute("SELECT name, coins, xp, stage FROM pet WHERE username=%s", (username,)).fetchone()
         pet_conn.close()
 
         conn.close()
@@ -10447,7 +10447,7 @@ def submit_feedback():
         cur = conn.cursor()
 
         # Get user role
-        user = cur.execute("SELECT role FROM users WHERE username=?", (username,)).fetchone()
+        user = cur.execute("SELECT role FROM users WHERE username=%s", (username,)).fetchone()
         role = user[0] if user else 'user'
 
         cur.execute(
@@ -10924,14 +10924,14 @@ def send_message():
         # Check recipient exists
         conn = get_db_connection()
         cur = conn.cursor()
-        recipient_user = cur.execute('SELECT username, role FROM users WHERE username=?', (recipient,)).fetchone()
+        recipient_user = cur.execute('SELECT username, role FROM users WHERE username=%s', (recipient,)).fetchone()
         
         if not recipient_user:
             conn.close()
             return jsonify({'error': 'Recipient not found'}), 404
         
         # Get sender role for permission check
-        sender_user = cur.execute('SELECT role FROM users WHERE username=?', (sender,)).fetchone()
+        sender_user = cur.execute('SELECT role FROM users WHERE username=%s', (sender,)).fetchone()
         sender_role = sender_user[0] if sender_user else 'user'
         recipient_role = recipient_user[1]
         
@@ -11260,7 +11260,7 @@ def get_all_feedback():
         cur = conn.cursor()
 
         # Check if user is developer
-        user_role = cur.execute('SELECT role FROM users WHERE username=?', (username,)).fetchone()
+        user_role = cur.execute('SELECT role FROM users WHERE username=%s', (username,)).fetchone()
         if not user_role or user_role[0] != 'developer':
             conn.close()
             return jsonify({'error': 'Only developers can view all feedback'}), 403
@@ -11316,7 +11316,7 @@ def update_feedback_status(feedback_id):
         cur = conn.cursor()
 
         # Check if user is developer
-        user_role = cur.execute('SELECT role FROM users WHERE username=?', (username,)).fetchone()
+        user_role = cur.execute('SELECT role FROM users WHERE username=%s', (username,)).fetchone()
         if not user_role or user_role[0] != 'developer':
             conn.close()
             return jsonify({'error': 'Only developers can update feedback'}), 403

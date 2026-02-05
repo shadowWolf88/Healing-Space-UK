@@ -393,9 +393,9 @@ class TrainingDataManager:
         cur = conn.cursor()
         
         # Delete all training data
-        cur.execute('DELETE FROM training_chats WHERE user_hash=?', (user_hash,))
-        cur.execute('DELETE FROM training_patterns WHERE user_hash=?', (user_hash,))
-        cur.execute('DELETE FROM training_outcomes WHERE user_hash=?', (user_hash,))
+        cur.execute('DELETE FROM training_chats WHERE user_hash=%s', (user_hash,))
+        cur.execute('DELETE FROM training_patterns WHERE user_hash=%s', (user_hash,))
+        cur.execute('DELETE FROM training_outcomes WHERE user_hash=%s', (user_hash,))
         
         # Audit
         cur.execute(

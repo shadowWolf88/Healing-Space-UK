@@ -106,7 +106,7 @@ def export_patient_fhir(username: str, signer: str = None, add_provenance: bool 
     cur = conn.cursor()
 
     # Patient profile
-    p = cur.execute("SELECT full_name, dob, conditions FROM users WHERE username=?", (username,)).fetchone()
+    p = cur.execute("SELECT full_name, dob, conditions FROM users WHERE username=%s", (username,)).fetchone()
     if p:
         full_name = _decrypt(p[0])
         dob = _decrypt(p[1])
@@ -117,14 +117,14 @@ def export_patient_fhir(username: str, signer: str = None, add_provenance: bool 
         conditions = None
 
     # Clinical scales
-    scales = cur.execute("SELECT scale_name, score, severity, entry_timestamp FROM clinical_scales WHERE username=? ORDER BY entry_timestamp DESC", (username,)).fetchall()
+    scales = cur.execute("SELECT scale_name, score, severity, entry_timestamp FROM clinical_scales WHERE username=%s ORDER BY entry_timestamp DESC", (username,)).fetchall()
 
     # Mood logs - schema may vary between 'entry_timestamp' and 'entrestamp'
     try:
-        moods = cur.execute("SELECT mood_val, sleep_val, meds, notes, entry_timestamp FROM mood_logs WHERE username=? ORDER BY entry_timestamp DESC LIMIT 50", (username,)).fetchall()
+        moods = cur.execute("SELECT mood_val, sleep_val, meds, notes, entry_timestamp FROM mood_logs WHERE username=%s ORDER BY entry_timestamp DESC LIMIT 50", (username,)).fetchall()
         timestamp_col = 'entry_timestamp'
     except sqlite3.OperationalError:
-        moods = cur.execute("SELECT mood_val, sleep_val, meds, notes, entrestamp FROM mood_logs WHERE username=? ORDER BY entrestamp DESC LIMIT 50", (username,)).fetchall()
+        moods = cur.execute("SELECT mood_val, sleep_val, meds, notes, entrestamp FROM mood_logs WHERE username=%s ORDER BY entrestamp DESC LIMIT 50", (username,)).fetchall()
         timestamp_col = 'entrestamp'
 
     conn.close()
