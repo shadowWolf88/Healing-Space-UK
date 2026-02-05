@@ -2205,6 +2205,422 @@ class SafetyMonitor:
             print(f"Crisis alert error: {e}")
 
 
+# ==================== RISK ASSESSMENT SYSTEM (Phase 1) ====================
+
+class RiskScoringEngine:
+    """Comprehensive risk scoring engine for patient safety monitoring.
+
+    Calculates composite risk scores from:
+    - Clinical data (PHQ-9, GAD-7 assessments)
+    - Behavioral patterns (engagement, mood trends)
+    - Conversational analysis (keyword detection, sentiment)
+
+    Risk Levels:
+    - 0-25: LOW (green)
+    - 26-50: MODERATE (yellow)
+    - 51-75: HIGH (orange)
+    - 76-100: CRITICAL (red)
+    """
+
+    RISK_THRESHOLDS = {
+        'low': (0, 25),
+        'moderate': (26, 50),
+        'high': (51, 75),
+        'critical': (76, 100)
+    }
+
+    @staticmethod
+    def get_risk_level(score):
+        """Convert numeric score to risk level string"""
+        if score >= 76:
+            return 'critical'
+        elif score >= 51:
+            return 'high'
+        elif score >= 26:
+            return 'moderate'
+        return 'low'
+
+    @staticmethod
+    def calculate_clinical_score(username, cur):
+        """Calculate clinical data risk score (0-40 points).
+
+        Based on PHQ-9 and GAD-7 assessment scores.
+        """
+        score = 0
+        factors = []
+
+        # Get latest PHQ-9 score
+        phq9 = cur.execute(
+            "SELECT score, severity FROM clinical_scales WHERE username = %s AND scale_name = 'PHQ-9' ORDER BY entry_timestamp DESC LIMIT 1",
+            (username,)
+        ).fetchone()
+
+        if phq9:
+            phq_score = phq9[0]
+            if phq_score >= 20:
+                score += 15
+                factors.append(f"PHQ-9 severe: {phq_score}")
+            elif phq_score >= 15:
+                score += 10
+                factors.append(f"PHQ-9 moderately severe: {phq_score}")
+            elif phq_score >= 10:
+                score += 5
+                factors.append(f"PHQ-9 moderate: {phq_score}")
+
+        # Get latest GAD-7 score
+        gad7 = cur.execute(
+            "SELECT score, severity FROM clinical_scales WHERE username = %s AND scale_name = 'GAD-7' ORDER BY entry_timestamp DESC LIMIT 1",
+            (username,)
+        ).fetchone()
+
+        if gad7:
+            gad_score = gad7[0]
+            if gad_score >= 15:
+                score += 10
+                factors.append(f"GAD-7 severe: {gad_score}")
+            elif gad_score >= 10:
+                score += 5
+                factors.append(f"GAD-7 moderate: {gad_score}")
+
+        # Check for any recent safety alerts (existing alerts table)
+        recent_alerts = cur.execute(
+            "SELECT COUNT(*) FROM alerts WHERE username = %s AND created_at >= CURRENT_TIMESTAMP - INTERVAL '7 days'",
+            (username,)
+        ).fetchone()
+
+        if recent_alerts and recent_alerts[0] > 0:
+            alert_points = min(15, recent_alerts[0] * 5)
+            score += alert_points
+            factors.append(f"Recent safety alerts: {recent_alerts[0]}")
+
+        return min(score, 40), factors
+
+    @staticmethod
+    def calculate_behavioral_score(username, cur):
+        """Calculate behavioral risk score (0-30 points).
+
+        Based on engagement patterns, mood trends, activity levels.
+        """
+        score = 0
+        factors = []
+
+        # Check last mood log date
+        last_mood = cur.execute(
+            "SELECT entrestamp FROM mood_logs WHERE username = %s ORDER BY entrestamp DESC LIMIT 1",
+            (username,)
+        ).fetchone()
+
+        if last_mood and last_mood[0]:
+            try:
+                last_mood_dt = last_mood[0]
+                if isinstance(last_mood_dt, str):
+                    last_mood_dt = datetime.strptime(last_mood_dt, "%Y-%m-%d %H:%M:%S")
+                days_since = (datetime.now() - last_mood_dt).days
+
+                if days_since >= 7:
+                    score += 10
+                    factors.append(f"No mood log in {days_since} days")
+                elif days_since >= 3:
+                    score += 5
+                    factors.append(f"No mood log in {days_since} days")
+            except Exception:
+                pass
+        else:
+            # No mood logs at all
+            score += 5
+            factors.append("No mood logs recorded")
+
+        # Check for sudden mood drop (>4 points in 48hrs)
+        recent_moods = cur.execute(
+            "SELECT mood_val, entrestamp FROM mood_logs WHERE username = %s AND entrestamp >= CURRENT_TIMESTAMP - INTERVAL '2 days' ORDER BY entrestamp ASC",
+            (username,)
+        ).fetchall()
+
+        if len(recent_moods) >= 2:
+            first_mood = recent_moods[0][0]
+            last_mood_val = recent_moods[-1][0]
+            if first_mood and last_mood_val and (first_mood - last_mood_val) >= 4:
+                score += 10
+                factors.append(f"Sudden mood drop: {first_mood} -> {last_mood_val}")
+
+        # Check for consistent low mood (<3/10 for 5+ days)
+        low_mood_days = cur.execute(
+            """SELECT COUNT(DISTINCT DATE(entrestamp)) FROM mood_logs
+               WHERE username = %s AND mood_val <= 3
+               AND entrestamp >= CURRENT_TIMESTAMP - INTERVAL '7 days'""",
+            (username,)
+        ).fetchone()
+
+        if low_mood_days and low_mood_days[0] >= 5:
+            score += 10
+            factors.append(f"Consistently low mood for {low_mood_days[0]} days")
+
+        # Check for CBT tool abandonment
+        recent_cbt = cur.execute(
+            "SELECT COUNT(*) FROM cbt_tool_entries WHERE username = %s AND created_at >= CURRENT_TIMESTAMP - INTERVAL '7 days'",
+            (username,)
+        ).fetchone()
+        older_cbt = cur.execute(
+            "SELECT COUNT(*) FROM cbt_tool_entries WHERE username = %s AND created_at >= CURRENT_TIMESTAMP - INTERVAL '30 days' AND created_at < CURRENT_TIMESTAMP - INTERVAL '7 days'",
+            (username,)
+        ).fetchone()
+
+        if older_cbt and older_cbt[0] >= 3 and (not recent_cbt or recent_cbt[0] == 0):
+            score += 5
+            factors.append("Stopped using CBT tools (was previously active)")
+
+        # Check for late-night activity (2-5am)
+        late_night = cur.execute(
+            """SELECT COUNT(*) FROM chat_history
+               WHERE session_id LIKE %s
+               AND EXTRACT(HOUR FROM timestamp) BETWEEN 2 AND 4
+               AND timestamp >= CURRENT_TIMESTAMP - INTERVAL '7 days'""",
+            (f"{username}_%",)
+        ).fetchone()
+
+        if late_night and late_night[0] >= 3:
+            score += 5
+            factors.append(f"Late-night activity: {late_night[0]} sessions (2-5am)")
+
+        return min(score, 30), factors
+
+    @staticmethod
+    def calculate_conversational_score(username, cur):
+        """Calculate conversational risk score (0-30 points).
+
+        Based on keyword detection in recent chat messages.
+        """
+        score = 0
+        factors = []
+        critical_flags = []
+
+        # Get active risk keywords from database
+        keywords = cur.execute(
+            "SELECT keyword, category, severity_weight FROM risk_keywords WHERE is_active = TRUE"
+        ).fetchall()
+
+        if not keywords:
+            return 0, factors, critical_flags
+
+        # Get recent chat messages (last 7 days)
+        messages = cur.execute(
+            """SELECT message FROM chat_history
+               WHERE session_id LIKE %s AND sender = 'user'
+               AND timestamp >= CURRENT_TIMESTAMP - INTERVAL '7 days'
+               ORDER BY timestamp DESC LIMIT 50""",
+            (f"{username}_%",)
+        ).fetchall()
+
+        if not messages:
+            return 0, factors, critical_flags
+
+        # Scan messages for keywords
+        combined_text = ' '.join(m[0].lower() for m in messages if m[0])
+        category_hits = {}
+
+        for keyword, category, weight in keywords:
+            if keyword.lower() in combined_text:
+                if category not in category_hits:
+                    category_hits[category] = {'count': 0, 'max_weight': 0, 'keywords': []}
+                category_hits[category]['count'] += 1
+                category_hits[category]['max_weight'] = max(category_hits[category]['max_weight'], weight)
+                category_hits[category]['keywords'].append(keyword)
+
+        # Score by category
+        if 'suicide' in category_hits:
+            hit = category_hits['suicide']
+            points = min(15, hit['max_weight'] * 2)
+            score += points
+            factors.append(f"Suicide-related language detected: {', '.join(hit['keywords'][:3])}")
+            if hit['max_weight'] >= 8:
+                critical_flags.append('suicide_risk')
+
+        if 'self_harm' in category_hits:
+            hit = category_hits['self_harm']
+            points = min(10, hit['max_weight'] * 2)
+            score += points
+            factors.append(f"Self-harm language detected: {', '.join(hit['keywords'][:3])}")
+            if hit['max_weight'] >= 8:
+                critical_flags.append('self_harm')
+
+        if 'crisis' in category_hits:
+            hit = category_hits['crisis']
+            points = min(8, hit['max_weight'])
+            score += points
+            factors.append(f"Crisis language detected: {', '.join(hit['keywords'][:3])}")
+
+        if 'substance' in category_hits:
+            hit = category_hits['substance']
+            points = min(5, hit['max_weight'])
+            score += points
+            factors.append(f"Substance concern: {', '.join(hit['keywords'][:3])}")
+
+        if 'violence' in category_hits:
+            hit = category_hits['violence']
+            points = min(5, hit['max_weight'])
+            score += points
+            factors.append(f"Violence concern: {', '.join(hit['keywords'][:3])}")
+
+        return min(score, 30), factors, critical_flags
+
+    @staticmethod
+    def calculate_risk_score(username):
+        """Calculate comprehensive risk score for a patient.
+
+        Returns:
+            dict: {
+                'risk_score': int (0-100),
+                'risk_level': str,
+                'clinical_score': int,
+                'behavioral_score': int,
+                'conversational_score': int,
+                'suicide_risk': int,
+                'self_harm_risk': int,
+                'crisis_risk': int,
+                'deterioration_risk': int,
+                'contributing_factors': list,
+                'critical_flags': list,
+                'assessment_id': int
+            }
+        """
+        try:
+            conn = get_db_connection()
+            cur = get_wrapped_cursor(conn)
+
+            # Calculate sub-scores
+            clinical_score, clinical_factors = RiskScoringEngine.calculate_clinical_score(username, cur)
+            behavioral_score, behavioral_factors = RiskScoringEngine.calculate_behavioral_score(username, cur)
+            conversational_score, conv_factors, critical_flags = RiskScoringEngine.calculate_conversational_score(username, cur)
+
+            # Composite score
+            total_score = min(clinical_score + behavioral_score + conversational_score, 100)
+            risk_level = RiskScoringEngine.get_risk_level(total_score)
+
+            # Calculate sub-category risk scores
+            suicide_risk = 0
+            self_harm_risk = 0
+            crisis_risk = 0
+            deterioration_risk = 0
+
+            if 'suicide_risk' in critical_flags:
+                suicide_risk = max(75, total_score)
+            if 'self_harm' in critical_flags:
+                self_harm_risk = max(60, conversational_score * 3)
+
+            # Crisis risk from clinical scores
+            crisis_risk = min(100, clinical_score * 2 + (10 if any('alert' in f.lower() for f in clinical_factors) else 0))
+
+            # Deterioration from behavioral patterns
+            deterioration_risk = min(100, behavioral_score * 3)
+
+            # Combine all factors
+            all_factors = clinical_factors + behavioral_factors + conv_factors
+
+            # Save assessment to database
+            cur.execute(
+                """INSERT INTO risk_assessments
+                   (patient_username, risk_score, risk_level, suicide_risk, self_harm_risk,
+                    crisis_risk, deterioration_risk, contributing_factors, clinical_data_score,
+                    behavioral_score, conversational_score)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                   RETURNING id""",
+                (username, total_score, risk_level, suicide_risk, self_harm_risk,
+                 crisis_risk, deterioration_risk, str(all_factors), clinical_score,
+                 behavioral_score, conversational_score)
+            )
+            assessment_id = cur.fetchone()[0]
+
+            # Auto-create alerts for critical flags
+            if critical_flags or risk_level == 'critical':
+                # Find the patient's assigned clinician
+                clinician = cur.execute(
+                    "SELECT clinician_id FROM users WHERE username = %s",
+                    (username,)
+                ).fetchone()
+                clinician_username = clinician[0] if clinician and clinician[0] else None
+
+                for flag in critical_flags:
+                    alert_title = {
+                        'suicide_risk': 'CRITICAL: Suicide risk indicators detected',
+                        'self_harm': 'HIGH: Self-harm indicators detected'
+                    }.get(flag, f'Risk flag: {flag}')
+
+                    alert_severity = 'critical' if flag == 'suicide_risk' else 'high'
+
+                    cur.execute(
+                        """INSERT INTO risk_alerts
+                           (patient_username, clinician_username, alert_type, severity,
+                            title, details, source, risk_score_at_time)
+                           VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                        (username, clinician_username, flag, alert_severity,
+                         alert_title, f"Contributing factors: {'; '.join(all_factors)}",
+                         'system_scan', total_score)
+                    )
+
+                # Alert for high risk level transition
+                if risk_level in ('critical', 'high'):
+                    # Check if previous assessment was lower
+                    prev = cur.execute(
+                        """SELECT risk_level FROM risk_assessments
+                           WHERE patient_username = %s AND id != %s
+                           ORDER BY assessed_at DESC LIMIT 1""",
+                        (username, assessment_id)
+                    ).fetchone()
+
+                    if not prev or prev[0] in ('low', 'moderate'):
+                        cur.execute(
+                            """INSERT INTO risk_alerts
+                               (patient_username, clinician_username, alert_type, severity,
+                                title, details, source, risk_score_at_time)
+                               VALUES (%s, %s, %s, %s, %s, %s, %s, %s)""",
+                            (username, clinician_username, 'risk_escalation', risk_level,
+                             f'Risk level escalated to {risk_level.upper()}',
+                             f"Risk score: {total_score}/100. Factors: {'; '.join(all_factors)}",
+                             'risk_engine', total_score)
+                        )
+
+                # Log critical events
+                log_event(username, 'risk', f'risk_{risk_level}',
+                          f"Risk score: {total_score}, Flags: {critical_flags}")
+
+            conn.commit()
+            conn.close()
+
+            return {
+                'risk_score': total_score,
+                'risk_level': risk_level,
+                'clinical_score': clinical_score,
+                'behavioral_score': behavioral_score,
+                'conversational_score': conversational_score,
+                'suicide_risk': suicide_risk,
+                'self_harm_risk': self_harm_risk,
+                'crisis_risk': crisis_risk,
+                'deterioration_risk': deterioration_risk,
+                'contributing_factors': all_factors,
+                'critical_flags': critical_flags,
+                'assessment_id': assessment_id
+            }
+
+        except Exception as e:
+            print(f"Risk scoring error for {username}: {e}")
+            import traceback
+            traceback.print_exc()
+            return {
+                'risk_score': 0,
+                'risk_level': 'low',
+                'clinical_score': 0,
+                'behavioral_score': 0,
+                'conversational_score': 0,
+                'suicide_risk': 0,
+                'self_harm_risk': 0,
+                'crisis_risk': 0,
+                'deterioration_risk': 0,
+                'contributing_factors': [f'Error calculating risk: {str(e)}'],
+                'critical_flags': [],
+                'assessment_id': None
+            }
+
+
 # Load secrets
 secrets_manager = SecretsManager(debug=DEBUG)
 # Support both GROQ_API_KEY and GROQ_API variable names for compatibility
@@ -10632,6 +11048,563 @@ def search_patients():
         
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
+
+# ==================== RISK ASSESSMENT ENDPOINTS (Phase 1) ====================
+
+@app.route('/api/risk/score/<username>', methods=['GET'])
+def get_risk_score(username):
+    """Calculate and return current risk score for a patient.
+    Requires clinician role or the patient themselves.
+    """
+    try:
+        requesting_user = get_authenticated_username()
+        if not requesting_user:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+
+        # Verify access: must be the patient, their clinician, or a developer
+        role = cur.execute("SELECT role FROM users WHERE username = %s", (requesting_user,)).fetchone()
+        if not role:
+            conn.close()
+            return jsonify({'error': 'User not found'}), 404
+
+        if requesting_user != username and role[0] not in ('clinician', 'developer'):
+            conn.close()
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        # If clinician, verify they have access to this patient
+        if role[0] == 'clinician':
+            approved = cur.execute(
+                "SELECT id FROM patient_approvals WHERE clinician_username = %s AND patient_username = %s AND status = 'approved'",
+                (requesting_user, username)
+            ).fetchone()
+            if not approved:
+                conn.close()
+                return jsonify({'error': 'You do not have access to this patient'}), 403
+
+        conn.close()
+
+        # Calculate risk score
+        result = RiskScoringEngine.calculate_risk_score(username)
+
+        log_event(requesting_user, 'risk', 'risk_score_viewed', f"Viewed risk score for {username}: {result['risk_score']}")
+
+        return jsonify({
+            'success': True,
+            'username': username,
+            **result
+        }), 200
+
+    except Exception as e:
+        return handle_exception(e, 'get_risk_score')
+
+
+@app.route('/api/risk/history/<username>', methods=['GET'])
+def get_risk_history(username):
+    """Get risk score history over time for a patient."""
+    try:
+        requesting_user = get_authenticated_username()
+        if not requesting_user:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+
+        # Verify clinician access
+        role = cur.execute("SELECT role FROM users WHERE username = %s", (requesting_user,)).fetchone()
+        if not role or role[0] not in ('clinician', 'developer'):
+            conn.close()
+            return jsonify({'error': 'Clinician role required'}), 403
+
+        days = request.args.get('days', 30, type=int)
+        days = min(days, 365)  # Max 1 year
+
+        history = cur.execute(
+            """SELECT id, risk_score, risk_level, suicide_risk, self_harm_risk,
+                      crisis_risk, deterioration_risk, clinical_data_score,
+                      behavioral_score, conversational_score, contributing_factors,
+                      assessed_at, assessed_by
+               FROM risk_assessments
+               WHERE patient_username = %s
+               AND assessed_at >= CURRENT_TIMESTAMP - INTERVAL '%s days'
+               ORDER BY assessed_at DESC""",
+            (username, days)
+        ).fetchall()
+
+        conn.close()
+
+        results = []
+        for row in history:
+            results.append({
+                'id': row[0],
+                'risk_score': row[1],
+                'risk_level': row[2],
+                'suicide_risk': row[3],
+                'self_harm_risk': row[4],
+                'crisis_risk': row[5],
+                'deterioration_risk': row[6],
+                'clinical_score': row[7],
+                'behavioral_score': row[8],
+                'conversational_score': row[9],
+                'contributing_factors': row[10],
+                'assessed_at': row[11].isoformat() if row[11] else None,
+                'assessed_by': row[12]
+            })
+
+        return jsonify({
+            'success': True,
+            'username': username,
+            'days': days,
+            'history': results,
+            'total_assessments': len(results)
+        }), 200
+
+    except Exception as e:
+        return handle_exception(e, 'get_risk_history')
+
+
+@app.route('/api/risk/alerts', methods=['GET'])
+def get_risk_alerts():
+    """Get active risk alerts for the requesting clinician."""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+
+        role = cur.execute("SELECT role FROM users WHERE username = %s", (username,)).fetchone()
+        if not role or role[0] not in ('clinician', 'developer'):
+            conn.close()
+            return jsonify({'error': 'Clinician role required'}), 403
+
+        status_filter = request.args.get('status', 'active')  # active/resolved/all
+        severity_filter = request.args.get('severity')  # critical/high/moderate/low
+
+        query = """SELECT ra.id, ra.patient_username, ra.clinician_username, ra.alert_type,
+                          ra.severity, ra.title, ra.details, ra.source, ra.ai_confidence,
+                          ra.risk_score_at_time, ra.acknowledged, ra.acknowledged_by,
+                          ra.acknowledged_at, ra.action_taken, ra.resolved, ra.resolved_at,
+                          ra.created_at, u.full_name
+                   FROM risk_alerts ra
+                   LEFT JOIN users u ON ra.patient_username = u.username
+                   WHERE 1=1"""
+        params = []
+
+        # Clinicians only see alerts for their patients
+        if role[0] == 'clinician':
+            query += " AND (ra.clinician_username = %s OR ra.clinician_username IS NULL)"
+            params.append(username)
+
+        if status_filter == 'active':
+            query += " AND ra.resolved = FALSE"
+        elif status_filter == 'resolved':
+            query += " AND ra.resolved = TRUE"
+
+        if severity_filter:
+            query += " AND ra.severity = %s"
+            params.append(severity_filter)
+
+        query += " ORDER BY CASE ra.severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'moderate' THEN 2 ELSE 3 END, ra.created_at DESC"
+
+        alerts = cur.execute(query, params).fetchall()
+        conn.close()
+
+        results = []
+        for a in alerts:
+            results.append({
+                'id': a[0],
+                'patient_username': a[1],
+                'patient_name': a[17],
+                'clinician_username': a[2],
+                'alert_type': a[3],
+                'severity': a[4],
+                'title': a[5],
+                'details': a[6],
+                'source': a[7],
+                'ai_confidence': a[8],
+                'risk_score_at_time': a[9],
+                'acknowledged': a[10],
+                'acknowledged_by': a[11],
+                'acknowledged_at': a[12].isoformat() if a[12] else None,
+                'action_taken': a[13],
+                'resolved': a[14],
+                'resolved_at': a[15].isoformat() if a[15] else None,
+                'created_at': a[16].isoformat() if a[16] else None
+            })
+
+        return jsonify({
+            'success': True,
+            'alerts': results,
+            'total': len(results)
+        }), 200
+
+    except Exception as e:
+        return handle_exception(e, 'get_risk_alerts')
+
+
+@app.route('/api/risk/alert', methods=['POST'])
+def create_risk_alert():
+    """Create a manual risk alert (clinician-initiated)."""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+
+        role = cur.execute("SELECT role FROM users WHERE username = %s", (username,)).fetchone()
+        if not role or role[0] not in ('clinician', 'developer'):
+            conn.close()
+            return jsonify({'error': 'Clinician role required'}), 403
+
+        data = request.json
+        patient_username = data.get('patient_username')
+        alert_type = data.get('alert_type', 'manual')
+        severity = data.get('severity', 'moderate')
+        title = data.get('title')
+        details = data.get('details')
+
+        if not patient_username or not title:
+            conn.close()
+            return jsonify({'error': 'patient_username and title are required'}), 400
+
+        if severity not in ('critical', 'high', 'moderate', 'low'):
+            conn.close()
+            return jsonify({'error': 'Invalid severity level'}), 400
+
+        cur.execute(
+            """INSERT INTO risk_alerts
+               (patient_username, clinician_username, alert_type, severity, title, details, source)
+               VALUES (%s, %s, %s, %s, %s, %s, 'manual')
+               RETURNING id""",
+            (patient_username, username, alert_type, severity, title, details)
+        )
+        alert_id = cur.fetchone()[0]
+        conn.commit()
+
+        log_event(username, 'risk', 'manual_alert_created',
+                  f"Created {severity} alert for {patient_username}: {title}")
+
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'alert_id': alert_id,
+            'message': 'Risk alert created'
+        }), 201
+
+    except Exception as e:
+        return handle_exception(e, 'create_risk_alert')
+
+
+@app.route('/api/risk/alert/<int:alert_id>/acknowledge', methods=['PATCH'])
+def acknowledge_risk_alert(alert_id):
+    """Acknowledge a risk alert."""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+
+        role = cur.execute("SELECT role FROM users WHERE username = %s", (username,)).fetchone()
+        if not role or role[0] not in ('clinician', 'developer'):
+            conn.close()
+            return jsonify({'error': 'Clinician role required'}), 403
+
+        # Check alert exists
+        alert = cur.execute("SELECT id, acknowledged FROM risk_alerts WHERE id = %s", (alert_id,)).fetchone()
+        if not alert:
+            conn.close()
+            return jsonify({'error': 'Alert not found'}), 404
+
+        if alert[1]:
+            conn.close()
+            return jsonify({'error': 'Alert already acknowledged'}), 400
+
+        cur.execute(
+            "UPDATE risk_alerts SET acknowledged = TRUE, acknowledged_by = %s, acknowledged_at = CURRENT_TIMESTAMP WHERE id = %s",
+            (username, alert_id)
+        )
+        conn.commit()
+
+        log_event(username, 'risk', 'alert_acknowledged', f"Acknowledged alert #{alert_id}")
+
+        conn.close()
+
+        return jsonify({'success': True, 'message': 'Alert acknowledged'}), 200
+
+    except Exception as e:
+        return handle_exception(e, 'acknowledge_risk_alert')
+
+
+@app.route('/api/risk/alert/<int:alert_id>/resolve', methods=['PATCH'])
+def resolve_risk_alert(alert_id):
+    """Resolve a risk alert with action notes."""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+
+        role = cur.execute("SELECT role FROM users WHERE username = %s", (username,)).fetchone()
+        if not role or role[0] not in ('clinician', 'developer'):
+            conn.close()
+            return jsonify({'error': 'Clinician role required'}), 403
+
+        alert = cur.execute("SELECT id, resolved FROM risk_alerts WHERE id = %s", (alert_id,)).fetchone()
+        if not alert:
+            conn.close()
+            return jsonify({'error': 'Alert not found'}), 404
+
+        if alert[1]:
+            conn.close()
+            return jsonify({'error': 'Alert already resolved'}), 400
+
+        data = request.json
+        action_taken = data.get('action_taken', '')
+
+        if not action_taken:
+            conn.close()
+            return jsonify({'error': 'action_taken is required when resolving an alert'}), 400
+
+        cur.execute(
+            """UPDATE risk_alerts SET
+               acknowledged = TRUE, acknowledged_by = COALESCE(acknowledged_by, %s),
+               acknowledged_at = COALESCE(acknowledged_at, CURRENT_TIMESTAMP),
+               resolved = TRUE, resolved_at = CURRENT_TIMESTAMP,
+               action_taken = %s
+               WHERE id = %s""",
+            (username, action_taken, alert_id)
+        )
+        conn.commit()
+
+        log_event(username, 'risk', 'alert_resolved', f"Resolved alert #{alert_id}: {action_taken[:100]}")
+
+        conn.close()
+
+        return jsonify({'success': True, 'message': 'Alert resolved'}), 200
+
+    except Exception as e:
+        return handle_exception(e, 'resolve_risk_alert')
+
+
+@app.route('/api/risk/keywords', methods=['GET'])
+def get_risk_keywords():
+    """Get active risk keywords."""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+
+        role = cur.execute("SELECT role FROM users WHERE username = %s", (username,)).fetchone()
+        if not role or role[0] not in ('clinician', 'developer'):
+            conn.close()
+            return jsonify({'error': 'Clinician role required'}), 403
+
+        keywords = cur.execute(
+            "SELECT id, keyword, category, severity_weight, is_active, added_by, created_at FROM risk_keywords ORDER BY category, severity_weight DESC"
+        ).fetchall()
+
+        conn.close()
+
+        results = []
+        for k in keywords:
+            results.append({
+                'id': k[0],
+                'keyword': k[1],
+                'category': k[2],
+                'severity_weight': k[3],
+                'is_active': k[4],
+                'added_by': k[5],
+                'created_at': k[6].isoformat() if k[6] else None
+            })
+
+        return jsonify({'success': True, 'keywords': results, 'total': len(results)}), 200
+
+    except Exception as e:
+        return handle_exception(e, 'get_risk_keywords')
+
+
+@app.route('/api/risk/keywords', methods=['POST'])
+def add_risk_keyword():
+    """Add a new risk keyword."""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+
+        role = cur.execute("SELECT role FROM users WHERE username = %s", (username,)).fetchone()
+        if not role or role[0] not in ('clinician', 'developer'):
+            conn.close()
+            return jsonify({'error': 'Clinician role required'}), 403
+
+        data = request.json
+        keyword = data.get('keyword', '').strip().lower()
+        category = data.get('category')
+        severity_weight = data.get('severity_weight', 5)
+
+        if not keyword or not category:
+            conn.close()
+            return jsonify({'error': 'keyword and category are required'}), 400
+
+        if category not in ('suicide', 'self_harm', 'crisis', 'substance', 'violence'):
+            conn.close()
+            return jsonify({'error': 'Invalid category'}), 400
+
+        severity_weight = max(1, min(10, int(severity_weight)))
+
+        # Check for duplicate
+        existing = cur.execute(
+            "SELECT id FROM risk_keywords WHERE keyword = %s", (keyword,)
+        ).fetchone()
+        if existing:
+            conn.close()
+            return jsonify({'error': 'Keyword already exists'}), 409
+
+        cur.execute(
+            "INSERT INTO risk_keywords (keyword, category, severity_weight, added_by) VALUES (%s, %s, %s, %s) RETURNING id",
+            (keyword, category, severity_weight, username)
+        )
+        keyword_id = cur.fetchone()[0]
+        conn.commit()
+
+        log_event(username, 'risk', 'keyword_added', f"Added risk keyword: {keyword} ({category})")
+
+        conn.close()
+
+        return jsonify({'success': True, 'keyword_id': keyword_id}), 201
+
+    except Exception as e:
+        return handle_exception(e, 'add_risk_keyword')
+
+
+@app.route('/api/risk/dashboard', methods=['GET'])
+def get_risk_dashboard():
+    """Get risk dashboard overview for clinician."""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+
+        role = cur.execute("SELECT role FROM users WHERE username = %s", (username,)).fetchone()
+        if not role or role[0] not in ('clinician', 'developer'):
+            conn.close()
+            return jsonify({'error': 'Clinician role required'}), 403
+
+        # Get patients this clinician has access to
+        if role[0] == 'clinician':
+            patients = cur.execute(
+                """SELECT pa.patient_username, u.full_name
+                   FROM patient_approvals pa
+                   JOIN users u ON pa.patient_username = u.username
+                   WHERE pa.clinician_username = %s AND pa.status = 'approved'""",
+                (username,)
+            ).fetchall()
+        else:
+            # Developer can see all
+            patients = cur.execute(
+                "SELECT username, full_name FROM users WHERE role = 'user'"
+            ).fetchall()
+
+        patient_usernames = [p[0] for p in patients]
+
+        if not patient_usernames:
+            conn.close()
+            return jsonify({
+                'success': True,
+                'summary': {'critical': 0, 'high': 0, 'moderate': 0, 'low': 0},
+                'unreviewed_alerts': 0,
+                'patients': [],
+                'recent_alerts': []
+            }), 200
+
+        # Get latest risk assessment for each patient
+        patient_risks = []
+        for p_user, p_name in patients:
+            latest = cur.execute(
+                """SELECT risk_score, risk_level, assessed_at
+                   FROM risk_assessments WHERE patient_username = %s
+                   ORDER BY assessed_at DESC LIMIT 1""",
+                (p_user,)
+            ).fetchone()
+
+            patient_risks.append({
+                'username': p_user,
+                'full_name': p_name,
+                'risk_score': latest[0] if latest else 0,
+                'risk_level': latest[1] if latest else 'low',
+                'last_assessed': latest[2].isoformat() if latest and latest[2] else None
+            })
+
+        # Sort by risk score descending
+        patient_risks.sort(key=lambda x: x['risk_score'], reverse=True)
+
+        # Count by risk level
+        summary = {'critical': 0, 'high': 0, 'moderate': 0, 'low': 0}
+        for p in patient_risks:
+            level = p['risk_level']
+            if level in summary:
+                summary[level] += 1
+
+        # Get unreviewed alerts count
+        placeholders = ','.join(['%s'] * len(patient_usernames))
+        unreviewed = cur.execute(
+            f"SELECT COUNT(*) FROM risk_alerts WHERE patient_username IN ({placeholders}) AND acknowledged = FALSE",
+            patient_usernames
+        ).fetchone()[0]
+
+        # Get recent alerts
+        recent = cur.execute(
+            f"""SELECT ra.id, ra.patient_username, ra.severity, ra.title, ra.created_at,
+                       ra.acknowledged, u.full_name
+                FROM risk_alerts ra
+                LEFT JOIN users u ON ra.patient_username = u.username
+                WHERE ra.patient_username IN ({placeholders})
+                ORDER BY ra.created_at DESC LIMIT 10""",
+            patient_usernames
+        ).fetchall()
+
+        conn.close()
+
+        recent_alerts = [{
+            'id': r[0],
+            'patient_username': r[1],
+            'severity': r[2],
+            'title': r[3],
+            'created_at': r[4].isoformat() if r[4] else None,
+            'acknowledged': r[5],
+            'patient_name': r[6]
+        } for r in recent]
+
+        return jsonify({
+            'success': True,
+            'summary': summary,
+            'unreviewed_alerts': unreviewed,
+            'patients': patient_risks,
+            'recent_alerts': recent_alerts
+        }), 200
+
+    except Exception as e:
+        return handle_exception(e, 'get_risk_dashboard')
+
 
 # ==================== HOME TAB ENDPOINTS ====================
 

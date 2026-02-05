@@ -352,3 +352,88 @@ CREATE INDEX idx_community_replies_active ON community_replies(post_id, deleted_
 CREATE INDEX idx_cbt_records_active ON cbt_records(username, deleted_at);
 CREATE INDEX idx_mood_logs_active ON mood_logs(username, deleted_at);
 CREATE INDEX idx_goals_active ON goals(username, deleted_at);
+
+-- ==========================================
+-- RISK ASSESSMENT SYSTEM (Phase 1)
+-- ==========================================
+CREATE TABLE risk_assessments (
+    id SERIAL PRIMARY KEY,
+    patient_username TEXT NOT NULL,
+    risk_score INTEGER NOT NULL DEFAULT 0,
+    risk_level TEXT NOT NULL DEFAULT 'low',
+    suicide_risk INTEGER DEFAULT 0,
+    self_harm_risk INTEGER DEFAULT 0,
+    crisis_risk INTEGER DEFAULT 0,
+    deterioration_risk INTEGER DEFAULT 0,
+    contributing_factors TEXT,
+    ai_analysis TEXT,
+    clinical_data_score INTEGER DEFAULT 0,
+    behavioral_score INTEGER DEFAULT 0,
+    conversational_score INTEGER DEFAULT 0,
+    assessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    assessed_by TEXT DEFAULT 'system',
+    CONSTRAINT valid_risk_level CHECK (risk_level IN ('critical', 'high', 'moderate', 'low'))
+);
+CREATE INDEX idx_risk_patient ON risk_assessments(patient_username);
+CREATE INDEX idx_risk_level ON risk_assessments(risk_level);
+CREATE INDEX idx_risk_date ON risk_assessments(assessed_at);
+
+CREATE TABLE risk_alerts (
+    id SERIAL PRIMARY KEY,
+    patient_username TEXT NOT NULL,
+    clinician_username TEXT,
+    alert_type TEXT NOT NULL,
+    severity TEXT NOT NULL DEFAULT 'moderate',
+    title TEXT NOT NULL,
+    details TEXT,
+    source TEXT,
+    ai_confidence REAL,
+    risk_score_at_time INTEGER,
+    acknowledged BOOLEAN DEFAULT FALSE,
+    acknowledged_by TEXT,
+    acknowledged_at TIMESTAMP,
+    action_taken TEXT,
+    resolved BOOLEAN DEFAULT FALSE,
+    resolved_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT valid_severity CHECK (severity IN ('critical', 'high', 'moderate', 'low'))
+);
+CREATE INDEX idx_risk_alerts_patient ON risk_alerts(patient_username);
+CREATE INDEX idx_risk_alerts_unacknowledged ON risk_alerts(acknowledged) WHERE acknowledged = FALSE;
+CREATE INDEX idx_risk_alerts_clinician ON risk_alerts(clinician_username);
+
+CREATE TABLE risk_keywords (
+    id SERIAL PRIMARY KEY,
+    keyword TEXT NOT NULL,
+    category TEXT NOT NULL,
+    severity_weight INTEGER DEFAULT 5,
+    is_active BOOLEAN DEFAULT TRUE,
+    added_by TEXT DEFAULT 'system',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE crisis_contacts (
+    id SERIAL PRIMARY KEY,
+    patient_username TEXT NOT NULL,
+    contact_name TEXT NOT NULL,
+    relationship TEXT,
+    phone TEXT,
+    email TEXT,
+    is_primary BOOLEAN DEFAULT FALSE,
+    is_professional BOOLEAN DEFAULT FALSE,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_crisis_contacts_patient ON crisis_contacts(patient_username);
+
+CREATE TABLE risk_reviews (
+    id SERIAL PRIMARY KEY,
+    risk_assessment_id INTEGER REFERENCES risk_assessments(id),
+    patient_username TEXT NOT NULL,
+    clinician_username TEXT NOT NULL,
+    review_notes TEXT,
+    risk_level_override TEXT,
+    action_plan TEXT,
+    next_review_date DATE,
+    reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
