@@ -2348,6 +2348,15 @@ def init_db():
             cursor.execute("CREATE TABLE IF NOT EXISTS dev_ai_chats (id SERIAL PRIMARY KEY, username TEXT, session_id TEXT, role TEXT, message TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
             cursor.execute("CREATE TABLE IF NOT EXISTS dev_messages (id SERIAL PRIMARY KEY, from_username TEXT, to_username TEXT, message TEXT, message_type TEXT DEFAULT 'message', read INTEGER DEFAULT 0, parent_message_id INTEGER, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
             
+            # Daily wellness tasks (missing from earlier)
+            cursor.execute("CREATE TABLE IF NOT EXISTS daily_tasks (id SERIAL PRIMARY KEY, username TEXT, task_type TEXT, task_date DATE, completed INTEGER DEFAULT 0, completed_at TIMESTAMP)")
+            
+            # Training data for AI (required for initialization)
+            cursor.execute("CREATE TABLE IF NOT EXISTS training_data (id SERIAL PRIMARY KEY, username TEXT, data_type TEXT, content TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, gdpr_consent INTEGER DEFAULT 0)")
+            
+            # Consent tracking
+            cursor.execute("CREATE TABLE IF NOT EXISTS consent_log (id SERIAL PRIMARY KEY, username TEXT, consent_type TEXT, status TEXT, date_given TIMESTAMP, date_revoked TIMESTAMP)")
+            
             conn.commit()
             print("✓ Critical database tables created")
         
@@ -2374,6 +2383,48 @@ def init_db():
         print("Pet database initialized successfully")
     except Exception as e:
         print(f"Pet database initialization error: {e}")
+
+
+def repair_missing_tables():
+    """Repair missing tables that weren't created in init_db - run on startup"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # List of tables that must exist
+        required_tables = {
+            'daily_tasks': "CREATE TABLE IF NOT EXISTS daily_tasks (id SERIAL PRIMARY KEY, username TEXT, task_type TEXT, task_date DATE, completed INTEGER DEFAULT 0, completed_at TIMESTAMP)",
+            'training_data': "CREATE TABLE IF NOT EXISTS training_data (id SERIAL PRIMARY KEY, username TEXT, data_type TEXT, content TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, gdpr_consent INTEGER DEFAULT 0)",
+            'consent_log': "CREATE TABLE IF NOT EXISTS consent_log (id SERIAL PRIMARY KEY, username TEXT, consent_type TEXT, status TEXT, date_given TIMESTAMP, date_revoked TIMESTAMP)"
+        }
+        
+        for table_name, create_sql in required_tables.items():
+            # Check if table exists
+            cursor.execute(f"""
+                SELECT EXISTS (
+                    SELECT 1 FROM information_schema.tables 
+                    WHERE table_schema = 'public' AND table_name = '{table_name}'
+                )
+            """)
+            
+            if not cursor.fetchone()[0]:
+                print(f"Creating missing table: {table_name}")
+                cursor.execute(create_sql)
+                conn.commit()
+            else:
+                print(f"✓ Table {table_name} exists")
+        
+        conn.close()
+        print("✓ Database repair complete")
+        return True
+    except Exception as e:
+        print(f"Database repair error: {e}")
+        if conn:
+            try:
+                conn.close()
+            except:
+                pass
+        return False
 
 
 def get_authenticated_username():
@@ -2550,38 +2601,16 @@ def summarize_breathing_exercises(username, limit=3):
 # Initialize database on startup
 try:
     init_db()
+    repair_missing_tables()
 except Exception as e:
     print(f"Database initialization: {e}")
 
-# Initialize pet game database on startup
-def init_pet_db():
-    """Initialize pet game database with required table"""
-    try:
-        conn = get_pet_db_connection()
-        cur = get_wrapped_cursor(conn)
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS pet (
-                id INTEGER PRIMARY KEY,
-                username TEXT NOT NULL,
-                name TEXT, species TEXT, gender TEXT,
-                hunger INTEGER DEFAULT 70, happiness INTEGER DEFAULT 70,
-                energy INTEGER DEFAULT 70, hygiene INTEGER DEFAULT 80,
-                coins INTEGER DEFAULT 0, xp INTEGER DEFAULT 0,
-                stage TEXT DEFAULT 'Baby', adventure_end REAL DEFAULT 0,
-                last_updated REAL, hat TEXT DEFAULT 'None',
-                UNIQUE(username)
-            )
-        """)
-        conn.commit()
-        conn.close()
-        print("Pet database initialized successfully")
-    except Exception as e:
-        print(f"Pet database initialization error: {e}")
-
+# Initialize pet game database on startup  
 try:
-    init_pet_db()
+    ensure_pet_table()
 except Exception as e:
     print(f"Pet database initialization: {e}")
+
 
 @app.route('/')
 def index():
@@ -11151,7 +11180,7 @@ def get_inbox():
                 AND recipient_username = %s
                 GROUP BY other_user
                 ORDER BY last_message_time DESC
-                LIMIT ? OFFSET ?
+                LIMIT %s OFFSET %s
             ''', (username, username, username, username, username, username, limit, offset)).fetchall()
         else:
             # Show all conversations
@@ -11175,7 +11204,7 @@ def get_inbox():
                 AND deleted_at IS NULL
                 GROUP BY other_user
                 ORDER BY last_message_time DESC
-                LIMIT ? OFFSET ?
+                LIMIT %s OFFSET %s
             ''', (username, username, username, username, username, limit, offset)).fetchall()
         
         # Get total unread count
