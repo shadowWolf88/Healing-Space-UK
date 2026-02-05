@@ -2078,6 +2078,131 @@ def get_wrapped_cursor(conn):
         pass
     return cursor
 
+
+# ===== AI SERVICE CLASSES =====
+
+class TherapistAI:
+    """AI-powered therapy chatbot using Groq LLM"""
+    
+    def __init__(self, username):
+        """Initialize AI with user context"""
+        self.username = username
+        self.groq_key = secrets_manager.get_secret("GROQ_API_KEY") or os.environ.get("GROQ_API_KEY")
+        if not self.groq_key:
+            raise RuntimeError("GROQ_API_KEY not configured")
+    
+    def get_response(self, user_message, history=None):
+        """Get AI therapy response using Groq API"""
+        if not self.groq_key:
+            raise RuntimeError("AI service not initialized")
+        
+        try:
+            import requests
+            
+            # Build conversation history for context
+            messages = []
+            
+            # Add system message for therapy context
+            messages.append({
+                "role": "system",
+                "content": "You are a compassionate AI therapy assistant. Provide supportive, empathetic responses. Focus on understanding emotions and providing coping strategies. Never provide medical advice."
+            })
+            
+            # Add conversation history
+            if history:
+                for hist_item in history[-5:]:  # Last 5 messages for context
+                    if len(hist_item) >= 2:
+                        messages.append({
+                            "role": hist_item[0] if hist_item[0] in ['user', 'assistant'] else 'user',
+                            "content": str(hist_item[1])
+                        })
+            
+            # Add current message
+            messages.append({
+                "role": "user",
+                "content": user_message
+            })
+            
+            # Call Groq API
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.groq_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "mixtral-8x7b-32768",
+                    "messages": messages,
+                    "max_tokens": 1024,
+                    "temperature": 0.7
+                },
+                timeout=30
+            )
+            
+            if response.status_code != 200:
+                raise RuntimeError(f"Groq API error: {response.status_code}")
+            
+            result = response.json()
+            if 'choices' not in result or len(result['choices']) == 0:
+                raise RuntimeError("No response from Groq API")
+            
+            return result['choices'][0]['message']['content']
+            
+        except Exception as e:
+            print(f"AI response error for {self.username}: {e}")
+            raise
+    
+    def get_insight(self, text):
+        """Get AI insight on provided text"""
+        return self.get_response(text)
+
+
+class SafetyMonitor:
+    """Monitor for crisis indicators and safety concerns"""
+    
+    def __init__(self):
+        """Initialize safety monitor"""
+        self.crisis_keywords = [
+            'suicide', 'kill myself', 'hurt myself', 'self harm', 'overdose',
+            'cutting', 'hang myself', 'jump', 'poison', 'death', 'die',
+            'want to die', 'should die', 'end it all', 'no point living'
+        ]
+    
+    def is_high_risk(self, text):
+        """Check if text indicates high-risk crisis indicators"""
+        if not text:
+            return False
+        
+        text_lower = text.lower()
+        
+        # Check for crisis keywords
+        for keyword in self.crisis_keywords:
+            if keyword in text_lower:
+                return True
+        
+        return False
+    
+    def send_crisis_alert(self, username):
+        """Send crisis alert (log event and optionally send webhook)"""
+        try:
+            # Log the crisis alert
+            log_event(username, 'crisis', 'high_risk_detected', 'User showed crisis indicators')
+            
+            # Check if webhook is configured
+            webhook_url = os.environ.get('ALERT_WEBHOOK_URL')
+            if webhook_url:
+                try:
+                    requests.post(webhook_url, json={
+                        'username': username,
+                        'alert_type': 'crisis',
+                        'timestamp': datetime.now().isoformat()
+                    }, timeout=5)
+                except:
+                    pass  # Webhook failure shouldn't block the response
+        except Exception as e:
+            print(f"Crisis alert error: {e}")
+
+
 # Load secrets
 secrets_manager = SecretsManager(debug=DEBUG)
 # Support both GROQ_API_KEY and GROQ_API variable names for compatibility
