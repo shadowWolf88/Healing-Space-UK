@@ -1,4 +1,5 @@
-import sqlite3
+import psycopg2
+import os
 from datetime import datetime
 
 DB = "therapist_app.db"

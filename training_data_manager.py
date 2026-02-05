@@ -20,6 +20,7 @@ import json
 import re
 from datetime import datetime
 import os
+import psycopg2
 
 # Training database path - DEPRECATED (using PostgreSQL now)
 # TRAINING_DB_PATH = "ai_training_data.db"
@@ -73,22 +74,24 @@ class TrainingDataManager:
         """Record user's consent for data usage in training"""
         user_hash = self.anonymize_username(username)
         
-        conn = sqlite3.connect(self.training_db)
+        conn = psycopg2.connect(os.getenv("DATABASE_URL"))
         cur = conn.cursor()
         
         if consent:
             cur.execute(
-                '''INSERT OR REPLACE INTO data_consent 
+                '''INSERT INTO data_consent 
                    (user_hash, consent_given, consent_date, consent_withdrawn, withdrawal_date)
-                   VALUES (?, 1, ?, 0, NULL)''',
-                (user_hash, datetime.now())
+                   VALUES (%s, 1, %s, 0, NULL)
+                   ON CONFLICT (user_hash) DO UPDATE
+                   SET consent_given=1, consent_date=%s''',
+                (user_hash, datetime.now(), datetime.now())
             )
             action = 'consent_given'
         else:
             cur.execute(
                 '''UPDATE data_consent 
-                   SET consent_withdrawn=1, withdrawal_date=?
-                   WHERE user_hash=?''',
+                   SET consent_withdrawn=1, withdrawal_date=%s
+                   WHERE user_hash=%s''',
                 (datetime.now(), user_hash)
             )
             action = 'consent_withdrawn'
@@ -109,7 +112,7 @@ class TrainingDataManager:
         """Check if user has given consent for training data"""
         user_hash = self.anonymize_username(username)
         
-        conn = sqlite3.connect(self.training_db)
+        conn = psycopg2.connect(os.getenv("DATABASE_URL"))
         cur = conn.cursor()
         
         result = cur.execute(
@@ -133,7 +136,7 @@ class TrainingDataManager:
         user_hash = self.anonymize_username(username)
         
         # Get production data
-        prod_conn = sqlite3.connect(self.prod_db)
+        prod_conn = psycopg2.connect(os.getenv("DATABASE_URL"))
         prod_cur = prod_conn.cursor()
         
         # Get chat history
@@ -164,7 +167,7 @@ class TrainingDataManager:
         prod_conn.close()
         
         # Export to training database
-        train_conn = sqlite3.connect(self.training_db)
+        train_conn = psycopg2.connect(os.getenv("DATABASE_URL"))
         train_cur = train_conn.cursor()
         
         session_hash = hashlib.md5(f"{user_hash}{datetime.now()}".encode()).hexdigest()[:12]
@@ -204,7 +207,7 @@ class TrainingDataManager:
         user_hash = self.anonymize_username(username)
         
         # Get production data
-        prod_conn = sqlite3.connect(self.prod_db)
+        prod_conn = psycopg2.connect(os.getenv("DATABASE_URL"))
         prod_cur = prod_conn.cursor()
         
         # Get CBT patterns
@@ -224,7 +227,7 @@ class TrainingDataManager:
         prod_conn.close()
         
         # Export to training database
-        train_conn = sqlite3.connect(self.training_db)
+        train_conn = psycopg2.connect(os.getenv("DATABASE_URL"))
         train_cur = train_conn.cursor()
         
         # CBT patterns
@@ -268,7 +271,7 @@ class TrainingDataManager:
         user_hash = self.anonymize_username(username)
         
         # Get production data
-        prod_conn = sqlite3.connect(self.prod_db)
+        prod_conn = psycopg2.connect(os.getenv("DATABASE_URL"))
         prod_cur = prod_conn.cursor()
         
         # Get assessment progression
@@ -287,7 +290,7 @@ class TrainingDataManager:
         gad7_scores = [a for a in assessments if a[0] == 'GAD-7']
         
         if len(phq9_scores) >= 2 or len(gad7_scores) >= 2:
-            train_conn = sqlite3.connect(self.training_db)
+            train_conn = psycopg2.connect(os.getenv("DATABASE_URL"))
             train_cur = train_conn.cursor()
             
             if len(phq9_scores) >= 2:
@@ -333,7 +336,7 @@ class TrainingDataManager:
         """GDPR Right to Deletion - Remove all training data for user"""
         user_hash = self.anonymize_username(username)
         
-        conn = sqlite3.connect(self.training_db)
+        conn = psycopg2.connect(os.getenv("DATABASE_URL"))
         cur = conn.cursor()
         
         # Delete all training data
@@ -355,7 +358,7 @@ class TrainingDataManager:
     
     def export_all_consented_data(self):
         """Batch export all data from consented users"""
-        conn = sqlite3.connect(self.training_db)
+        conn = psycopg2.connect(os.getenv("DATABASE_URL"))
         cur = conn.cursor()
         
         # Get all consented users
@@ -373,7 +376,7 @@ class TrainingDataManager:
     
     def get_training_stats(self):
         """Get statistics about training database"""
-        conn = sqlite3.connect(self.training_db)
+        conn = psycopg2.connect(os.getenv("DATABASE_URL"))
         cur = conn.cursor()
         
         stats = {

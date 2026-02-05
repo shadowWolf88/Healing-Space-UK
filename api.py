@@ -2794,7 +2794,7 @@ def send_verification():
         # Insert new code
         expires_at = datetime.now() + timedelta(minutes=10)
         cur.execute(
-            "INSERT INTO verification_codes (identifier, code, method, expires_at) VALUES (?, ?, ?, ?)",
+            "INSERT INTO verification_codes (identifier, code, method, expires_at) VALUES (%s, ?, ?, ?)",
             (identifier, code, method, expires_at)
         )
         conn.commit()
@@ -3565,7 +3565,7 @@ def clinician_register():
         
         # Insert new clinician
         cur.execute(
-            "INSERT INTO users (username, password, pin, role, full_name, email, phone, last_login, country, area, professional_id) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO users (username, password, pin, role, full_name, email, phone, last_login, country, area, professional_id) VALUES (%s,?,?,?,?,?,?,?,?,?,?)",
             (username, hashed_password, hashed_pin, 'clinician', full_name, email, phone, datetime.now(), country, area, professional_id)
         )
         conn.commit()
@@ -3610,7 +3610,7 @@ def developer_register():
 
         # Create developer account
         cur.execute(
-            "INSERT INTO users (username, password, pin, role, last_login) VALUES (?,?,?,?,?)",
+            "INSERT INTO users (username, password, pin, role, last_login) VALUES (%s,?,?,?,?)",
             (username, hashed_password, hashed_pin, 'developer', datetime.now())
         )
         conn.commit()
@@ -3716,7 +3716,7 @@ def execute_terminal():
 
             # Log command
             cur.execute(
-                "INSERT INTO dev_terminal_logs (username, command, output, exit_code, duration_ms) VALUES (?,?,?,?,?)",
+                "INSERT INTO dev_terminal_logs (username, command, output, exit_code, duration_ms) VALUES (%s,?,?,?,?)",
                 (username, command, output[:10000], exit_code, duration_ms)  # Truncate output to 10k chars
             )
             conn.commit()
@@ -3798,11 +3798,11 @@ You have full knowledge of the codebase and can provide specific advice. Be conc
 
             # Save to database
             cur.execute(
-                "INSERT INTO dev_ai_chats (username, session_id, role, message) VALUES (?,?,?,?)",
+                "INSERT INTO dev_ai_chats (username, session_id, role, message) VALUES (%s,?,?,?)",
                 (username, session_id, 'user', message)
             )
             cur.execute(
-                "INSERT INTO dev_ai_chats (username, session_id, role, message) VALUES (?,?,?,?)",
+                "INSERT INTO dev_ai_chats (username, session_id, role, message) VALUES (%s,?,?,?)",
                 (username, session_id, 'assistant', ai_response)
             )
             conn.commit()
@@ -3855,7 +3855,7 @@ def send_dev_message():
                     # Insert into messages table (new Phase 3 system)
                     cur.execute('''
                         INSERT INTO messages (sender_username, recipient_username, subject, content, sent_at)
-                        VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                        VALUES (%s, ?, ?, ?, CURRENT_TIMESTAMP)
                     ''', (from_username, recipient_username, subject if subject else None, message))
                     
                     # Send notification
@@ -3873,7 +3873,7 @@ def send_dev_message():
                 
                 cur.execute('''
                     INSERT INTO messages (sender_username, recipient_username, subject, content, sent_at)
-                    VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                    VALUES (%s, ?, ?, ?, CURRENT_TIMESTAMP)
                 ''', (from_username, to_username, subject if subject else None, message))
                 
                 # Send notification
@@ -3892,7 +3892,7 @@ def send_dev_message():
             
             cur.execute('''
                 INSERT INTO messages (sender_username, recipient_username, subject, content, sent_at)
-                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                VALUES (%s, ?, ?, ?, CURRENT_TIMESTAMP)
             ''', (from_username, to_username, subject if subject else None, message))
             
             # Send notification
@@ -3911,7 +3911,7 @@ def send_dev_message():
             
             cur.execute('''
                 INSERT INTO messages (sender_username, recipient_username, subject, content, sent_at)
-                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                VALUES (%s, ?, ?, ?, CURRENT_TIMESTAMP)
             ''', (from_username, to_username, subject if subject else None, message))
             
             # Send notification
@@ -4010,7 +4010,7 @@ def reply_dev_message():
 
         # Insert reply
         cur.execute(
-            "INSERT INTO dev_messages (from_username, to_username, message, message_type, parent_message_id) VALUES (?,?,?,?,?)",
+            "INSERT INTO dev_messages (from_username, to_username, message, message_type, parent_message_id) VALUES (%s,?,?,?,?)",
             (from_username, to_username, message, 'reply', parent_message_id)
         )
         conn.commit()
@@ -4365,13 +4365,13 @@ def approve_patient(approval_id):
         
         # Notify patient of approval
         cur.execute(
-            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (?,?,?)",
+            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (%s,?,?)",
             (patient_username, f'Dr. {clinician_username} has approved your request! You can now access all features.', 'approval_accepted')
         )
         
         # Notify clinician
         cur.execute(
-            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (?,?,?)",
+            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (%s,?,?)",
             (clinician_username, f'You approved {patient_username} as your patient', 'patient_approved')
         )
 
@@ -4415,7 +4415,7 @@ def reject_patient(approval_id):
         
         # Notify patient of rejection
         cur.execute(
-            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (?,?,?)",
+            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (%s,?,?)",
             (patient_username, f'Dr. {clinician_username} declined your request. Please select another clinician.', 'approval_rejected')
         )
 
@@ -4541,7 +4541,7 @@ def update_ai_memory(username):
         
         # Update or insert memory
         cur.execute(
-            "INSERT INTO ai_memory (username, memory_summary, last_updated) VALUES (?,?,?)",
+            "INSERT INTO ai_memory (username, memory_summary, last_updated) VALUES (%s,?,?)",
             (username, memory_summary, datetime.now())
         )
         conn.commit()
@@ -4556,7 +4556,7 @@ def send_notification(username, message, notification_type='info'):
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
         cur.execute(
-            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (?,?,?)",
+            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (%s,?,?)",
             (username, message, notification_type)
         )
         conn.commit()
@@ -4750,11 +4750,10 @@ def therapy_chat():
         
         if not active_session:
             cur.execute(
-                "INSERT INTO chat_sessions (username, session_name, is_active) VALUES (?, 'Main Chat', 1)",
+                "INSERT INTO chat_sessions (username, session_name, is_active) VALUES (%s, 'Main Chat', 1) RETURNING id",
                 (username,)
             )
-            conn.commit()
-            chat_session_id = cur.lastrowid
+            chat_session_id = cur.fetchone()[0]
         else:
             chat_session_id = active_session[0]
         
@@ -5027,7 +5026,7 @@ def get_chat_sessions():
         
         if existing == 0:
             cur.execute(
-                "INSERT INTO chat_sessions (username, session_name, is_active) VALUES (?, ?, 1)",
+                "INSERT INTO chat_sessions (username, session_name, is_active) VALUES (%s, ?, 1)",
                 (username, "Main Chat")
             )
             conn.commit()
@@ -5074,10 +5073,10 @@ def create_chat_session():
             
             # Create new session
             cur.execute(
-                "INSERT INTO chat_sessions (username, session_name, is_active) VALUES (?, ?, 1)",
+                "INSERT INTO chat_sessions (username, session_name, is_active) VALUES (%s, ?, 1)",
                 (username, session_name)
             )
-            session_id = cur.lastrowid
+            session_id = cur.fetchone()[0]
             conn.commit()
             
             return jsonify({
@@ -5303,14 +5302,14 @@ def initialize_chat():
         # Save welcome message to chat history
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         cur.execute(
-            "INSERT INTO chat_history (session_id, sender, message, timestamp) VALUES (?,?,?,?)",
+            "INSERT INTO chat_history (session_id, sender, message, timestamp) VALUES (%s,?,?,?)",
             (f"{username}_session", 'ai', welcome_message, timestamp)
         )
         
         # Initialize AI memory with profile data
         initial_memory = f"Patient: {full_name}. Date of Birth: {dob}. Medical conditions: {conditions}. First session: {timestamp}."
         cur.execute(
-            "INSERT INTO ai_memory (username, memory_summary, last_updated) VALUES (?,?,?)",
+            "INSERT INTO ai_memory (username, memory_summary, last_updated) VALUES (%s,?,?)",
             (username, initial_memory, timestamp)
         )
         
@@ -5418,11 +5417,11 @@ def log_mood():
         
         cur.execute(
             """INSERT INTO mood_logs (username, mood_val, sleep_val, meds, notes, sentiment, 
-               water_pints, exercise_mins, outside_mins) VALUES (?,?,?,?,?,?,?,?,?)""",
+               water_pints, exercise_mins, outside_mins) VALUES (%s,?,?,?,?,?,?,?,?)""",
             (username, mood_val, sleep_val, meds_str, notes, 'Neutral', water_pints, exercise_mins, outside_mins)
         )
         conn.commit()
-        log_id = cur.lastrowid
+        log_id = cur.fetchone()[0]
         conn.close()
         
         # Update AI memory with new activity
@@ -5508,9 +5507,11 @@ def log_gratitude():
 
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
-        cur.execute("INSERT INTO gratitude_logs (username, entry) VALUES (%s,%s)", (username, entry))
-        conn.commit()
-        log_id = cur.lastrowid
+        cur.execute(
+                "INSERT INTO gratitude_logs (username, entry) VALUES (%s,%s) RETURNING id",
+                (username, entry)
+            )
+            log_id = cur.fetchone()[0]
         conn.close()
         
         # AUTO-UPDATE AI MEMORY
@@ -5595,11 +5596,11 @@ def log_breathing_exercise():
         cur.execute(
             """INSERT INTO breathing_exercises
                (username, exercise_type, duration_seconds, pre_anxiety_level, post_anxiety_level, notes)
-               VALUES (?,?,?,?,?,?)""",
+               VALUES (%s,?,?,?,?,?)""",
             (username, exercise_type, duration_seconds, pre_anxiety, post_anxiety, notes[:500] if notes else None)
         )
         conn.commit()
-        log_id = cur.lastrowid
+        log_id = cur.fetchone()[0]
         conn.close()
 
         update_ai_memory(username)
@@ -5667,11 +5668,11 @@ def log_relaxation_session():
         cur.execute(
             """INSERT INTO relaxation_techniques
                (username, technique_type, duration_minutes, effectiveness_rating, body_scan_areas, notes)
-               VALUES (?,?,?,?,?,?)""",
+               VALUES (%s,?,?,?,?,?)""",
             (username, technique_type, duration_minutes, effectiveness, body_areas[:200] if body_areas else None, notes[:500] if notes else None)
         )
         conn.commit()
-        log_id = cur.lastrowid
+        log_id = cur.fetchone()[0]
         conn.close()
 
         update_ai_memory(username)
@@ -5745,13 +5746,13 @@ def log_sleep_diary():
             """INSERT INTO sleep_diary
                (username, sleep_date, bedtime, wake_time, time_to_fall_asleep, times_woken,
                 total_sleep_hours, sleep_quality, dreams_nightmares, factors_affecting, morning_mood, notes)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+               VALUES (%s,?,?,?,?,?,?,?,?,?,?,?)""",
             (username, sleep_date, bedtime, wake_time, time_to_fall_asleep, times_woken,
              total_sleep_hours, sleep_quality, dreams[:500] if dreams else None,
              factors[:500] if factors else None, morning_mood, notes[:500] if notes else None)
         )
         conn.commit()
-        log_id = cur.lastrowid
+        log_id = cur.fetchone()[0]
         conn.close()
 
         update_ai_memory(username)
@@ -5824,13 +5825,13 @@ def create_core_belief_alt():
             """INSERT INTO core_beliefs
                (username, old_belief, belief_origin, evidence_for, evidence_against,
                 new_balanced_belief, belief_strength_before, belief_strength_after)
-               VALUES (?,?,?,?,?,?,?,?)""",
+               VALUES (%s,?,?,?,?,?,?,?)""",
             (username, old_belief[:500], belief_origin[:500] if belief_origin else None,
              evidence_for[:1000] if evidence_for else None, evidence_against[:1000] if evidence_against else None,
              new_belief[:500] if new_belief else None, strength_before, strength_after)
         )
         conn.commit()
-        log_id = cur.lastrowid
+        log_id = cur.fetchone()[0]
         conn.close()
 
         update_ai_memory(username)
@@ -5910,11 +5911,11 @@ def create_exposure_item():
         cur.execute(
             """INSERT INTO exposure_hierarchy
                (username, fear_situation, initial_suds, target_suds, hierarchy_rank)
-               VALUES (?,?,?,?,?)""",
+               VALUES (%s,?,?,?,?)""",
             (username, fear_situation[:500], initial_suds, target_suds, hierarchy_rank)
         )
         conn.commit()
-        log_id = cur.lastrowid
+        log_id = cur.fetchone()[0]
         conn.close()
 
         update_ai_memory(username)
@@ -5954,7 +5955,7 @@ def log_exposure_attempt(exposure_id):
         cur.execute(
             """INSERT INTO exposure_attempts
                (exposure_id, username, pre_suds, peak_suds, post_suds, duration_minutes, coping_strategies_used, notes)
-               VALUES (?,?,?,?,?,?,?,?)""",
+               VALUES (%s,?,?,?,?,?,?,?)""",
             (exposure_id, username, pre_suds, peak_suds, post_suds, duration,
              coping_strategies[:500] if coping_strategies else None, notes[:500] if notes else None)
         )
@@ -5968,7 +5969,7 @@ def log_exposure_attempt(exposure_id):
                 cur.execute("UPDATE exposure_hierarchy SET status='in_progress' WHERE id=%s", (exposure_id,))
 
         conn.commit()
-        log_id = cur.lastrowid
+        log_id = cur.fetchone()[0]
         conn.close()
 
         update_ai_memory(username)
@@ -6071,13 +6072,13 @@ def create_coping_card_alt():
         cur.execute(
             """INSERT INTO coping_cards
                (username, card_title, situation_trigger, unhelpful_thought, helpful_response, coping_strategies)
-               VALUES (?,?,?,?,?,?)""",
+               VALUES (%s,?,?,?,?,?)""",
             (username, title[:100], trigger[:500] if trigger else None,
              unhelpful[:500] if unhelpful else None, helpful[:500] if helpful else None,
              strategies[:1000] if strategies else None)
         )
         conn.commit()
-        log_id = cur.lastrowid
+        log_id = cur.fetchone()[0]
         conn.close()
 
         update_ai_memory(username)
@@ -6231,13 +6232,13 @@ def log_self_compassion():
             """INSERT INTO self_compassion_journal
                (username, difficult_situation, self_critical_thoughts, common_humanity,
                 kind_response, self_care_action, mood_before, mood_after)
-               VALUES (?,?,?,?,?,?,?,?)""",
+               VALUES (%s,?,?,?,?,?,?,?)""",
             (username, situation[:1000], critical_thoughts[:1000] if critical_thoughts else None,
              common_humanity[:1000] if common_humanity else None, kind_response[:1000] if kind_response else None,
              self_care[:500] if self_care else None, mood_before, mood_after)
         )
         conn.commit()
-        log_id = cur.lastrowid
+        log_id = cur.fetchone()[0]
         conn.close()
 
         update_ai_memory(username)
@@ -6385,11 +6386,11 @@ def add_goal_milestone(goal_id):
         cur.execute(
             """INSERT INTO goal_milestones
                (goal_id, username, milestone_title, milestone_description, target_date)
-               VALUES (?,?,?,?,?)""",
+               VALUES (%s,?,?,?,?)""",
             (goal_id, username, title[:200], description[:500] if description else None, target_date)
         )
         conn.commit()
-        log_id = cur.lastrowid
+        log_id = cur.fetchone()[0]
         conn.close()
 
         log_event(username, 'api', 'milestone_added', f'Added milestone to goal {goal_id}')
@@ -6483,13 +6484,13 @@ def add_goal_checkin(goal_id):
         cur.execute(
             """INSERT INTO goal_checkins
                (goal_id, username, progress_notes, obstacles, next_steps, motivation_level)
-               VALUES (?,?,?,?,?,?)""",
+               VALUES (%s,?,?,?,?,?)""",
             (goal_id, username, progress_notes[:1000] if progress_notes else None,
              obstacles[:500] if obstacles else None, next_steps[:500] if next_steps else None,
              motivation_level)
         )
         conn.commit()
-        log_id = cur.lastrowid
+        log_id = cur.fetchone()[0]
         conn.close()
 
         update_ai_memory(username)
@@ -6754,7 +6755,7 @@ def pet_create():
         cur.execute("""
             INSERT INTO pet (username, name, species, gender, hunger, happiness, energy, hygiene, 
                            coins, xp, stage, adventure_end, last_updated, hat)
-            VALUES (?, ?, ?, ?, 70, 70, 70, 80, 0, 0, 'Baby', 0, ?, 'None')
+            VALUES (%s, ?, ?, ?, 70, 70, 70, 80, 0, 0, 'Baby', 0, ?, 'None')
         """, (username, name, species, gender, datetime.now().timestamp()))
         conn.commit()
         conn.close()
@@ -7195,11 +7196,10 @@ def cbt_thought_record():
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
         cur.execute(
-            "INSERT INTO cbt_records (username, situation, thought, evidence) VALUES (?,?,?,?)",
-            (username, situation, thought, evidence or '')
-        )
-        conn.commit()
-        record_id = cur.lastrowid
+                "INSERT INTO cbt_records (username, situation, thought, evidence) VALUES (%s,?,?,?) RETURNING id",
+                (username, situation, thought, evidence or '')
+            )
+            record_id = cur.fetchone()[0]
         conn.close()
         
         # AUTO-UPDATE AI MEMORY
@@ -7281,7 +7281,7 @@ def submit_phq9():
             severity = "Severe"
         
         cur.execute(
-            "INSERT INTO clinical_scales (username, scale_name, score, severity) VALUES (?,?,?,?)",
+            "INSERT INTO clinical_scales (username, scale_name, score, severity) VALUES (%s,?,?,?)",
             (username, 'PHQ-9', total, severity)
         )
         
@@ -7359,7 +7359,7 @@ def submit_gad7():
             severity = "Severe"
         
         cur.execute(
-            "INSERT INTO clinical_scales (username, scale_name, score, severity) VALUES (?,?,?,?)",
+            "INSERT INTO clinical_scales (username, scale_name, score, severity) VALUES (%s,?,?,?)",
             (username, 'GAD-7', total, severity)
         )
         
@@ -7423,7 +7423,7 @@ def get_community_posts():
             # Mark channel as read for this user
             if username:
                 cur.execute(
-                    "INSERT INTO community_channel_reads (username, channel, last_read) VALUES (?, ?, CURRENT_TIMESTAMP)",
+                    "INSERT INTO community_channel_reads (username, channel, last_read) VALUES (%s, ?, CURRENT_TIMESTAMP)",
                     (username, category)
                 )
                 conn.commit()
@@ -7629,7 +7629,7 @@ def create_community_post():
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
         cur.execute(
-            "INSERT INTO community_posts (username, message, category) VALUES (?,?,?)",
+            "INSERT INTO community_posts (username, message, category) VALUES (%s,?,?)",
             (username, message, category)
         )
         conn.commit()
@@ -7678,7 +7678,7 @@ def react_to_post(post_id):
         else:
             # Add reaction
             cur.execute(
-                "INSERT INTO community_likes (post_id, username, reaction_type) VALUES (?,?,?)",
+                "INSERT INTO community_likes (post_id, username, reaction_type) VALUES (%s,?,?)",
                 (post_id, username, reaction_type)
             )
             action = 'added'
@@ -7811,15 +7811,15 @@ def create_reply(post_id):
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
         cur.execute(
-            "INSERT INTO community_replies (post_id, username, message) VALUES (?,?,?)",
+            "INSERT INTO community_replies (post_id, username, message) VALUES (%s,?,?)",
             (post_id, username, sanitized_message)
         )
-        reply_id = cur.lastrowid
+        reply_id = cur.fetchone()[0]
 
         # Flag for review if needed
         if moderation_result['flagged']:
             cur.execute(
-                "INSERT INTO alerts (username, alert_type, details, status) VALUES (?,?,?,?)",
+                "INSERT INTO alerts (username, alert_type, details, status) VALUES (%s,?,?,?)",
                 (username, 'content_review', f"Reply {reply_id} to post {post_id}: {moderation_result['flag_reason']}", 'pending_review')
             )
             log_event(username, 'community', 'reply_flagged', moderation_result['flag_reason'])
@@ -7914,7 +7914,7 @@ def report_community_post(post_id):
         # Create report alert
         report_details = f"post_id:{post_id}|reporter:{reporter_username}|author:{post_author}|reason:{reason}"
         cur.execute(
-            "INSERT INTO alerts (username, alert_type, details, status) VALUES (?,?,?,?)",
+            "INSERT INTO alerts (username, alert_type, details, status) VALUES (%s,?,?,?)",
             (post_author, 'post_report', report_details, 'pending_review')
         )
 
@@ -8008,7 +8008,7 @@ def save_safety_plan():
             )
         else:
             cur.execute(
-                "INSERT INTO safety_plans (username, triggers, coping_strategies, support_contacts, professional_contacts) VALUES (?,?,?,?,?)",
+                "INSERT INTO safety_plans (username, triggers, coping_strategies, support_contacts, professional_contacts) VALUES (%s,?,?,?,?)",
                 (username, triggers, coping, support, professional)
             )
         conn.commit()
@@ -8915,10 +8915,10 @@ def create_clinician_note():
             return jsonify({'error': 'Unauthorized: Patient not assigned to clinician'}), 403
         
         cur.execute(
-            "INSERT INTO clinician_notes (clinician_username, patient_username, note_text, is_highlighted) VALUES (?,?,?,?)",
+            "INSERT INTO clinician_notes (clinician_username, patient_username, note_text, is_highlighted) VALUES (%s,?,?,?)",
             (clinician_username, patient_username, note_text, 1 if is_highlighted else 0)
         )
-        note_id = cur.lastrowid
+        note_id = cur.fetchone()[0]
         conn.commit()
         conn.close()
         
@@ -9312,7 +9312,7 @@ def check_mood_reminder():
             if not logged_today:
                 # Send reminder notification
                 cur.execute(
-                    "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (?,?,?)",
+                    "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (%s,?,?)",
                     (username, "🕗 Reminder: Don't forget to log your mood and habits for today!", 'mood_reminder')
                 )
                 reminders_sent += 1
@@ -9563,9 +9563,9 @@ def manage_appointments():
             cur = get_wrapped_cursor(conn)
             cur.execute("""
                 INSERT INTO appointments (clinician_username, patient_username, appointment_date, notes, patient_response)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (%s, ?, ?, ?, ?)
             """, (clinician, patient, appt_date, notes, 'pending'))
-            appt_id = cur.lastrowid
+            appt_id = cur.fetchone()[0]
             
             # Send notification to patient
             from datetime import datetime as dt
@@ -9573,7 +9573,7 @@ def manage_appointments():
             date_str = appt_datetime.strftime('%A, %d %B %Y at %H:%M')
             cur.execute("""
                 INSERT INTO notifications (recipient_username, message, notification_type)
-                VALUES (?, ?, ?)
+                VALUES (%s, ?, ?)
             """, (patient, f'New appointment scheduled with {clinician} on {date_str}. Please view and respond in the Appointments tab.', 'appointment_new'))
             
             conn.commit()
@@ -9611,7 +9611,7 @@ def cancel_appointment(appointment_id):
             
             # Send notification to patient
             cur.execute(
-                "INSERT INTO notifications (username, message, read) VALUES (?, ?, 0)",
+                "INSERT INTO notifications (username, message, read) VALUES (%s, ?, 0)",
                 (patient_username, f"Your appointment on {apt_date} at {apt_time} with {clinician_username} has been cancelled.")
             )
             
@@ -9669,7 +9669,7 @@ def respond_to_appointment(appointment_id):
         action = 'accepted' if response == 'accepted' else 'declined'
         cur.execute("""
             INSERT INTO notifications (recipient_username, message, notification_type)
-            VALUES (?, ?, ?)
+            VALUES (%s, ?, ?)
         """, (clinician, f'{patient_username} has {action} the appointment', 'appointment_response'))
         
         conn.commit()
@@ -9732,7 +9732,7 @@ def confirm_appointment_attendance(appointment_id):
             message = f'Your clinician {clinician_username} has marked the appointment as {status}.'
 
         cur.execute(
-            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (?,?,?)",
+            "INSERT INTO notifications (recipient_username, message, notification_type) VALUES (%s,?,?)",
             (patient_username, message, 'appointment_attendance')
         )
 
@@ -10532,11 +10532,11 @@ def submit_feedback():
         role = user[0] if user else 'user'
 
         cur.execute(
-            "INSERT INTO feedback (username, role, category, message) VALUES (?, ?, ?, ?)",
+            "INSERT INTO feedback (username, role, category, message) VALUES (%s, ?, ?, ?)",
             (username, role, category, message)
         )
         
-        feedback_id = cur.lastrowid
+        feedback_id = cur.fetchone()[0]
         conn.commit()
 
         # Send notification to all developers
@@ -10628,7 +10628,7 @@ def complete_daily_task():
         else:
             # Insert new record
             cur.execute(
-                "INSERT INTO daily_tasks (username, task_type, completed, completed_at, task_date) VALUES (?, ?, 1, datetime('now'), ?)",
+                "INSERT INTO daily_tasks (username, task_type, completed, completed_at, task_date) VALUES (%s, ?, 1, datetime('now'), ?)",
                 (username, task_type, today)
             )
 
@@ -10690,7 +10690,7 @@ def award_daily_completion_bonus(username, cursor, today):
         else:
             cursor.execute('''
                 INSERT INTO daily_streaks (username, current_streak, longest_streak, last_complete_date, total_bonus_coins, total_bonus_xp)
-                VALUES (?, 1, 1, ?, 50, 100)
+                VALUES (%s, 1, 1, ?, 50, 100)
             ''', (username, today))
 
         # Award pet bonus (50 coins, 100 XP, +10 happiness)
@@ -10765,7 +10765,7 @@ def mark_daily_task_complete(username, task_type):
         # Use INSERT OR REPLACE to handle duplicates
         cur.execute('''
             INSERT INTO daily_tasks (username, task_type, completed, completed_at, task_date)
-            VALUES (?, ?, 1, datetime('now'), ?)
+            VALUES (%s, ?, 1, datetime('now'), ?)
             ON CONFLICT(username, task_type, task_date) DO UPDATE SET completed=1, completed_at=datetime('now')
         ''', (username, task_type, today))
 
@@ -10854,7 +10854,7 @@ def save_cbt_tool_entry():
             # Insert new entry
             cur.execute('''
                 INSERT INTO cbt_tool_entries (username, tool_type, data, mood_rating, notes)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (%s, ?, ?, ?, ?)
             ''', (username, tool_type, entry_data, mood_rating, notes))
 
         conn.commit()
@@ -11038,10 +11038,10 @@ def send_message():
         # Insert message
         cur.execute('''
             INSERT INTO messages (sender_username, recipient_username, subject, content, sent_at)
-            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+            VALUES (%s, ?, ?, ?, CURRENT_TIMESTAMP)
         ''', (sender, recipient, subject if subject else None, content))
         
-        message_id = cur.lastrowid
+        message_id = cur.fetchone()[0]
         conn.commit()
         conn.close()
         
