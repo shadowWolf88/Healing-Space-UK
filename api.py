@@ -2617,16 +2617,12 @@ def diagnostic():
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    """Health check endpoint for Railway"""
-    return jsonify({
-        'status': 'healthy',
-        'service': 'Healing Space UK - Mental Health Therapy API',
-        'version': '2.0.0-postgresql-ready',
-        'deployed': '2026-02-04T18:30:00Z',
-        'commit': '5faf610',
-        'database': 'PostgreSQL',
-        'timestamp': datetime.now().isoformat()
-    })
+    """Health check endpoint for Railway - MUST be extremely fast"""
+    try:
+        # Minimal health check - just return OK
+        return jsonify({'status': 'ok'}), 200
+    except Exception as e:
+        return jsonify({'status': 'error', 'error': str(e)}), 500
 
 @app.route('/api/admin/wipe-database', methods=['POST'])
 def admin_wipe_database():

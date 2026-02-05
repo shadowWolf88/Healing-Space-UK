@@ -12,5 +12,7 @@ restartPolicyMaxRetries = 3
 
 [[deploy.healthcheck]]
 httpPath = "/api/health"
-initialDelaySeconds = 30
+initialDelaySeconds = 60
+timeoutSeconds = 10
+intervalSeconds = 10
 periodSeconds = 10
