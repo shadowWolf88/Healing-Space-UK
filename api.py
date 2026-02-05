@@ -18,91 +18,6 @@ import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-# --- Pet Table Ensurer ---
-def ensure_pet_table():
-    """Ensure the pet table exists in PostgreSQL with username support"""
-    conn = get_pet_db_connection()
-    cur = get_wrapped_cursor(conn)
-    
-    try:
-        # Check if table exists
-        cur.execute("""
-            SELECT EXISTS (
-                SELECT FROM information_schema.tables 
-                WHERE table_schema = 'public' AND table_name = 'pet'
-            )
-        """)
-        
-        if not cur.fetchone()[0]:
-            # Create new table with username column for multi-user support
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS pet (
-                    id SERIAL PRIMARY KEY,
-                    username TEXT NOT NULL UNIQUE,
-                    name TEXT, species TEXT, gender TEXT,
-                    hunger INTEGER DEFAULT 70, happiness INTEGER DEFAULT 70,
-                    energy INTEGER DEFAULT 70, hygiene INTEGER DEFAULT 80,
-                    coins INTEGER DEFAULT 0, xp INTEGER DEFAULT 0,
-                    stage TEXT DEFAULT 'Baby', adventure_end REAL DEFAULT 0,
-                    last_updated REAL, hat TEXT DEFAULT 'None'
-                )
-            """)
-        conn.commit()
-    except psycopg2.Error as e:
-        print(f"Error ensuring pet table: {e}")
-        conn.rollback()
-    finally:
-        conn.close()
-
-def get_pet_db_connection():
-    """Get pet database connection to PostgreSQL
-    
-    Supports both:
-    1. DATABASE_URL (Railway): postgresql://user:pass@host:port/db
-    2. Individual env vars: DB_HOST, DB_PORT, DB_NAME_PET, DB_USER, DB_PASSWORD
-    """
-    try:
-        # Check for Railway DATABASE_URL first
-        database_url = os.environ.get('DATABASE_URL')
-        if database_url:
-            conn = psycopg2.connect(database_url)
-        else:
-            # Fall back to individual environment variables
-            conn = psycopg2.connect(
-                host=os.environ.get('DB_HOST', 'localhost'),
-                port=os.environ.get('DB_PORT', '5432'),
-                database=os.environ.get('DB_NAME_PET', 'healing_space_pet_test'),
-                user=os.environ.get('DB_USER', 'healing_space'),
-                password=os.environ.get('DB_PASSWORD', 'healing_space_dev_pass')
-            )
-        return conn
-    except psycopg2.Error as e:
-        print(f"Failed to connect to PostgreSQL pet database: {e}")
-        raise
-
-def normalize_pet_row(pet_row):
-    """Convert pet row values to proper types"""
-    if not pet_row:
-        return None
-    # pet schema: id, username, name, species, gender, hunger, happiness, energy, hygiene, coins, xp, stage, adventure_end, last_updated, hat
-    return (
-        int(pet_row[0]),      # id
-        pet_row[1],           # username (text)
-        pet_row[2],           # name (text)
-        pet_row[3],           # species (text)
-        pet_row[4],           # gender (text)
-        int(pet_row[5]),      # hunger (int)
-        int(pet_row[6]),      # happiness (int)
-        int(pet_row[7]),      # energy (int)
-        int(pet_row[8]),      # hygiene (int)
-        int(pet_row[9]),      # coins (int)
-        int(pet_row[10]),     # xp (int)
-        pet_row[11],          # stage (text)
-        float(pet_row[12]) if pet_row[12] else 0.0,  # adventure_end (real)
-        float(pet_row[13]) if pet_row[13] else time.time(),  # last_updated (real)
-        pet_row[14]           # hat (text)
-    )
-
 # Import existing modules
 from secrets_manager import SecretsManager
 from audit import log_event
@@ -2043,6 +1958,31 @@ def get_db_connection(timeout=30.0):
         print(f"Failed to connect to PostgreSQL database: {e}")
         raise
 
+def get_pet_db_connection():
+    """Get pet database connection to PostgreSQL
+    
+    Supports both:
+    1. DATABASE_URL (Railway): postgresql://user:pass@host:port/db
+    2. Individual env vars: DB_HOST, DB_PORT, DB_NAME_PET, DB_USER, DB_PASSWORD
+    """
+    try:
+        # Check for Railway DATABASE_URL first
+        database_url = os.environ.get('DATABASE_URL')
+        if database_url:
+            conn = psycopg2.connect(database_url)
+        else:
+            # Fall back to individual environment variables
+            conn = psycopg2.connect(
+                host=os.environ.get('DB_HOST', 'localhost'),
+                port=os.environ.get('DB_PORT', '5432'),
+                database=os.environ.get('DB_NAME_PET', 'healing_space_pet_test'),
+                user=os.environ.get('DB_USER', 'healing_space'),
+                password=os.environ.get('DB_PASSWORD', 'healing_space_dev_pass')
+            )
+        return conn
+    except psycopg2.Error as e:
+        print(f"Failed to connect to PostgreSQL pet database: {e}")
+        raise
 
 class PostgreSQLCursorWrapper:
     """Wrapper to make psycopg2 cursor API compatible with sqlite3 chaining"""
@@ -2077,6 +2017,41 @@ def get_wrapped_cursor(conn):
     except:
         pass
     return cursor
+
+def ensure_pet_table():
+    """Ensure the pet table exists in PostgreSQL with username support"""
+    conn = get_pet_db_connection()
+    cur = get_wrapped_cursor(conn)
+    
+    try:
+        # Check if table exists
+        cur.execute("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_schema = 'public' AND table_name = 'pet'
+            )
+        """)
+        
+        if not cur.fetchone()[0]:
+            # Create new table with username column for multi-user support
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS pet (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT NOT NULL UNIQUE,
+                    name TEXT, species TEXT, gender TEXT,
+                    hunger INTEGER DEFAULT 70, happiness INTEGER DEFAULT 70,
+                    energy INTEGER DEFAULT 70, hygiene INTEGER DEFAULT 80,
+                    coins INTEGER DEFAULT 0, xp INTEGER DEFAULT 0,
+                    stage TEXT DEFAULT 'Baby', adventure_end REAL DEFAULT 0,
+                    last_updated REAL, hat TEXT DEFAULT 'None'
+                )
+            """)
+        conn.commit()
+    except psycopg2.Error as e:
+        print(f"[PET TABLE] Error ensuring pet table: {e}")
+        conn.rollback()
+    finally:
+        conn.close()
 
 # Load secrets
 secrets_manager = SecretsManager(debug=DEBUG)
