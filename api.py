@@ -8266,18 +8266,33 @@ def create_community_post():
 
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
+        
+        # Log for debugging
+        print(f"[DEBUG] Creating post: username={username}, category={category}, msg_len={len(message)}")
+        
         cur.execute(
             "INSERT INTO community_posts (username, message, category) VALUES (%s,%s,%s)",
             (username, message, category)
         )
         conn.commit()
+        
+        # Get the inserted post ID
+        result = cur.execute(
+            "SELECT id FROM community_posts WHERE username = %s AND message = %s AND category = %s ORDER BY entry_timestamp DESC LIMIT 1",
+            (username, message, category)
+        ).fetchone()
+        
         conn.close()
         
         # AUTO-UPDATE AI MEMORY
         update_ai_memory(username)
         
-        return jsonify({'success': True}), 201
+        post_id = result[0] if result else None
+        print(f"[DEBUG] Post created with ID: {post_id}")
+        
+        return jsonify({'success': True, 'post_id': post_id}), 201
     except Exception as e:
+        print(f"[DEBUG] Error creating post: {e}")
         return handle_exception(e, request.endpoint or 'unknown')
 
 @app.route('/api/community/post/<int:post_id>/react', methods=['POST'])

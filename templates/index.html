@@ -10488,16 +10488,21 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             }
 
             try {
+                console.log('🔍 Loading posts for channel:', channelId);
                 const response = await fetch(`/api/community/posts?username=${encodeURIComponent(currentUser)}&category=${encodeURIComponent(channelId)}`);
                 const data = await response.json();
 
+                console.log('📊 Response data:', data);
+
                 if (response.ok && data.posts && data.posts.length > 0) {
+                    console.log('✅ Found', data.posts.length, 'posts');
                     postsArea.innerHTML = data.posts.map(post => renderDiscordPost(post)).join('');
                     // Auto-scroll to bottom to show newest post
                     setTimeout(() => {
                         postsArea.scrollTop = postsArea.scrollHeight;
                     }, 0);
                 } else {
+                    console.log('ℹ️ No posts found for channel:', channelId);
                     const info = CHANNEL_INFO[channelId] || { name: channelId };
                     postsArea.innerHTML = `
                         <div class="welcome-message">
@@ -10508,8 +10513,8 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     `;
                 }
             } catch (error) {
+                console.error('❌ Load posts error:', error);
                 postsArea.innerHTML = '<div style="text-align: center; color: #ed4245; padding: 40px;">Error loading posts</div>';
-                console.error('Load posts error:', error);
             }
         }
 
@@ -10706,24 +10711,34 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             }
 
             try {
+                console.log('📤 Posting to community:', { username: currentUser, message, category: currentChannel });
                 const response = await fetch('/api/community/post', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
                     body: JSON.stringify({ username: currentUser, message, category: currentChannel })
                 });
 
+                console.log('📥 Response status:', response.status, response.ok);
+                
                 if (response.ok) {
+                    const responseData = await response.json();
+                    console.log('✅ Post successful:', responseData);
                     document.getElementById('communityMessage').value = '';
-                    // Add small delay to ensure post is committed to database before fetching
-                    await new Promise(resolve => setTimeout(resolve, 300));
+                    
+                    // Wait longer to ensure database write is complete
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    console.log('🔄 Reloading posts...');
                     await loadChannelPosts(currentChannel, false);
+                    console.log('✅ Posts reloaded');
                 } else {
                     const data = await response.json();
+                    console.error('❌ Post failed:', data);
                     alert(data.error || 'Error posting message');
                 }
             } catch (error) {
-                alert('Connection error');
-                console.error('Post error:', error);
+                console.error('❌ Post error:', error);
+                alert('Connection error: ' + error.message);
             }
         }
 
