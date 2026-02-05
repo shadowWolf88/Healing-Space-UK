@@ -8679,12 +8679,12 @@ def generate_ai_summary():
                 days_since_join = 30
         # Get moods and alerts since join (or 30 days, whichever is less)
         moods = cur.execute(
-            "SELECT mood_val, sleep_val, exercise_mins, outside_mins, water_pints, meds, notes, entrestamp FROM mood_logs WHERE username = %s AND entrestamp >= datetime('now', %s || ' days') ORDER BY entrestamp DESC",
-            (username, f"-{min(days_since_join,30)}"),
+            f"SELECT mood_val, sleep_val, exercise_mins, outside_mins, water_pints, meds, notes, entrestamp FROM mood_logs WHERE username = %s AND entrestamp >= CURRENT_TIMESTAMP - INTERVAL '{min(days_since_join,30)} days' ORDER BY entrestamp DESC",
+            (username,),
         ).fetchall() or []
         alerts = cur.execute(
-            "SELECT alert_type, details, created_at FROM alerts WHERE username = %s AND created_at >= datetime('now', %s || ' days') ORDER BY created_at DESC",
-            (username, f"-{min(days_since_join,30)}"),
+            f"SELECT alert_type, details, created_at FROM alerts WHERE username = %s AND created_at >= CURRENT_TIMESTAMP - INTERVAL '{min(days_since_join,30)} days' ORDER BY created_at DESC",
+            (username,),
         ).fetchall() or []
 
         # Get latest assessments
@@ -10100,7 +10100,7 @@ def get_patient_analytics(username):
             SELECT DATE(entrestamp) as date, mood_val, notes
             FROM mood_logs
             WHERE username = %s
-            AND entrestamp > datetime('now', '-90 days')
+            AND entrestamp > CURRENT_TIMESTAMP - INTERVAL '90 days'
             ORDER BY date
         """, (username,)).fetchall()
         
@@ -11693,7 +11693,7 @@ def get_monitoring_status():
         # Get recent activity
         recent_logins = cur.execute("""
             SELECT COUNT(*) FROM users 
-            WHERE last_login > datetime('now', '-24 hours')
+            WHERE last_login > CURRENT_TIMESTAMP - INTERVAL '24 hours'
         """).fetchone()[0]
         
         # Get alerts
