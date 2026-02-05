@@ -3986,9 +3986,10 @@
                     </div>
 
                     <!-- Already Logged Message -->
-                    <div id="wellnessAlreadyLogged" class="wellness-already-logged" style="display: none; text-align: center; padding: 20px; background: var(--bg-secondary); border-radius: 8px; margin: 15px;">
-                        <p style="font-size: 1.1em; margin-bottom: 10px;">✅ All set for today!</p>
-                        <p style="color: var(--text-secondary); margin-bottom: 15px;">You've completed your wellness check-in. Come back tomorrow!</p>
+                    <div id="wellnessAlreadyLogged" class="wellness-already-logged" style="display: none; text-align: center; padding: 15px; background: var(--bg-secondary); border-radius: 8px; margin: 15px; position: relative;">
+                        <button onclick="toggleWellnessChat()" style="position: absolute; top: 8px; right: 8px; background: none; border: none; font-size: 1.2em; cursor: pointer; color: var(--text-secondary);" title="Minimize">−</button>
+                        <p style="font-size: 1.1em; margin: 0 0 8px 0;">✅ All set for today!</p>
+                        <p style="color: var(--text-secondary); margin: 0; font-size: 0.95em;">You've completed your wellness check-in. Come back tomorrow!</p>
                     </div>
 
                     <!-- Input Area -->
@@ -14553,13 +14554,29 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
         function toggleWellnessChat() {
             const messagesDiv = document.getElementById('wellnessConversation');
             const inputArea = document.querySelector('.wellness-input-area');
+            const alreadyLogged = document.getElementById('wellnessAlreadyLogged');
+            const progressHeader = document.querySelector('.wellness-chat-header');
             
-            if (messagesDiv.style.display === 'none') {
-                messagesDiv.style.display = 'flex';
-                inputArea.style.display = 'flex';
-            } else {
+            // Check if already logged is showing
+            if (alreadyLogged.style.display === 'block') {
+                // Collapse - hide everything except progress header
+                alreadyLogged.style.display = 'none';
                 messagesDiv.style.display = 'none';
                 inputArea.style.display = 'none';
+                progressHeader.style.display = 'none';
+            } else if (alreadyLogged.style.display === 'none' && messagesDiv.style.display === 'none') {
+                // Expand - show already logged message
+                alreadyLogged.style.display = 'block';
+                progressHeader.style.display = 'flex';
+            } else {
+                // Toggle between showing/hiding messages
+                if (messagesDiv.style.display === 'none') {
+                    messagesDiv.style.display = 'flex';
+                    inputArea.style.display = 'flex';
+                } else {
+                    messagesDiv.style.display = 'none';
+                    inputArea.style.display = 'none';
+                }
             }
         }
 
@@ -14991,13 +15008,17 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 const result = await response.json();
                 console.log('Wellness saved successfully:', result);
                 
-                // Show success message and re-initialize
+                // Show success message
                 await new Promise(r => setTimeout(r, 1000));
                 addWellnessMessage('✅ All saved! See you tomorrow, ' + (wellnessRitualState.data.preferred_name || 'friend') + '.', false);
                 
-                // Reset for next time
+                // Collapse wellness card after a short delay
                 setTimeout(() => {
-                    initializeWellnessRitual();
+                    document.getElementById('wellnessConversation').style.display = 'none';
+                    document.querySelector('.wellness-input-area').style.display = 'none';
+                    document.getElementById('wellnessAlreadyLogged').style.display = 'block';
+                    document.getElementById('wellnessProgressBar').style.width = '100%';
+                    document.getElementById('wellnessProgressText').textContent = 'Completed! ✨';
                 }, 2000);
                 
             } catch (error) {
