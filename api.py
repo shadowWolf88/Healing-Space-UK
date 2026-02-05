@@ -11126,57 +11126,68 @@ def get_inbox():
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
         
+        # Get conversations using CTE with window functions for PostgreSQL compatibility
+        where_clause = '''
+            WHERE (sender_username = %s OR recipient_username = %s)
+            AND deleted_at IS NULL
+        '''
+        unread_where = ' AND is_read = 0 AND recipient_username = %s'
+        
+        params_base = [username, username]
+        params = params_base + ([username] if unread_only else [])
+        
         # Get conversations (unique senders/recipients, excluding deleted messages)
-        if unread_only:
-            # Only show conversations with unread messages
-            rows = cur.execute('''
-                SELECT 
+        query = f'''
+            WITH conversation_pairs AS (
+                SELECT DISTINCT
                     CASE WHEN sender_username = %s THEN recipient_username ELSE sender_username END as other_user,
-                    (SELECT content FROM messages m2 
-                     WHERE (m2.sender_username = messages.sender_username AND m2.recipient_username = messages.recipient_username
-                            OR m2.sender_username = messages.recipient_username AND m2.recipient_username = messages.sender_username)
-                     AND m2.deleted_at IS NULL
-                     ORDER BY m2.sent_at DESC LIMIT 1) as last_message,
-                    (SELECT sent_at FROM messages m2 
-                     WHERE (m2.sender_username = messages.sender_username AND m2.recipient_username = messages.recipient_username
-                            OR m2.sender_username = messages.recipient_username AND m2.recipient_username = messages.sender_username)
-                     AND m2.deleted_at IS NULL
-                     ORDER BY m2.sent_at DESC LIMIT 1) as last_message_time,
-                    SUM(CASE WHEN recipient_username = %s AND is_read = 0 AND deleted_at IS NULL THEN 1 ELSE 0 END) as unread_count,
-                    MAX(CASE WHEN sender_username != %s THEN 1 ELSE 0 END) as is_latest_from_them
+                    CASE WHEN sender_username = %s THEN recipient_username ELSE sender_username END as other_user_dup
                 FROM messages
+                {where_clause}
+                {"AND is_read = 0 AND recipient_username = %s" if unread_only else ""}
+            ),
+            last_messages AS (
+                SELECT
+                    CASE WHEN sender_username = %s THEN recipient_username ELSE sender_username END as other_user,
+                    MAX(sent_at) as last_message_time,
+                    content as last_message
+                FROM messages m
                 WHERE (sender_username = %s OR recipient_username = %s)
                 AND deleted_at IS NULL
+                {"AND is_read = 0 AND recipient_username = %s" if unread_only else ""}
+                GROUP BY other_user, content, sent_at
+                HAVING sent_at = MAX(sent_at) OVER (PARTITION BY other_user)
+            ),
+            unread_counts AS (
+                SELECT
+                    CASE WHEN recipient_username = %s THEN sender_username ELSE recipient_username END as other_user,
+                    COUNT(*) as unread_count
+                FROM messages
+                WHERE recipient_username = %s
                 AND is_read = 0
-                AND recipient_username = %s
-                GROUP BY other_user
-                ORDER BY last_message_time DESC
-                LIMIT ? OFFSET ?
-            ''', (username, username, username, username, username, username, limit, offset)).fetchall()
-        else:
-            # Show all conversations
-            rows = cur.execute('''
-                SELECT 
-                    CASE WHEN sender_username = %s THEN recipient_username ELSE sender_username END as other_user,
-                    (SELECT content FROM messages m2 
-                     WHERE (m2.sender_username = messages.sender_username AND m2.recipient_username = messages.recipient_username
-                            OR m2.sender_username = messages.recipient_username AND m2.recipient_username = messages.sender_username)
-                     AND m2.deleted_at IS NULL
-                     ORDER BY m2.sent_at DESC LIMIT 1) as last_message,
-                    (SELECT sent_at FROM messages m2 
-                     WHERE (m2.sender_username = messages.sender_username AND m2.recipient_username = messages.recipient_username
-                            OR m2.sender_username = messages.recipient_username AND m2.recipient_username = messages.sender_username)
-                     AND m2.deleted_at IS NULL
-                     ORDER BY m2.sent_at DESC LIMIT 1) as last_message_time,
-                    SUM(CASE WHEN recipient_username = %s AND is_read = 0 AND deleted_at IS NULL THEN 1 ELSE 0 END) as unread_count,
-                    MAX(CASE WHEN sender_username != %s THEN 1 ELSE 0 END) as is_latest_from_them
-                FROM messages
-                WHERE (sender_username = %s OR recipient_username = %s)
                 AND deleted_at IS NULL
                 GROUP BY other_user
-                ORDER BY last_message_time DESC
-                LIMIT ? OFFSET ?
-            ''', (username, username, username, username, username, limit, offset)).fetchall()
+            )
+            SELECT
+                cp.other_user,
+                lm.last_message,
+                lm.last_message_time,
+                COALESCE(uc.unread_count, 0) as unread_count
+            FROM conversation_pairs cp
+            LEFT JOIN last_messages lm ON cp.other_user = lm.other_user
+            LEFT JOIN unread_counts uc ON cp.other_user = uc.other_user
+            ORDER BY lm.last_message_time DESC NULLS LAST
+            LIMIT %s OFFSET %s
+        '''
+        
+        query_params = [username, username] + ([username] if unread_only else [])
+        query_params += [username, username, username]
+        if unread_only:
+            query_params.append(username)
+        query_params += [username, username]
+        query_params += [limit, offset]
+        
+        rows = cur.execute(query, query_params).fetchall()
         
         # Get total unread count
         total_unread = cur.execute('''
@@ -11198,8 +11209,7 @@ def get_inbox():
             'with_user': row[0],
             'last_message': row[1][:100] if row[1] else '',  # Preview first 100 chars
             'last_message_time': row[2],
-            'unread_count': row[3] if row[3] else 0,
-            'is_latest_from_them': bool(row[4]) if row[4] else False
+            'unread_count': int(row[3]) if row[3] else 0
         } for row in rows]
         
         return jsonify({
