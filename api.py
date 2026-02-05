@@ -2891,6 +2891,11 @@ def init_db():
             cursor.execute("CREATE TABLE IF NOT EXISTS community_replies (id SERIAL PRIMARY KEY, post_id INTEGER NOT NULL, username TEXT NOT NULL, message TEXT NOT NULL, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(post_id) REFERENCES community_posts(id) ON DELETE CASCADE, FOREIGN KEY(username) REFERENCES users(username) ON DELETE CASCADE)")
             cursor.execute("CREATE TABLE IF NOT EXISTS community_channel_reads (id SERIAL PRIMARY KEY, username TEXT NOT NULL, channel TEXT NOT NULL, last_read TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(username) REFERENCES users(username) ON DELETE CASCADE)")
             
+            # Wellness tables
+            cursor.execute("CREATE TABLE IF NOT EXISTS wellness_logs (id SERIAL PRIMARY KEY, username TEXT NOT NULL REFERENCES users(username) ON DELETE CASCADE, timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP, mood INTEGER, mood_descriptor TEXT, mood_context TEXT, sleep_quality INTEGER, sleep_notes TEXT, hydration_level TEXT, total_hydration_cups INTEGER, exercise_type TEXT, exercise_duration INTEGER, outdoor_time_minutes INTEGER, social_contact TEXT, medication_taken BOOLEAN, medication_reason_if_missed TEXT, caffeine_intake_time TEXT, energy_level INTEGER, capacity_index INTEGER, weekly_goal_progress INTEGER, homework_completed BOOLEAN, homework_blockers TEXT, emotional_narrative TEXT, ai_reflection TEXT, time_of_day_category TEXT, session_duration_seconds INTEGER)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_wellness_username_timestamp ON wellness_logs(username, timestamp DESC)")
+            cursor.execute("CREATE TABLE IF NOT EXISTS patient_medications (id SERIAL PRIMARY KEY, username TEXT NOT NULL REFERENCES users(username) ON DELETE CASCADE, medication_name TEXT NOT NULL, dosage TEXT, frequency TEXT, time_of_day TEXT, prescribed_date DATE, notes TEXT, is_active BOOLEAN DEFAULT TRUE, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+            
             # Developer dashboard tables
             cursor.execute("CREATE TABLE IF NOT EXISTS developer_test_runs (id SERIAL PRIMARY KEY, username TEXT, test_output TEXT, exit_code INTEGER, passed_count INTEGER DEFAULT 0, failed_count INTEGER DEFAULT 0, error_count INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
             cursor.execute("CREATE TABLE IF NOT EXISTS dev_terminal_logs (id SERIAL PRIMARY KEY, username TEXT, command TEXT, output TEXT, exit_code INTEGER, duration_ms INTEGER, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
@@ -4999,7 +5004,7 @@ def reject_patient(approval_id):
         return handle_exception(e, request.endpoint or 'unknown')
 
 def update_ai_memory(username):
-    """Update AI memory with recent user activity summary including clinician notes"""
+    """Update AI memory with recent user activity summary including clinician notes and wellness patterns"""
     try:
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
@@ -5043,6 +5048,12 @@ def update_ai_memory(username):
             (username,)
         ).fetchall()
 
+        # NEW: Get wellness ritual data
+        recent_wellness = cur.execute(
+            "SELECT mood, sleep_quality, exercise_type, medication_taken, energy_level, social_contact, timestamp FROM wellness_logs WHERE username = %s ORDER BY timestamp DESC LIMIT 7",
+            (username,)
+        ).fetchall()
+
         # Build memory summary
         memory_parts = []
         
@@ -5074,6 +5085,25 @@ def update_ai_memory(username):
         
         if recent_gratitude:
             memory_parts.append(f"Practicing gratitude: {len(recent_gratitude)} recent entries")
+
+        # NEW: Add wellness ritual patterns
+        if recent_wellness:
+            wellness_count = len(recent_wellness)
+            avg_wellness_mood = sum(w[0] for w in recent_wellness if w[0]) / len([w for w in recent_wellness if w[0]]) if any(w[0] for w in recent_wellness) else 0
+            exercise_count = len([w for w in recent_wellness if w[2]])  # exercise_type
+            med_adherence = len([w for w in recent_wellness if w[3]]) / wellness_count * 100 if wellness_count > 0 else 0
+            avg_sleep = sum(w[1] for w in recent_wellness if w[1]) / len([w for w in recent_wellness if w[1]]) if any(w[1] for w in recent_wellness) else 0
+            
+            wellness_summary = f"Wellness rituals: {wellness_count} completed"
+            if avg_wellness_mood > 0:
+                wellness_summary += f", avg mood {avg_wellness_mood:.1f}/10"
+            if avg_sleep > 0:
+                wellness_summary += f", sleep quality {avg_sleep:.1f}/10"
+            if exercise_count > 0:
+                wellness_summary += f", {exercise_count} exercise sessions"
+            wellness_summary += f", {med_adherence:.0f}% medication adherence"
+            
+            memory_parts.append(wellness_summary)
 
         if recent_cbt_tools:
             # Format CBT tool names for readability
@@ -13067,6 +13097,271 @@ groq_ready = bool(GROQ_API_KEY)
 print(f"✅ GROQ API Key configured: {groq_ready}", flush=True)
 print(f"✅ SECRET_KEY configured: {bool(app.config.get('SECRET_KEY'))}", flush=True)
 print(f"✅ PIN_SALT configured: {bool(PIN_SALT)}", flush=True)
+
+# ============================================================================
+# WELLNESS RITUAL ENDPOINTS
+# ============================================================================
+
+@app.route('/api/wellness/log', methods=['POST'])
+def create_wellness_log():
+    """Create a new daily wellness ritual log"""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        data = request.json
+        
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+        
+        # Insert wellness log
+        cur.execute("""
+            INSERT INTO wellness_logs (
+                username, mood, mood_descriptor, mood_context,
+                sleep_quality, sleep_notes, hydration_level, total_hydration_cups,
+                exercise_type, exercise_duration, outdoor_time_minutes, social_contact,
+                medication_taken, medication_reason_if_missed, caffeine_intake_time,
+                energy_level, capacity_index, weekly_goal_progress,
+                homework_completed, homework_blockers, emotional_narrative,
+                ai_reflection, time_of_day_category, session_duration_seconds
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+            )
+        """, (
+            username,
+            data.get('mood'),
+            data.get('mood_descriptor'),
+            data.get('mood_context'),
+            data.get('sleep_quality'),
+            data.get('sleep_notes'),
+            data.get('hydration_level'),
+            data.get('total_hydration_cups'),
+            data.get('exercise_type'),
+            data.get('exercise_duration'),
+            data.get('outdoor_time_minutes'),
+            data.get('social_contact'),
+            data.get('medication_taken'),
+            data.get('medication_reason_if_missed'),
+            data.get('caffeine_intake_time'),
+            data.get('energy_level'),
+            data.get('capacity_index'),
+            data.get('weekly_goal_progress'),
+            data.get('homework_completed'),
+            data.get('homework_blockers'),
+            data.get('emotional_narrative'),
+            data.get('ai_reflection'),
+            data.get('time_of_day_category'),
+            data.get('session_duration_seconds')
+        ))
+        
+        conn.commit()
+        wellness_log_id = cur.lastrowid
+        
+        # Update AI memory with new wellness data
+        update_ai_memory(username)
+        
+        # Log event for audit
+        log_event(username, 'wellness', 'daily_ritual_completed', 
+                  f"Mood: {data.get('mood')}/10, Energy: {data.get('energy_level')}/10")
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'wellness_log_id': wellness_log_id,
+            'message': 'Wellness check-in saved'
+        }), 201
+        
+    except Exception as e:
+        return handle_exception(e, request.endpoint or 'wellness/log')
+
+
+@app.route('/api/wellness/today', methods=['GET'])
+def get_today_wellness_log():
+    """Get today's wellness log if it exists"""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        today = datetime.now().date()
+        
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+        
+        row = cur.execute("""
+            SELECT id, mood, mood_descriptor, sleep_quality, energy_level, 
+                   capacity_index, exercise_duration, timestamp
+            FROM wellness_logs
+            WHERE username = %s AND DATE(timestamp) = %s
+            LIMIT 1
+        """, (username, today)).fetchone()
+        
+        conn.close()
+        
+        if row:
+            result = {
+                'id': row[0],
+                'mood': row[1],
+                'mood_descriptor': row[2],
+                'sleep_quality': row[3],
+                'energy_level': row[4],
+                'capacity_index': row[5],
+                'exercise_duration': row[6],
+                'timestamp': row[7]
+            }
+            return jsonify({
+                'exists': True,
+                'log': result
+            }), 200
+        else:
+            return jsonify({
+                'exists': False
+            }), 200
+            
+    except Exception as e:
+        return handle_exception(e, request.endpoint or 'wellness/today')
+
+
+@app.route('/api/wellness/summary', methods=['GET'])
+def get_wellness_summary():
+    """Get wellness summary for dashboard (last 7/30 days)"""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        period = request.args.get('period', '7')
+        days = int(period)
+        
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+        
+        logs = cur.execute("""
+            SELECT mood, sleep_quality, energy_level, exercise_duration,
+                   medication_taken, hydration_level, timestamp
+            FROM wellness_logs
+            WHERE username = %s 
+            AND timestamp >= NOW() - INTERVAL '%s days'
+            ORDER BY timestamp DESC
+        """, (username, days)).fetchall()
+        
+        conn.close()
+        
+        if not logs:
+            return jsonify({
+                'summary': {},
+                'period_days': days
+            }), 200
+        
+        # Calculate summary statistics
+        moods = [log[0] for log in logs if log[0]]
+        sleeps = [log[1] for log in logs if log[1]]
+        energies = [log[2] for log in logs if log[2]]
+        exercise_durations = [log[3] for log in logs if log[3]]
+        med_taken = sum(1 for log in logs if log[4])
+        hydration_count = {level: 0 for level in ['low', 'medium', 'high']}
+        for log in logs:
+            if log[5]:
+                hydration_count[log[5]] += 1
+        
+        summary = {
+            'logs_count': len(logs),
+            'mood_avg': sum(moods) / len(moods) if moods else 0,
+            'mood_trend': 'up' if len(moods) > 1 and moods[0] > moods[-1] else 'down' if len(moods) > 1 else 'stable',
+            'sleep_avg': sum(sleeps) / len(sleeps) if sleeps else 0,
+            'energy_avg': sum(energies) / len(energies) if energies else 0,
+            'exercise_total_mins': sum(exercise_durations),
+            'med_adherence_percent': (med_taken / len(logs) * 100) if logs else 0,
+            'hydration_distribution': hydration_count,
+            'period_days': days
+        }
+        
+        return jsonify({'summary': summary}), 200
+        
+    except Exception as e:
+        return handle_exception(e, request.endpoint or 'wellness/summary')
+
+
+@app.route('/api/user/medications', methods=['GET'])
+def get_user_medications():
+    """Check if user has medications and get details"""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+        
+        # Check if user has medications
+        meds = cur.execute("""
+            SELECT medication_name, dosage, frequency, time_of_day
+            FROM patient_medications
+            WHERE username = %s AND is_active = TRUE
+        """, (username,)).fetchall()
+        
+        conn.close()
+        
+        return jsonify({
+            'has_medications': len(meds) > 0,
+            'medications': [
+                {
+                    'name': m[0],
+                    'dosage': m[1],
+                    'frequency': m[2],
+                    'time_of_day': m[3]
+                } for m in meds
+            ] if meds else []
+        }), 200
+        
+    except Exception as e:
+        return handle_exception(e, request.endpoint or 'user/medications')
+
+
+@app.route('/api/homework/current', methods=['GET'])
+def get_current_homework():
+    """Get current homework and weekly goal"""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+        
+        # Get current homework (due today or later)
+        homework = cur.execute("""
+            SELECT id, title, description FROM homework
+            WHERE patient_username = %s
+            AND due_date >= DATE(NOW())
+            ORDER BY due_date ASC
+            LIMIT 1
+        """, (username,)).fetchone()
+        
+        # Get current weekly focus (this week)
+        this_week_start = datetime.now() - timedelta(days=datetime.now().weekday())
+        weekly_focus = cur.execute("""
+            SELECT focus_type, focus_custom_text FROM weekly_focus
+            WHERE username = %s
+            AND week_start_date = %s
+        """, (username, this_week_start.date())).fetchone()
+        
+        conn.close()
+        
+        return jsonify({
+            'has_homework': bool(homework),
+            'homework_title': homework[1] if homework else None,
+            'homework_id': homework[0] if homework else None,
+            'has_weekly_goal': bool(weekly_focus),
+            'weekly_goal': weekly_focus[0] or weekly_focus[1] if weekly_focus else None
+        }), 200
+        
+    except Exception as e:
+        return handle_exception(e, request.endpoint or 'homework/current')
+
 
 # Print app summary
 print(f"📊 API Routes: {len(app.url_map._rules)} routes registered", flush=True)
