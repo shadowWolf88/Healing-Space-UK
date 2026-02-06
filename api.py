@@ -9025,18 +9025,18 @@ def get_insights():
 
         conn.close()
 
-        # Format data for AI
+        # Format data for AI (handle datetime objects properly - convert to string first)
         mood_summary = [
-            f"{m[2][:10]}: Mood {m[0]}/10, Sleep {m[1]}h, Notes: {m[3][:50] if m[3] else '-'}"
+            f"{str(m[2])[:10]}: Mood {m[0]}/10, Sleep {m[1]}h, Notes: {m[3][:50] if m[3] else '-'}"
             for m in moods
         ]
         chat_summary = [
-            f"{c[2][:16]} {c[0].upper()}: {c[1][:100]}"
+            f"{str(c[2])[:16]} {c[0].upper()}: {c[1][:100]}"
             for c in chat_history
         ]
-        gratitude_summary = [f"{g[1][:10]}: {g[0][:80]}" for g in gratitudes]
+        gratitude_summary = [f"{str(g[1])[:10]}: {g[0][:80]}" for g in gratitudes]
         cbt_summary = [
-            f"{c[3][:10]}: Situation: {c[0][:40]}, Thought: {c[1][:40]}, Evidence: {c[2][:40]}"
+            f"{str(c[3])[:10]}: Situation: {c[0][:40]}, Thought: {c[1][:40]}, Evidence: {c[2][:40]}"
             for c in cbt
         ]
         safety_summary = f"Triggers: {safety[0] if safety else 'None'}, Coping: {safety[1] if safety else 'None'}"
@@ -9062,14 +9062,13 @@ def get_insights():
                 f"6. Any missing data or areas needing further assessment.\n"
                 f"Be thorough, concise, and professional."
             )
-        else:
             ai_input = (
                 f"You are a compassionate therapist writing a detailed, narrative insight for the patient. "
                 f"Summarize all their app activity, highlight progress, strengths, and areas for growth. "
                 f"Use an empathetic, encouraging tone.\n\n"
                 f"YOUR DATA ({from_date or 'the beginning'} to {to_date or 'now'}):\n"
-                f"- Mood logs: " + ", ".join([f"{m[0]}/10" for m in moods[:10]]) + "\n"
-                f"- Sleep: " + ", ".join([f"{m[1]}h" for m in moods[:10]]) + "\n"
+                f"- Mood logs: " + ", ".join([f"{m[0]}/10" for m in moods[:10] if m[0] is not None]) + "\n"
+                f"- Sleep: " + ", ".join([f"{m[1]}h" for m in moods[:10] if m[1] is not None]) + "\n"
                 f"- Recent gratitude: " + "; ".join([g[0][:60] for g in gratitudes[:5]]) + "\n"
                 f"- CBT: " + "; ".join([c[1][:60] for c in cbt[:3]]) + "\n"
                 f"- Safety plan: {safety_summary}\n"
@@ -9083,23 +9082,33 @@ def get_insights():
                 f"Make it easy to understand, supportive, and motivating."
             )
 
-        # Call AI model (pseudo-code, replace with actual call)
-        ai_response = TherapistAI(username).get_insight(ai_input)
+        # Call AI model with the constructed input
+        try:
+            ai = TherapistAI(username)
+            ai_response = ai.get_response(user_message=ai_input, history=[])
+        except Exception as e:
+            print(f"[ERROR] AI insight generation failed: {e}")
+            ai_response = f"I'm having trouble generating insights right now. Please try again later. ({str(e)[:50]})"
 
         # Calculate avg_mood, avg_sleep, and trend safely
         # Always return numbers to prevent frontend .toFixed() errors
         if moods:
-            avg_mood = sum(m[0] for m in moods if m[0] is not None) / max(1, len([m for m in moods if m[0] is not None]))
+            mood_values = [m[0] for m in moods if m[0] is not None]
+            avg_mood = sum(mood_values) / len(mood_values) if mood_values else 0.0
             avg_sleep = sum(m[1] or 0 for m in moods) / len(moods)
-            trend = 'Improving' if len(moods) > 1 and moods[0][0] > moods[-1][0] else 'Stable'
+            # Trend: check if first mood (most recent) is higher than last mood (oldest)
+            if len(mood_values) > 1 and mood_values[0] is not None and mood_values[-1] is not None:
+                trend = 'Improving' if mood_values[0] > mood_values[-1] else 'Stable'
+            else:
+                trend = 'No clear trend'
         else:
             avg_mood = 0.0  # Return 0 instead of None for frontend compatibility
             avg_sleep = 0.0
             trend = 'No data'
         return jsonify({
             'insight': ai_response,
-            'mood_data': [{'value': m[0], 'timestamp': m[2]} for m in moods],
-            'sleep_data': [{'value': m[1], 'timestamp': m[2]} for m in moods],
+            'mood_data': [{'value': m[0], 'timestamp': str(m[2])} for m in moods],
+            'sleep_data': [{'value': m[1], 'timestamp': str(m[2])} for m in moods],
             'avg_mood': avg_mood,
             'avg_sleep': avg_sleep,
             'trend': trend,
