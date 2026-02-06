@@ -9062,6 +9062,7 @@ def get_insights():
                 f"6. Any missing data or areas needing further assessment.\n"
                 f"Be thorough, concise, and professional."
             )
+        else:
             ai_input = (
                 f"You are a compassionate therapist writing a detailed, narrative insight for the patient. "
                 f"Summarize all their app activity, highlight progress, strengths, and areas for growth. "

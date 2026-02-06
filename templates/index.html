@@ -579,6 +579,30 @@
             border-radius: 12px;
             line-height: 1.6;
             color: var(--text-primary);
+            min-height: 400px;
+            max-height: 600px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        
+        .ai-insight-box::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .ai-insight-box::-webkit-scrollbar-track {
+            background: var(--bg-primary);
+            border-radius: 10px;
+        }
+        
+        .ai-insight-box::-webkit-scrollbar-thumb {
+            background: var(--accent-color);
+            border-radius: 10px;
+        }
+        
+        .ai-insight-box::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-color-hover);
         }
 
         /* Muted text helper */
