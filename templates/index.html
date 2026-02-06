@@ -11277,16 +11277,18 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 // Always include a default prompt for insights
                 const defaultPrompt = encodeURIComponent('Generate a detailed, narrative, and empathetic summary of the user\'s recent mental health progress, including mood, sleep, therapy, and self-care activities. Highlight trends, strengths, and areas for growth.');
                 url += `&prompt=${defaultPrompt}`;
-                // Add role if clinician
-                if (typeof currentUserRole !== 'undefined' && currentUserRole === 'clinician') {
-                    url += `&role=clinician`;
-                }
+                // Add role (default to patient)
+                url += `&role=patient`;
                 // Add date range if specified
                 const fromDate = document.getElementById('insightsFromDate')?.value;
                 const toDate = document.getElementById('insightsToDate')?.value;
                 if (fromDate) url += `&from_date=${fromDate}`;
                 if (toDate) url += `&to_date=${toDate}`;
-                const response = await fetch(url);
+                const response = await fetch(url, {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
                 const data = await response.json();
                 
                 if (response.ok) {
@@ -11663,7 +11665,11 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 if (fromDate) url += `&from_date=${fromDate}`;
                 if (toDate) url += `&to_date=${toDate}`;
                 
-                const response = await fetch(url);
+                const response = await fetch(url, {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
                 const data = await response.json();
                 
                 if (response.ok) {

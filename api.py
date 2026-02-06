@@ -8933,56 +8933,42 @@ def get_insights():
         from_date = request.args.get('from_date')
         to_date = request.args.get('to_date')
         ai_prompt = request.args.get('prompt')  # The descriptive insights prompt
-        requesting_user = request.args.get('requesting_user')  # Who is making this request
 
         if not username or not ai_prompt:
             return jsonify({'error': 'Username and prompt required'}), 400
+
+        # SECURITY: Get authenticated user from session
+        authenticated_user = get_authenticated_username()
+        if not authenticated_user:
+            return jsonify({'error': 'Authentication required'}), 401
 
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
 
         # SECURITY: Verify authorization
         if role == 'clinician':
-            # Clinician must provide their username and be approved to view this patient
-            clinician_username = request.args.get('clinician_username')
-            if not clinician_username:
-                conn.close()
-                return jsonify({'error': 'Clinician username required for clinician role'}), 400
-
-            # Verify clinician exists and has correct role
+            # Clinician requesting patient data
+            # Verify authenticated user is a clinician
             clinician_check = cur.execute(
-                "SELECT role FROM users WHERE username = %s", (clinician_username,)
+                "SELECT role FROM users WHERE username = %s", (authenticated_user,)
             ).fetchone()
             if not clinician_check or clinician_check[0] != 'clinician':
                 conn.close()
-                return jsonify({'error': 'Invalid clinician'}), 403
+                return jsonify({'error': 'Only clinicians can request clinician insights'}), 403
 
             # Verify clinician has approved access to this patient
             approval_check = cur.execute(
                 "SELECT status FROM patient_approvals WHERE patient_username = %s AND clinician_username = %s AND status='approved'",
-                (username, clinician_username)
+                (username, authenticated_user)
             ).fetchone()
             if not approval_check:
                 conn.close()
-                return jsonify({'error': 'Clinician not authorized to view this patient'}), 403
+                return jsonify({'error': 'Not authorized to view this patient'}), 403
         else:
             # Patient role - verify they're requesting their own data
-            if requesting_user and requesting_user != username:
-                # Check if requesting_user is a clinician with approval
-                clinician_check = cur.execute(
-                    "SELECT role FROM users WHERE username = %s", (requesting_user,)
-                ).fetchone()
-                if clinician_check and clinician_check[0] == 'clinician':
-                    approval_check = cur.execute(
-                        "SELECT status FROM patient_approvals WHERE patient_username = %s AND clinician_username = %s AND status='approved'",
-                        (username, requesting_user)
-                    ).fetchone()
-                    if not approval_check:
-                        conn.close()
-                        return jsonify({'error': 'Not authorized to view this data'}), 403
-                else:
-                    conn.close()
-                    return jsonify({'error': 'Not authorized to view this data'}), 403
+            if authenticated_user != username:
+                conn.close()
+                return jsonify({'error': 'Can only view your own insights'}), 403
 
         # Build mood log query with date range
         mood_query = "SELECT mood_val, sleep_val, entrestamp, notes FROM mood_logs WHERE username = %s"
