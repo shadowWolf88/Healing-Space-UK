@@ -1,8 +1,5 @@
-# COMPREHENSIVE AI MEMORY SYSTEM - IMPLEMENTATION PROMPT
-
-## FOR: Claude or AI Implementation Partner
-
-This is a detailed, actionable prompt to implement a comprehensive persistent AI memory system for a mental health therapy app. The AI must remember EVERYTHING the patient does and never say "I'm a new conversation" again.
+You are the best computer programmer in the world, and an absoulte GOD at AI programming.
+I want you to read this prompt in full and action all parts with full, detailed, functionality on the live production site, whthout breaking or removing anything that already exists. 
 
 ---
 
@@ -1803,13 +1800,108 @@ If stuck, check:
 
 ---
 
-This prompt is ready to give to an AI implementation partner. It includes:
-- Complete database schema with explanations
-- All API endpoint specifications with code examples
-- Frontend integration points
-- Pattern detection algorithms
-- Testing framework
-- Deployment checklist
-- Success criteria
+## AUTO-DISCOVERY OF NEW FEATURES
 
-The AI should be able to implement this end-to-end without asking for clarification.
+### Principle: Zero-Config AI Memory Integration
+
+When ANY new feature, tab, endpoint, or interactive element is added to the patient dashboard, the AI memory system MUST automatically detect and incorporate it — with ZERO manual wiring required for basic tracking.
+
+### How It Works
+
+**1. Frontend Auto-Detection (activity-logger.js):**
+
+The `ActivityLogger` class uses global DOM event listeners that automatically capture:
+- **New tab added** → `switchTab()` dispatches a `tabchange` event → ActivityLogger logs it
+- **New button added** → Any `<button>`, `<a>`, `[role="button"]`, `.clickable`, or `.tab-btn` click is captured → logged automatically
+- **New form/save action** → If it uses a `<button>` → click logged automatically
+- **Visibility changes** → App minimize/resume tracked automatically
+
+No changes to `activity-logger.js` are needed for basic interaction tracking.
+
+**2. Backend Auto-Detection:**
+
+The system automatically captures new features through existing infrastructure:
+- If the new endpoint calls `log_event()` → it appears in audit_logs → AI sees it
+- If the new endpoint saves to ANY table with a `username` column → nightly pattern detection can query it
+- If the new feature sends data via `POST /api/ai/memory/update` with a new `event_type` → it flows into `ai_memory_events` automatically
+- The `update_ai_memory()` function dynamically builds memory summaries from all tracked tables
+
+**3. The Auto-Discovery Contract:**
+
+When building ANY new patient-facing feature, follow these rules:
+
+```
+RULE 1: USE EXISTING ACTIVITY LOGGING (Zero code needed)
+  - Frontend: Use standard <button> elements (ActivityLogger captures them)
+  - Frontend: If adding a new tab, use switchTab() (tabchange event fires automatically)
+  - Frontend: For significant saves, add one line:
+    activityLogger.logActivity('feature_name_saved', 'metadata', 'tab_name');
+
+RULE 2: LOG TO AI MEMORY ON SAVE (One line of code)
+  - Backend: After saving new data, insert into ai_memory_events:
+    cur.execute("""
+        INSERT INTO ai_memory_events (username, event_type, event_data, severity)
+        VALUES (%s, %s, %s, 'normal')
+    """, (username, 'new_feature_name', json.dumps(event_data)))
+
+RULE 3: INCLUDE IN update_ai_memory() (Small block of code)
+  - Add a query for the new table to the update_ai_memory() function
+  - This ensures the AI's text memory_summary includes the new data
+  - Pattern: fetch recent entries → summarize → append to memory_parts[]
+
+RULE 4: ADD TO PATTERN DETECTION (if applicable)
+  - If the feature produces data that could indicate risk or patterns,
+    add a detection function in the nightly batch job
+  - Example: "journaling_abandonment" if user stops using a new journal feature
+```
+
+**4. What Happens Automatically (No Code Changes Needed):**
+
+| New Feature Added | What AI Memory Sees Automatically |
+|---|---|
+| New tab in dashboard | Tab change logged, feature_access recorded |
+| New button anywhere | Button click logged with label text |
+| New save/submit action | Button click logged |
+| New data entry form | ActivityLogger captures the interaction |
+| New API endpoint called | If it uses log_event(), audit trail created |
+
+**5. What Requires ONE Line of Code:**
+
+| New Feature Added | One Line to Add |
+|---|---|
+| New data saved to DB | `activityLogger.logActivity('feature_saved', 'metadata', 'tab');` in frontend |
+| New significant event | `INSERT INTO ai_memory_events` in the backend endpoint |
+| New data table queried by AI | Add query block in `update_ai_memory()` function |
+
+**6. What Requires a Small Block of Code:**
+
+| New Feature Added | Code to Add |
+|---|---|
+| New pattern to detect | Add detection function in nightly batch job |
+| New risk flag type | Add to `check_event_for_flags()` keyword lists |
+| New clinician summary metric | Add query in `generate_single_summary()` |
+
+### Example: Adding a New "Journal" Feature
+
+```
+Step 1: Create the feature (new tab, new endpoint, new table)
+Step 2: Frontend already auto-tracks tab switches and button clicks (free)
+Step 3: In the save endpoint, add ONE insert to ai_memory_events:
+        cur.execute("INSERT INTO ai_memory_events (username, event_type, event_data)
+                     VALUES (%s, 'journal_entry', %s)", (username, json.dumps(data)))
+Step 4: In update_ai_memory(), add a query:
+        recent_journal = cur.execute(
+            "SELECT ... FROM journal WHERE username = %s ORDER BY ... LIMIT 5",
+            (username,)
+        ).fetchall()
+        if recent_journal:
+            memory_parts.append(f"Journal: {len(recent_journal)} recent entries")
+Step 5: Done. AI now knows about journal entries, tracks engagement,
+        and can reference them in conversations.
+```
+
+### The Golden Rule
+
+> **If a patient can interact with it, the AI must know about it.**
+> The system is designed so that 90% of tracking happens automatically.
+> The remaining 10% requires at most 3-5 lines of code per new feature.

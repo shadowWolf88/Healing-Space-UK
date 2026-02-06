@@ -3215,7 +3215,8 @@
         }
 
         .wellness-text-input {
-            width: 100%;
+            flex: 1;
+            min-width: 0;
             padding: 14px 16px;
             border: 2px solid var(--border-color);
             border-radius: 8px;
@@ -8608,6 +8609,8 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 if (homeBtn) homeBtn.classList.add('active');
                 if (homeTab) homeTab.classList.add('active');
                 loadHomeTabData();
+                // Check wellness ritual completion status on login
+                setTimeout(() => initializeWellnessRitual(), 500);
 
                 loadPetStatus();
                 checkMoodStatus(); // Check if mood logged today

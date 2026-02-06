@@ -945,6 +945,108 @@ All activity is tracked server-side, encrypted, and:
 
 ---
 
+## PART 12: AUTO-DISCOVERY OF NEW FEATURES
+
+### Principle: Zero-Config AI Memory Integration
+
+When a developer adds ANY new feature, tab, endpoint, or interactive element to the patient dashboard, the AI memory system MUST automatically detect and incorporate it — with ZERO manual wiring required.
+
+### How It Works
+
+**1. Frontend Auto-Detection (activity-logger.js already handles this):**
+
+The `ActivityLogger` class tracks ALL button clicks, tab changes, and form submissions globally via DOM event listeners. This means:
+- **New tab added?** → `switchTab()` dispatches a `tabchange` event → ActivityLogger logs it automatically
+- **New button added?** → Any `<button>` click is captured by the global click handler → logged automatically
+- **New form/save action?** → If it uses a `<button>` or dispatches a custom event → logged automatically
+
+No changes to `activity-logger.js` are needed when new features are added.
+
+**2. Backend Auto-Detection (update_ai_memory already handles this):**
+
+The `update_ai_memory()` function in `api.py` dynamically queries ALL data tables the user has interacted with. When a new table is added:
+- If the new endpoint calls `log_event()` → it appears in audit_logs → AI sees it
+- If the new endpoint saves to ANY table with a `username` column → the nightly pattern detection can query it
+- If the new feature sends data via `/api/ai/memory/update` with a new `event_type` → it flows into `ai_memory_events` automatically
+
+**3. The Auto-Discovery Contract:**
+
+When building ANY new patient feature, the developer MUST follow these rules:
+
+```
+RULE 1: USE EXISTING ACTIVITY LOGGING
+  - Frontend: Use standard <button> elements (ActivityLogger captures them)
+  - Frontend: If adding a new tab, use switchTab() (tabchange event fires automatically)
+  - Frontend: For significant saves, add one line:
+    activityLogger.logActivity('feature_name_saved', 'metadata', 'tab_name');
+
+RULE 2: LOG TO AI MEMORY ON SAVE
+  - Backend: After saving new data, call:
+    log_therapy_interaction_to_memory(conn, cur, username, data_summary, '')
+    OR insert directly into ai_memory_events:
+    cur.execute("INSERT INTO ai_memory_events (username, event_type, event_data, severity) VALUES (%s, %s, %s, 'normal')",
+                (username, 'new_feature_name', json.dumps(event_data)))
+
+RULE 3: INCLUDE IN update_ai_memory()
+  - Add a query for the new table to the update_ai_memory() function
+  - This ensures the AI's text memory_summary includes the new data
+  - Pattern: fetch recent entries → summarize → append to memory_parts[]
+
+RULE 4: ADD TO PATTERN DETECTION (if applicable)
+  - If the feature produces data that could indicate risk or patterns,
+    add a detection function in detect_patterns_endpoint()
+  - Example: "journaling_abandonment" if user stops using a new journal feature
+```
+
+**4. What Happens Automatically (No Code Changes Needed):**
+
+| New Feature Added | What AI Memory Sees Automatically |
+|---|---|
+| New tab in dashboard | Tab change logged, feature_access recorded |
+| New button anywhere | Button click logged with label text |
+| New save/submit action | Form submit or button click logged |
+| New data entry form | ActivityLogger captures the interaction |
+| New API endpoint called | If it uses log_event(), audit trail created |
+
+**5. What Requires ONE Line of Code:**
+
+| New Feature Added | One Line to Add |
+|---|---|
+| New data saved to DB | `activityLogger.logActivity('feature_saved', 'metadata', 'tab');` in frontend |
+| New significant event | `INSERT INTO ai_memory_events` in the backend endpoint |
+| New data table queried by AI | Add query block in `update_ai_memory()` function |
+
+**6. What Requires a Small Block of Code:**
+
+| New Feature Added | Code to Add |
+|---|---|
+| New pattern to detect | Add detection function in nightly batch job |
+| New risk flag type | Add to `check_event_for_flags()` keyword lists |
+| New clinician summary metric | Add query in `generate_single_summary()` |
+
+### Example: Adding a "Gratitude Journal V2" Feature
+
+```
+Step 1: Create the feature (new tab, new endpoint, new table)
+Step 2: Frontend already auto-tracks tab switches and button clicks ✓
+Step 3: In the save endpoint, add ONE insert to ai_memory_events:
+        cur.execute("INSERT INTO ai_memory_events (username, event_type, event_data) VALUES (%s, 'gratitude_v2', %s)", (username, json.dumps(data)))
+Step 4: In update_ai_memory(), add a query:
+        recent_gratitude_v2 = cur.execute("SELECT ... FROM gratitude_v2 WHERE username = %s ORDER BY ... LIMIT 5", (username,)).fetchall()
+        if recent_gratitude_v2:
+            memory_parts.append(f"Gratitude V2: {len(recent_gratitude_v2)} entries")
+Step 5: Done. AI now knows about gratitude entries, tracks engagement,
+        and can reference them in conversations.
+```
+
+### The Golden Rule
+
+> **If a patient can interact with it, the AI must know about it.**
+> The system is designed so that 90% of tracking happens automatically.
+> The remaining 10% requires at most 3-5 lines of code per new feature.
+
+---
+
 ## NEXT STEPS
 
 Ready to proceed with implementation? Start with Phase 1 (database infrastructure)?
