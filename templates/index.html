@@ -8611,6 +8611,8 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 loadHomeTabData();
                 // Check wellness ritual completion status on login
                 setTimeout(() => initializeWellnessRitual(), 500);
+                // Load Wins Board
+                setTimeout(() => loadWinsBoard(), 300);
 
                 loadPetStatus();
                 checkMoodStatus(); // Check if mood logged today
@@ -9248,7 +9250,10 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             if (currentUserRole !== 'clinician') return;
             
             try {
-                const response = await fetch(`/api/approvals/pending?clinician=${currentUser}`);
+                const response = await fetch(`/api/approvals/pending?clinician=${currentUser}`, {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
                 const data = await response.json();
                 
                 const container = document.getElementById('pendingApprovals');
@@ -9283,6 +9288,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             try {
                 const response = await fetch(`/api/approvals/${approvalId}/approve`, {
                     method: 'POST',
+                    credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ clinician_username: currentUser })
                 });
@@ -9308,6 +9314,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             try {
                 const response = await fetch(`/api/approvals/${approvalId}/reject`, {
                     method: 'POST',
+                    credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ clinician_username: currentUser })
                 });
@@ -9378,6 +9385,8 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 loadHomeTabData();
                 // Check and initialize wellness ritual if not yet completed today
                 setTimeout(() => initializeWellnessRitual(), 500);
+                // Load Wins Board
+                setTimeout(() => loadWinsBoard(), 300);
             }
 
             // Load pet when switching to pet tab
@@ -9956,7 +9965,10 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             content.innerHTML = '<p style="text-align: center; color: #666;">Loading...</p>';
             
             try {
-                const response = await fetch(`/api/analytics/active-patients?clinician=${encodeURIComponent(currentUser)}`);
+                const response = await fetch(`/api/analytics/active-patients?clinician=${encodeURIComponent(currentUser)}`, {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
                 
                 if (!response.ok) {
                     throw new Error('Failed to load active patients');
@@ -11162,7 +11174,10 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
         // Appointments Functions
         async function loadPatientAppointments() {
             try {
-                const response = await fetch(`/api/appointments?patient=${encodeURIComponent(currentUser)}`);
+                const response = await fetch(`/api/appointments?patient=${encodeURIComponent(currentUser)}`, {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
                 const data = await response.json();
                 
                 const listDiv = document.getElementById('appointmentsList');
@@ -11287,6 +11302,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             try {
                 const apiResponse = await fetch(`/api/appointments/${appointmentId}/respond`, {
                     method: 'POST',
+                    credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         patient_username: currentUser,
@@ -11614,7 +11630,10 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             listDiv.innerHTML = '<div style="text-align: center; padding: 40px;"><div class="loading" style="margin: 0 auto;"></div></div>';
             
             try {
-                const response = await fetch(`/api/professional/patients?clinician=${encodeURIComponent(currentUser)}`);
+                const response = await fetch(`/api/professional/patients?clinician=${encodeURIComponent(currentUser)}`, {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
                 const data = await response.json();
                 
                 if (response.ok && data.patients && data.patients.length > 0) {
@@ -11675,7 +11694,10 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             switchPatientTab('summary', document.getElementById('summaryPatientSubtabBtn'));
             
             try {
-                const response = await fetch(`/api/professional/patient/${encodeURIComponent(username)}?clinician=${encodeURIComponent(currentUser)}`);
+                const response = await fetch(`/api/professional/patient/${encodeURIComponent(username)}?clinician=${encodeURIComponent(currentUser)}`, {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
                 const data = await response.json();
                 
                 if (response.ok) {
@@ -11918,6 +11940,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 // Call API to get AI summary (must include clinician_username for authorization)
                 const response = await fetch('/api/professional/ai-summary', {
                     method: 'POST',
+                    credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, clinician_username: currentUser })
                 });
@@ -12219,6 +12242,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             try {
                 const response = await fetch('/api/professional/notes', {
                     method: 'POST',
+                    credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         clinician_username: currentUser,
@@ -12250,7 +12274,8 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             
             try {
                 const response = await fetch(`/api/professional/notes/${noteId}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    credentials: 'include'
                 });
                 
                 const data = await response.json();
@@ -12281,7 +12306,8 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             try {
                 const response = await fetch(`/api/appointments?clinician=${encodeURIComponent(currentUser)}&_t=${Date.now()}`, {
                     cache: 'no-store',
-                    headers: { 'Cache-Control': 'no-cache' }
+                    credentials: 'include',
+                    headers: { 'Cache-Control': 'no-cache', 'Content-Type': 'application/json' }
                 });
                 const data = await response.json();
                 
@@ -12574,6 +12600,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             try {
                 const response = await fetch('/api/appointments', {
                     method: 'POST',
+                    credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         clinician_username: currentUser,
@@ -12605,7 +12632,8 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             
             try {
                 const response = await fetch(`/api/appointments/${appointmentId}`, {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    credentials: 'include'
                 });
                 
                 const data = await response.json();
@@ -12723,7 +12751,8 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 
                 const response = await fetch(url, {
                     cache: 'no-store',
-                    headers: { 'Cache-Control': 'no-cache' }
+                    credentials: 'include',
+                    headers: { 'Cache-Control': 'no-cache', 'Content-Type': 'application/json' }
                 });
                 
                 console.log('Analytics response status:', response.status);
@@ -13026,6 +13055,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             try {
                 const response = await fetch('/api/reports/generate', {
                     method: 'POST',
+                    credentials: 'include',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         username: username,
@@ -13101,7 +13131,8 @@ ${reportText}
             try {
                 const response = await fetch(`/api/analytics/patient/${username}?_t=${Date.now()}`, {
                     cache: 'no-store',
-                    headers: { 'Cache-Control': 'no-cache' }
+                    credentials: 'include',
+                    headers: { 'Cache-Control': 'no-cache', 'Content-Type': 'application/json' }
                 });
                 
                 if (!response.ok) {
@@ -13123,6 +13154,7 @@ ${reportText}
             try {
                 const resp = await fetch(`/api/appointments/${appointmentId}/attendance`, {
                     method: 'POST',
+                    credentials: 'include',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ clinician_username: currentUser, status })
                 });
@@ -15301,6 +15333,135 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 console.error('Error submitting wellness ritual:', error);
                 addWellnessMessage('❌ Error saving: ' + error.message + '. Please try again.', false);
             }
+        }
+
+        // ==================== WINS BOARD ====================
+
+        const WIN_PRESETS = [
+            { type: 'had_a_laugh', emoji: '\u{1F604}', label: 'Had a laugh' },
+            { type: 'self_care', emoji: '\u{1F486}', label: 'Kind to myself' },
+            { type: 'kept_promise', emoji: '\u{1F91D}', label: 'Kept a promise' },
+            { type: 'tried_new', emoji: '\u{1F31F}', label: 'Tried something new' },
+            { type: 'stood_up', emoji: '\u{1F4AA}', label: 'Stood up for myself' },
+            { type: 'got_outside', emoji: '\u{1F333}', label: 'Got outside' },
+            { type: 'helped_someone', emoji: '\u{2764}\u{FE0F}', label: 'Helped someone' }
+        ];
+
+        function renderWinPresets() {
+            var presetsDiv = document.getElementById('winsPresets');
+            if (!presetsDiv) return;
+            presetsDiv.innerHTML = WIN_PRESETS.map(function(p) {
+                return '<button class="win-preset-btn" onclick="logPresetWin(\'' + p.type + '\', \'' + p.label + '\')">' + p.emoji + ' ' + p.label + '</button>';
+            }).join('');
+        }
+
+        async function loadWinsBoard() {
+            try {
+                renderWinPresets();
+                var response = await fetch('/api/wins/recent?limit=10', {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!response.ok) return;
+                var data = await response.json();
+                var countEl = document.getElementById('winsWeekCount');
+                if (countEl) countEl.textContent = data.this_week_count + ' this week';
+                renderRecentWins(data.wins || []);
+            } catch (e) {
+                console.warn('Wins board load error:', e);
+            }
+        }
+
+        async function logPresetWin(winType, defaultText) {
+            var detail = prompt('Add a detail (optional):', '');
+            var winText = detail !== null && detail.trim() !== '' ? detail.trim() : defaultText;
+            await submitWin(winType, winText);
+        }
+
+        async function logCustomWin() {
+            var input = document.getElementById('customWinInput');
+            var text = input.value.trim();
+            if (!text) return;
+            await submitWin('custom', text);
+            input.value = '';
+        }
+
+        async function submitWin(winType, winText) {
+            try {
+                var response = await fetch('/api/wins/log', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ win_type: winType, win_text: winText })
+                });
+                if (!response.ok) {
+                    var err = await response.json();
+                    alert(err.error || 'Failed to log win');
+                    return;
+                }
+                try {
+                    if (activityLogger) activityLogger.logActivity('win_logged', winType, 'home');
+                } catch(e) {}
+                showWinCelebration(winText);
+                loadWinsBoard();
+            } catch (e) {
+                console.error('Error logging win:', e);
+            }
+        }
+
+        function renderRecentWins(wins) {
+            var listDiv = document.getElementById('recentWinsList');
+            if (!listDiv) return;
+            if (!wins || wins.length === 0) {
+                listDiv.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 15px;">No wins yet. Celebrate something today!</p>';
+                return;
+            }
+            var emojiMap = {};
+            WIN_PRESETS.forEach(function(p) { emojiMap[p.type] = p.emoji; });
+            listDiv.innerHTML = wins.map(function(w) {
+                var emoji = emojiMap[w.win_type] || '\u{1F3C6}';
+                var timeAgo = getTimeAgo(w.created_at);
+                return '<div class="win-entry">' +
+                    '<span>' + emoji + '</span>' +
+                    '<span>' + escapeHtml(w.win_text) + '</span>' +
+                    '<span class="win-time">' + timeAgo + '</span>' +
+                    '</div>';
+            }).join('');
+        }
+
+        function showWinCelebration(winText) {
+            var listDiv = document.getElementById('recentWinsList');
+            if (!listDiv) return;
+            var celebDiv = document.createElement('div');
+            celebDiv.className = 'win-entry win-celebration';
+            celebDiv.style.background = 'rgba(99, 179, 237, 0.1)';
+            celebDiv.style.borderRadius = '8px';
+            celebDiv.style.padding = '12px';
+            celebDiv.innerHTML = '<span>\u{1F389}</span><span><strong>Win logged!</strong> ' + escapeHtml(winText) + '</span>';
+            listDiv.insertBefore(celebDiv, listDiv.firstChild);
+            setTimeout(function() { celebDiv.remove(); }, 3000);
+        }
+
+        function getTimeAgo(dateStr) {
+            if (!dateStr) return '';
+            var date = new Date(dateStr);
+            var now = new Date();
+            var diffMs = now - date;
+            var diffMins = Math.floor(diffMs / 60000);
+            if (diffMins < 1) return 'Just now';
+            if (diffMins < 60) return diffMins + 'm ago';
+            var diffHrs = Math.floor(diffMins / 60);
+            if (diffHrs < 24) return diffHrs + 'h ago';
+            var diffDays = Math.floor(diffHrs / 24);
+            if (diffDays === 1) return 'Yesterday';
+            if (diffDays < 7) return diffDays + 'd ago';
+            return date.toLocaleDateString();
+        }
+
+        function escapeHtml(str) {
+            var div = document.createElement('div');
+            div.textContent = str || '';
+            return div.innerHTML;
         }
 
     </script>

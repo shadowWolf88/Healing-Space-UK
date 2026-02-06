@@ -3271,6 +3271,29 @@ def init_db():
                 print(f"Migration note ({table_name}): {e}")
                 conn.rollback()
 
+        # Ensure patient_wins table exists (Wins Board feature)
+        try:
+            cursor.execute("SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'patient_wins')")
+            if not cursor.fetchone()[0]:
+                print("Migrating: Creating patient_wins table...")
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS patient_wins (
+                        id SERIAL PRIMARY KEY,
+                        username TEXT NOT NULL REFERENCES users(username) ON DELETE CASCADE,
+                        win_type TEXT NOT NULL,
+                        win_text TEXT NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_wins_username ON patient_wins(username)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_wins_created ON patient_wins(created_at DESC)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_wins_user_date ON patient_wins(username, created_at DESC)")
+                conn.commit()
+                print("✓ Migration: patient_wins table created")
+        except Exception as e:
+            print(f"Migration note (patient_wins): {e}")
+            conn.rollback()
+
         # Verify the database is accessible
         cursor.execute("SELECT 1")
         conn.commit()
@@ -5499,6 +5522,18 @@ def update_ai_memory(username):
             latest_with_mood = next((t for t in recent_cbt_tools if t[1] is not None), None)
             if latest_with_mood:
                 memory_parts.append(f"Latest CBT tool mood: {latest_with_mood[1]}/10")
+
+        # Recent wins (Wins Board)
+        try:
+            recent_wins = cur.execute(
+                "SELECT win_type, win_text, created_at FROM patient_wins WHERE username = %s ORDER BY created_at DESC LIMIT 5",
+                (username,)
+            ).fetchall()
+            if recent_wins:
+                wins_text = '; '.join([f"{w[0]}: {w[1]}" for w in recent_wins])
+                memory_parts.append(f"Recent wins ({len(recent_wins)}): {wins_text}")
+        except Exception:
+            pass  # Table may not exist yet
 
         memory_summary = "; ".join(memory_parts) if memory_parts else "New user, no activity yet"
         
@@ -9622,7 +9657,17 @@ def get_patient_detail(username):
             "SELECT id, note_text, is_highlighted, created_at FROM clinician_notes WHERE patient_username = %s ORDER BY created_at DESC LIMIT 20",
             (username,)
         ).fetchall()
-        
+
+        # Patient wins (last 30 days)
+        try:
+            wins = cur.execute("""
+                SELECT win_type, win_text, created_at FROM patient_wins
+                WHERE username = %s AND created_at > CURRENT_TIMESTAMP - INTERVAL '30 days'
+                ORDER BY created_at DESC
+            """, (username,)).fetchall()
+        except Exception:
+            wins = []
+
         conn.close()
         
         return jsonify({
@@ -9664,6 +9709,9 @@ def get_patient_detail(username):
             ],
             'clinician_notes': [
                 {'id': n[0], 'note': n[1], 'highlighted': bool(n[2]), 'timestamp': n[3]} for n in notes
+            ],
+            'recent_wins': [
+                {'type': w[0], 'text': w[1], 'timestamp': str(w[2]) if w[2] else None} for w in wins
             ]
         }), 200
     except Exception as e:
@@ -10919,9 +10967,8 @@ def get_analytics_dashboard():
             }), 200
         
         # Total and active patients (logged in last 7 days)
-        # Check last_login, mood_logs and chat_history for recent activity
-        placeholders = ','.join(['?'] * len(patient_usernames))
-        
+        placeholders = ','.join(['%s'] * len(patient_usernames))
+
         # Get active patients from last_login, mood logs or chat activity
         active = cur.execute(f"""
             SELECT COUNT(DISTINCT username) FROM (
@@ -10929,23 +10976,26 @@ def get_analytics_dashboard():
                 WHERE username IN ({placeholders})
                 AND last_login > CURRENT_TIMESTAMP - INTERVAL '7 days'
                 UNION
-                SELECT username FROM mood_logs 
-                WHERE username IN ({placeholders}) 
+                SELECT username FROM mood_logs
+                WHERE username IN ({placeholders})
                 AND entrestamp > CURRENT_TIMESTAMP - INTERVAL '7 days'
                 UNION
-                SELECT sender as username FROM chat_history 
-                WHERE sender IN ({placeholders}) 
+                SELECT sender as username FROM chat_history
+                WHERE sender IN ({placeholders})
                 AND timestamp > CURRENT_TIMESTAMP - INTERVAL '7 days'
-            )
+            ) AS active_users
         """, patient_usernames + patient_usernames + patient_usernames).fetchone()[0]
-        
+
         # High risk count (from alerts table - using status column)
-        high_risk = cur.execute(f"""
-            SELECT COUNT(DISTINCT username) FROM alerts 
-            WHERE username IN ({placeholders}) 
-            AND (status IS NULL OR status != 'resolved')
-        """, patient_usernames).fetchone()[0]
-        
+        try:
+            high_risk = cur.execute(f"""
+                SELECT COUNT(DISTINCT username) FROM alerts
+                WHERE username IN ({placeholders})
+                AND (status IS NULL OR status != 'resolved')
+            """, patient_usernames).fetchone()[0]
+        except Exception:
+            high_risk = 0
+
         # Mood trends over last 30 days
         mood_data = cur.execute(f"""
             SELECT DATE(entrestamp) as date, AVG(mood_val) as avg_mood, COUNT(*) as count
@@ -10955,12 +11005,12 @@ def get_analytics_dashboard():
             GROUP BY DATE(entrestamp)
             ORDER BY date
         """, patient_usernames).fetchall()
-        
+
         # Engagement metrics (recent activity per patient in last 7 days)
         engagement = cur.execute(f"""
-            SELECT username, 
-                   (SELECT COUNT(*) FROM mood_logs ml WHERE ml.username = u.username 
-                    AND datetime(ml.entrestamp) > CURRENT_TIMESTAMP - INTERVAL '7 days') as mood_count,
+            SELECT username,
+                   (SELECT COUNT(*) FROM mood_logs ml WHERE ml.username = u.username
+                    AND ml.entrestamp > CURRENT_TIMESTAMP - INTERVAL '7 days') as mood_count,
                    (SELECT MAX(entrestamp) FROM mood_logs ml WHERE ml.username = u.username) as last_active
             FROM users u
             WHERE u.username IN ({placeholders})
@@ -11018,21 +11068,21 @@ def get_analytics_dashboard():
             'high_risk_count': high_risk,
             'mood_trends': [
                 {
-                    'date': row[0],
-                    'avg_mood': round(row[1], 1) if row[1] else 0,
+                    'date': str(row[0]) if row[0] else None,
+                    'avg_mood': round(float(row[1]), 1) if row[1] else 0,
                     'count': row[2]
                 } for row in mood_data
             ],
             'engagement_data': [
                 {
                     'username': row[0],
-                    'session_count': row[1],  # Actually mood log count
-                    'last_active': row[2] if row[2] else 'Never'
+                    'session_count': row[1],
+                    'last_active': str(row[2]) if row[2] else 'Never'
                 } for row in engagement
             ],
             'assessment_summary': assessment_summary
         }), 200
-        
+
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
@@ -14504,6 +14554,208 @@ def get_clinician_summaries_endpoint():
     except Exception as e:
         print(f"Summary retrieval error: {e}")
         return jsonify({'error': 'Failed to retrieve summaries'}), 500
+
+
+# ==================== WINS BOARD ENDPOINTS ====================
+
+VALID_WIN_TYPES = ['had_a_laugh', 'self_care', 'kept_promise', 'tried_new', 'stood_up', 'got_outside', 'helped_someone', 'custom']
+
+@app.route('/api/wins/log', methods=['POST'])
+def log_win():
+    """Log a new win to the Wins Board"""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        data = request.get_json()
+        win_type = data.get('win_type', 'custom')
+        win_text = data.get('win_text', '').strip()
+
+        if win_type not in VALID_WIN_TYPES:
+            return jsonify({'error': 'Invalid win type'}), 400
+        if not win_text or len(win_text) > 500:
+            return jsonify({'error': 'Win text required (max 500 chars)'}), 400
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+
+        cur.execute(
+            "INSERT INTO patient_wins (username, win_type, win_text) VALUES (%s, %s, %s) RETURNING id",
+            (username, win_type, win_text)
+        )
+        win_id = cur.fetchone()[0]
+        conn.commit()
+
+        # Log to AI memory events
+        try:
+            cur.execute("""
+                INSERT INTO ai_memory_events (username, event_type, event_data, severity)
+                VALUES (%s, 'win_logged', %s, 'normal')
+            """, (username, json.dumps({
+                'win_type': win_type,
+                'win_text': win_text,
+                'timestamp': datetime.now().isoformat()
+            })))
+            conn.commit()
+        except Exception:
+            pass
+
+        # Update AI memory summary
+        try:
+            update_ai_memory(username)
+        except Exception:
+            pass
+
+        # Mark daily task complete
+        try:
+            mark_daily_task_complete(username, 'log_win')
+        except Exception:
+            pass
+
+        # Log event
+        log_event(username, 'wins', 'win_logged', f"Type: {win_type}")
+
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'win_id': win_id,
+            'message': 'Win logged!'
+        }), 201
+
+    except Exception as e:
+        return handle_exception(e, request.endpoint or 'wins/log')
+
+
+@app.route('/api/wins/recent', methods=['GET'])
+def get_recent_wins():
+    """Get recent wins for the logged-in user"""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        limit = min(int(request.args.get('limit', 20)), 50)
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+
+        wins = cur.execute("""
+            SELECT id, win_type, win_text, created_at FROM patient_wins
+            WHERE username = %s ORDER BY created_at DESC LIMIT %s
+        """, (username, limit)).fetchall()
+
+        total_count = cur.execute(
+            "SELECT COUNT(*) FROM patient_wins WHERE username = %s",
+            (username,)
+        ).fetchone()[0]
+
+        this_week_count = cur.execute("""
+            SELECT COUNT(*) FROM patient_wins
+            WHERE username = %s AND created_at > CURRENT_TIMESTAMP - INTERVAL '7 days'
+        """, (username,)).fetchone()[0]
+
+        conn.close()
+
+        return jsonify({
+            'wins': [
+                {
+                    'id': w[0],
+                    'win_type': w[1],
+                    'win_text': w[2],
+                    'created_at': str(w[3]) if w[3] else None
+                } for w in wins
+            ],
+            'total_count': total_count,
+            'this_week_count': this_week_count
+        }), 200
+
+    except Exception as e:
+        return handle_exception(e, request.endpoint or 'wins/recent')
+
+
+@app.route('/api/wins/stats', methods=['GET'])
+def get_wins_stats():
+    """Get win statistics (for clinician dashboard or AI context)"""
+    try:
+        auth_user = get_authenticated_username()
+        if not auth_user:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        # Allow clinicians to view patient stats
+        target_username = request.args.get('username', auth_user)
+        if target_username != auth_user:
+            conn = get_db_connection()
+            cur = get_wrapped_cursor(conn)
+            role = cur.execute("SELECT role FROM users WHERE username = %s", (auth_user,)).fetchone()
+            if not role or role[0] != 'clinician':
+                conn.close()
+                return jsonify({'error': 'Unauthorized'}), 403
+            approval = cur.execute(
+                "SELECT status FROM patient_approvals WHERE clinician_username = %s AND patient_username = %s AND status = 'approved'",
+                (auth_user, target_username)
+            ).fetchone()
+            if not approval:
+                conn.close()
+                return jsonify({'error': 'Patient not approved'}), 403
+        else:
+            conn = get_db_connection()
+            cur = get_wrapped_cursor(conn)
+
+        total_wins = cur.execute(
+            "SELECT COUNT(*) FROM patient_wins WHERE username = %s", (target_username,)
+        ).fetchone()[0]
+
+        this_week = cur.execute("""
+            SELECT COUNT(*) FROM patient_wins
+            WHERE username = %s AND created_at > CURRENT_TIMESTAMP - INTERVAL '7 days'
+        """, (target_username,)).fetchone()[0]
+
+        last_week = cur.execute("""
+            SELECT COUNT(*) FROM patient_wins
+            WHERE username = %s
+            AND created_at > CURRENT_TIMESTAMP - INTERVAL '14 days'
+            AND created_at <= CURRENT_TIMESTAMP - INTERVAL '7 days'
+        """, (target_username,)).fetchone()[0]
+
+        trend = 'improving' if this_week > last_week else ('declining' if this_week < last_week else 'stable')
+
+        top_types = cur.execute("""
+            SELECT win_type, COUNT(*) as count FROM patient_wins
+            WHERE username = %s GROUP BY win_type ORDER BY count DESC LIMIT 5
+        """, (target_username,)).fetchall()
+
+        # Calculate streak (consecutive days with at least one win)
+        streak_days = 0
+        day_check = cur.execute("""
+            SELECT DISTINCT DATE(created_at) FROM patient_wins
+            WHERE username = %s ORDER BY DATE(created_at) DESC LIMIT 30
+        """, (target_username,)).fetchall()
+
+        if day_check:
+            from datetime import date as date_type
+            today = date.today()
+            for i, row in enumerate(day_check):
+                expected_date = today - timedelta(days=i)
+                if row[0] == expected_date:
+                    streak_days += 1
+                else:
+                    break
+
+        conn.close()
+
+        return jsonify({
+            'total_wins': total_wins,
+            'this_week': this_week,
+            'last_week': last_week,
+            'trend': trend,
+            'top_types': [{'type': t[0], 'count': t[1]} for t in top_types],
+            'streak_days': streak_days
+        }), 200
+
+    except Exception as e:
+        return handle_exception(e, request.endpoint or 'wins/stats')
 
 
 # Print app summary
