@@ -5318,6 +5318,9 @@
                     <button class="clinical-subtab-btn" onclick="switchClinicalTab('messages', this)" style="background: transparent; color: #667eea; border: 2px solid #667eea; padding: 10px 20px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; white-space: nowrap;">
                         📨 Messages
                     </button>
+                    <button class="clinical-subtab-btn" onclick="switchClinicalTab('riskmonitor', this)" style="background: transparent; color: #667eea; border: 2px solid #667eea; padding: 10px 20px; border-radius: 8px 8px 0 0; cursor: pointer; font-weight: 600; white-space: nowrap;">
+                        🚨 Risk Monitor
+                    </button>
                 </div>
                 
                 <!-- Overview Subtab -->
@@ -5534,7 +5537,72 @@
                         </div>
                     </div>
                 </div>
-                
+
+                <!-- Risk Monitor Subtab -->
+                <div id="clinicalRiskmonitorTab" class="clinical-subtab-content" style="display: none;">
+                    <!-- Quick Stats Bar -->
+                    <div class="card" style="background: linear-gradient(135deg, #1a1a2e, #16213e); color: white; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                            <h4 style="color: white; margin: 0;">🚨 Risk Overview</h4>
+                            <button onclick="loadRiskDashboard()" class="btn" style="padding: 8px 16px; background: rgba(255,255,255,0.3); border: 2px solid white; font-size: 0.85em;">🔄 Refresh</button>
+                        </div>
+                        <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 15px;">
+                            <div style="text-align: center; cursor: pointer;" onclick="filterRiskPatients('critical')">
+                                <div style="font-size: 2em; font-weight: bold; color: #ff4444;" id="riskCriticalCount">0</div>
+                                <div style="color: #ff4444; font-size: 0.9em;">Critical</div>
+                            </div>
+                            <div style="text-align: center; cursor: pointer;" onclick="filterRiskPatients('high')">
+                                <div style="font-size: 2em; font-weight: bold; color: #ff8800;" id="riskHighCount">0</div>
+                                <div style="color: #ff8800; font-size: 0.9em;">High</div>
+                            </div>
+                            <div style="text-align: center; cursor: pointer;" onclick="filterRiskPatients('moderate')">
+                                <div style="font-size: 2em; font-weight: bold; color: #ffcc00;" id="riskModerateCount">0</div>
+                                <div style="color: #ffcc00; font-size: 0.9em;">Moderate</div>
+                            </div>
+                            <div style="text-align: center; cursor: pointer;" onclick="filterRiskPatients('low')">
+                                <div style="font-size: 2em; font-weight: bold; color: #44ff44;" id="riskLowCount">0</div>
+                                <div style="color: #44ff44; font-size: 0.9em;">Low</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 2em; font-weight: bold; color: #ff6666;" id="riskUnreviewedCount">0</div>
+                                <div style="color: #ff6666; font-size: 0.9em;">Unreviewed</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active Alerts Section -->
+                    <div class="card" style="margin-bottom: 20px;">
+                        <h4 style="margin-top: 0;">Active Alerts</h4>
+                        <div id="riskActiveAlertsList" style="max-height: 400px; overflow-y: auto;">
+                            <p style="text-align: center; color: #999; padding: 20px;">Loading alerts...</p>
+                        </div>
+                    </div>
+
+                    <!-- Patient Risk Overview -->
+                    <div class="card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                            <h4 style="margin-top: 0;">Patient Risk Levels</h4>
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                <button onclick="filterRiskPatients('all')" class="btn btn-secondary" style="padding: 6px 12px; font-size: 0.85em; width: auto;">All</button>
+                                <button onclick="filterRiskPatients('critical')" class="btn" style="padding: 6px 12px; font-size: 0.85em; background: #ff4444; width: auto;">Critical</button>
+                                <button onclick="filterRiskPatients('high')" class="btn" style="padding: 6px 12px; font-size: 0.85em; background: #ff8800; width: auto;">High</button>
+                                <button onclick="filterRiskPatients('moderate')" class="btn" style="padding: 6px 12px; font-size: 0.85em; background: #ccaa00; width: auto;">Moderate</button>
+                            </div>
+                        </div>
+                        <div id="riskPatientsList">
+                            <p style="text-align: center; color: #999; padding: 20px;">Loading patient risk data...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Risk Detail Modal -->
+                <div id="riskDetailModal" class="modal" style="display:none;">
+                    <div class="modal-content" style="max-width: 800px; max-height: 90vh; overflow-y: auto;">
+                        <span class="close" onclick="closeRiskDetailModal()">&times;</span>
+                        <div id="riskDetailContent">Loading...</div>
+                    </div>
+                </div>
+
                 <!-- Patient List Section - Hidden by default, kept for compatibility -->
                 <div id="patientListSection" style="display: none;">
                 </div>
@@ -9468,6 +9536,8 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 loadAppointments();
             } else if (subtabName === 'approvals') {
                 loadPendingApprovals();
+            } else if (subtabName === 'riskmonitor') {
+                loadRiskDashboard();
             }
         }
         
@@ -15464,10 +15534,287 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             return div.innerHTML;
         }
 
+        // === RISK DASHBOARD FUNCTIONS ===
+        let allRiskPatients = [];
+
+        async function loadRiskDashboard() {
+            try {
+                const response = await fetch('/api/risk/dashboard', {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Failed to load risk dashboard');
+
+                document.getElementById('riskCriticalCount').textContent = data.summary.critical || 0;
+                document.getElementById('riskHighCount').textContent = data.summary.high || 0;
+                document.getElementById('riskModerateCount').textContent = data.summary.moderate || 0;
+                document.getElementById('riskLowCount').textContent = data.summary.low || 0;
+                document.getElementById('riskUnreviewedCount').textContent = data.unreviewed_alerts || 0;
+
+                allRiskPatients = data.patients || [];
+                renderRiskPatients(allRiskPatients);
+                renderRiskAlerts(data.recent_alerts || []);
+            } catch (err) {
+                console.error('Risk dashboard error:', err);
+                document.getElementById('riskPatientsList').innerHTML = '<p style="text-align:center; color:#e74c3c; padding:20px;">Error loading risk data: ' + err.message + '</p>';
+            }
+        }
+
+        function renderRiskAlerts(alerts) {
+            const container = document.getElementById('riskActiveAlertsList');
+            if (!alerts || !alerts.length) {
+                container.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">No active alerts - all patients stable</p>';
+                return;
+            }
+            const severityColors = { critical: '#ff4444', high: '#ff8800', moderate: '#ffcc00', low: '#44ff44' };
+            container.innerHTML = alerts.map(function(a) {
+                return '<div style="border-left: 4px solid ' + (severityColors[a.severity] || '#999') + '; padding: 12px; margin-bottom: 10px; background: ' + (a.acknowledged ? 'var(--bg-card)' : '#fff5f5') + '; border-radius: 0 8px 8px 0;">' +
+                    '<div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 8px;">' +
+                        '<div>' +
+                            '<strong>' + (a.severity === 'critical' ? '🔴' : a.severity === 'high' ? '🟠' : a.severity === 'moderate' ? '🟡' : '🟢') + ' ' + escapeHtml(a.title || 'Alert') + '</strong>' +
+                            '<div style="color: var(--text-secondary); font-size: 0.85em;">Patient: ' + escapeHtml(a.patient_name || a.patient_username) + ' | ' + new Date(a.created_at).toLocaleString() + '</div>' +
+                        '</div>' +
+                        '<div style="display: flex; gap: 5px;">' +
+                            (!a.acknowledged ? '<button onclick="acknowledgeRiskAlert(' + a.id + ')" class="btn btn-secondary" style="padding:4px 10px; font-size:0.8em; width:auto;">Acknowledge</button>' : '') +
+                            '<button onclick="resolveRiskAlertPrompt(' + a.id + ')" class="btn" style="padding:4px 10px; font-size:0.8em; background:#2ecc71; width:auto;">Resolve</button>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+        }
+
+        function renderRiskPatients(patients) {
+            const container = document.getElementById('riskPatientsList');
+            if (!patients || !patients.length) {
+                container.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">No patients found</p>';
+                return;
+            }
+            const levelColors = { critical: '#ff4444', high: '#ff8800', moderate: '#ccaa00', low: '#2ecc71' };
+            container.innerHTML = patients.map(function(p) {
+                return '<div onclick="openRiskDetail(\'' + escapeHtml(p.username) + '\')" style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid var(--shadow-color); cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background=\'rgba(102,126,234,0.05)\'" onmouseout="this.style.background=\'transparent\'">' +
+                    '<div>' +
+                        '<strong>' + escapeHtml(p.full_name || p.username) + '</strong>' +
+                        '<div style="font-size: 0.85em; color: var(--text-secondary);">' + (p.last_assessed ? 'Last assessed: ' + new Date(p.last_assessed).toLocaleDateString() : 'Not yet assessed') + '</div>' +
+                    '</div>' +
+                    '<span style="background: ' + (levelColors[p.risk_level] || '#ccc') + '; color: white; padding: 4px 12px; border-radius: 12px; font-weight: bold; font-size: 0.85em;">' + (p.risk_level || 'low').toUpperCase() + '</span>' +
+                '</div>';
+            }).join('');
+        }
+
+        function filterRiskPatients(level) {
+            if (level === 'all') {
+                renderRiskPatients(allRiskPatients);
+            } else {
+                renderRiskPatients(allRiskPatients.filter(function(p) { return p.risk_level === level; }));
+            }
+        }
+
+        async function acknowledgeRiskAlert(alertId) {
+            try {
+                const response = await fetch('/api/risk/alert/' + alertId + '/acknowledge', {
+                    method: 'PATCH',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await response.json();
+                if (data.success) loadRiskDashboard();
+                else alert(data.error || 'Failed to acknowledge alert');
+            } catch (err) { alert('Error: ' + err.message); }
+        }
+
+        function resolveRiskAlertPrompt(alertId) {
+            const action = prompt('What action was taken to resolve this alert?');
+            if (!action) return;
+            resolveRiskAlert(alertId, action);
+        }
+
+        async function resolveRiskAlert(alertId, actionTaken) {
+            try {
+                const response = await fetch('/api/risk/alert/' + alertId + '/resolve', {
+                    method: 'PATCH',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action_taken: actionTaken })
+                });
+                const data = await response.json();
+                if (data.success) loadRiskDashboard();
+                else alert(data.error || 'Failed to resolve alert');
+            } catch (err) { alert('Error: ' + err.message); }
+        }
+
+        async function openRiskDetail(patientUsername) {
+            const modal = document.getElementById('riskDetailModal');
+            const content = document.getElementById('riskDetailContent');
+            modal.style.display = 'flex';
+            content.innerHTML = '<p style="text-align:center; padding:40px;">Loading risk details...</p>';
+            try {
+                const scoreRes = await fetch('/api/risk/score/' + encodeURIComponent(patientUsername), { credentials: 'include' });
+                const scoreData = await scoreRes.json();
+
+                const histRes = await fetch('/api/risk/history/' + encodeURIComponent(patientUsername) + '?days=30', { credentials: 'include' });
+                const histData = await histRes.json();
+
+                const levelColors = { critical: '#ff4444', high: '#ff8800', moderate: '#ccaa00', low: '#2ecc71' };
+                const level = scoreData.risk_level || 'low';
+                const factors = scoreData.contributing_factors || [];
+
+                content.innerHTML =
+                    '<h3 style="margin-top:0;">' + escapeHtml(patientUsername) + ' - Risk Assessment</h3>' +
+                    '<div style="text-align: center; margin: 20px 0;">' +
+                        '<div style="display: inline-block; background: ' + (levelColors[level] || '#ccc') + '; color: white; padding: 15px 30px; border-radius: 12px; font-size: 1.5em; font-weight: bold;">' +
+                            level.toUpperCase() + ' RISK (Score: ' + (scoreData.risk_score || 0) + '/100)' +
+                        '</div>' +
+                    '</div>' +
+                    '<h4>Score Breakdown</h4>' +
+                    '<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px;">' +
+                        '<div style="background: var(--bg-card); padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--shadow-color);">' +
+                            '<div style="font-size: 1.5em; font-weight: bold;">' + (scoreData.clinical_score || 0) + '/40</div>' +
+                            '<div style="color: var(--text-secondary); font-size: 0.85em;">Clinical</div>' +
+                        '</div>' +
+                        '<div style="background: var(--bg-card); padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--shadow-color);">' +
+                            '<div style="font-size: 1.5em; font-weight: bold;">' + (scoreData.behavioral_score || 0) + '/30</div>' +
+                            '<div style="color: var(--text-secondary); font-size: 0.85em;">Behavioral</div>' +
+                        '</div>' +
+                        '<div style="background: var(--bg-card); padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--shadow-color);">' +
+                            '<div style="font-size: 1.5em; font-weight: bold;">' + (scoreData.conversational_score || 0) + '/30</div>' +
+                            '<div style="color: var(--text-secondary); font-size: 0.85em;">Conversational</div>' +
+                        '</div>' +
+                    '</div>' +
+                    '<h4>Contributing Factors</h4>' +
+                    '<ul style="margin-bottom: 20px;">' +
+                        (factors.length > 0 ? factors.map(function(f) { return '<li>' + escapeHtml(f) + '</li>'; }).join('') : '<li style="color: var(--text-secondary);">No contributing factors identified</li>') +
+                    '</ul>' +
+                    '<h4>Risk History (30 days)</h4>' +
+                    '<div style="max-height: 200px; margin-bottom: 20px;"><canvas id="riskHistoryChart"></canvas></div>' +
+                    '<div style="display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap;">' +
+                        '<button onclick="triggerRiskRecalc(\'' + escapeHtml(patientUsername) + '\')" class="btn" style="background: #667eea; width: auto;">Recalculate Risk</button>' +
+                        '<button onclick="closeRiskDetailModal()" class="btn btn-secondary" style="width: auto;">Close</button>' +
+                    '</div>';
+
+                // Render Chart.js timeline
+                var history = histData.history || [];
+                if (history.length > 0) {
+                    history.reverse();
+                    var ctx = document.getElementById('riskHistoryChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: history.map(function(h) { return new Date(h.assessed_at).toLocaleDateString(); }),
+                            datasets: [{
+                                label: 'Risk Score',
+                                data: history.map(function(h) { return h.risk_score; }),
+                                borderColor: '#ff4444',
+                                backgroundColor: 'rgba(255, 68, 68, 0.1)',
+                                fill: true,
+                                tension: 0.3
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: { y: { min: 0, max: 100, title: { display: true, text: 'Risk Score' } } },
+                            plugins: { legend: { display: false } }
+                        }
+                    });
+                }
+            } catch (err) {
+                content.innerHTML = '<p style="color: #e74c3c; padding: 20px;">Error loading risk details: ' + err.message + '</p>';
+            }
+        }
+
+        function closeRiskDetailModal() {
+            document.getElementById('riskDetailModal').style.display = 'none';
+        }
+
+        async function triggerRiskRecalc(username) {
+            try {
+                const res = await fetch('/api/risk/score/' + encodeURIComponent(username), { credentials: 'include' });
+                if (res.ok) {
+                    openRiskDetail(username);
+                    loadRiskDashboard();
+                }
+            } catch (err) { alert('Error: ' + err.message); }
+        }
+
+        // === CRISIS SUPPORT FUNCTIONS ===
+        function openCrisisSupport() {
+            document.getElementById('crisisSupportModal').style.display = 'flex';
+            try {
+                if (typeof activityLogger !== 'undefined' && activityLogger) {
+                    activityLogger.logActivity('crisis_resources_viewed', '', 'safety');
+                }
+            } catch(e) {}
+        }
+
+        function closeCrisisSupport() {
+            document.getElementById('crisisSupportModal').style.display = 'none';
+        }
+
     </script>
     <!-- UX Enhancement System -->
     <script src="/static/js/ux-enhancements.js"></script>
     <!-- AI Memory System - Activity Logger -->
     <script src="/static/js/activity-logger.js"></script>
+
+    <!-- Persistent Crisis Support Button (visible on all tabs) -->
+    <button id="crisisSupportBtn" onclick="openCrisisSupport()"
+        style="position: fixed; bottom: 80px; right: 20px; z-index: 9999;
+               background: #c62828; color: white; border: none; border-radius: 50%;
+               width: 52px; height: 52px; font-size: 22px; cursor: pointer;
+               box-shadow: 0 4px 12px rgba(198,40,40,0.4); transition: transform 0.2s;"
+        onmouseover="this.style.transform='scale(1.1)'"
+        onmouseout="this.style.transform='scale(1)'"
+        title="Crisis Support - Get Help Now">
+        🆘
+    </button>
+
+    <!-- Crisis Support Modal -->
+    <div id="crisisSupportModal" class="modal" style="display:none; z-index: 10000;">
+        <div class="modal-content" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
+            <span class="close" onclick="closeCrisisSupport()">&times;</span>
+            <h3 style="color: #c62828; margin-top: 0;">Crisis Support</h3>
+            <p style="color: var(--text-secondary);">If you or someone you know is in immediate danger, please call <strong>999</strong>.</p>
+
+            <div style="background: #ffebee; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                <h4 style="color: #c62828; margin-top: 0;">Immediate Help</h4>
+                <p style="margin: 8px 0;"><strong>Emergency Services:</strong> <a href="tel:999" style="color: #c62828; font-weight: bold; font-size: 1.1em;">999</a></p>
+                <p style="margin: 8px 0;"><strong>NHS Mental Health Crisis:</strong> <a href="tel:111" style="color: #c62828;">111</a> (press 2)</p>
+            </div>
+
+            <div style="background: #fff3e0; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                <h4 style="margin-top: 0;">Mental Health Crisis Lines</h4>
+                <p style="margin: 8px 0;"><strong>Samaritans:</strong> <a href="tel:116123">116 123</a> (24/7, free, confidential)</p>
+                <p style="margin: 8px 0;"><strong>Crisis Text Line:</strong> Text <strong>SHOUT</strong> to <strong>85258</strong></p>
+                <p style="margin: 8px 0;"><strong>CALM:</strong> <a href="tel:08005858">0800 58 58 58</a> (5pm-midnight)</p>
+                <p style="margin: 8px 0;"><strong>Papyrus (Under 35s):</strong> <a href="tel:08000684141">0800 068 41 41</a></p>
+                <p style="margin: 8px 0;"><strong>Childline (Under 18s):</strong> <a href="tel:08001111">0800 1111</a></p>
+            </div>
+
+            <div style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                <h4 style="margin-top: 0;">Specialist Support</h4>
+                <p style="margin: 8px 0;"><strong>Self-Injury Support:</strong> <a href="tel:08088008088">0808 800 8088</a> (evenings)</p>
+                <p style="margin: 8px 0;"><strong>Frank (Drug Support):</strong> <a href="tel:03001236600">0300 123 6600</a></p>
+                <p style="margin: 8px 0;"><strong>Drinkline:</strong> <a href="tel:03001231110">0300 123 1110</a></p>
+                <p style="margin: 8px 0;"><strong>Domestic Abuse Helpline:</strong> <a href="tel:08082000247">0808 2000 247</a></p>
+                <p style="margin: 8px 0;"><strong>Mind Infoline:</strong> <a href="tel:03001233393">0300 123 3393</a></p>
+                <p style="margin: 8px 0;"><strong>Beat (Eating Disorders):</strong> <a href="tel:08088010677">0808 801 0677</a></p>
+                <p style="margin: 8px 0;"><strong>Combat Stress (Veterans):</strong> <a href="tel:08001381619">0800 138 1619</a></p>
+                <p style="margin: 8px 0;"><strong>Cruse Bereavement:</strong> <a href="tel:08088081677">0808 808 1677</a></p>
+            </div>
+
+            <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                <h4 style="margin-top: 0;">Online Resources</h4>
+                <p style="margin: 8px 0;"><a href="https://www.nhs.uk/every-mind-matters" target="_blank" rel="noopener">NHS Every Mind Matters</a></p>
+                <p style="margin: 8px 0;"><a href="https://www.mind.org.uk" target="_blank" rel="noopener">Mind</a></p>
+                <p style="margin: 8px 0;"><a href="https://hubofhope.co.uk" target="_blank" rel="noopener">Hub of Hope (find local services)</a></p>
+            </div>
+
+            <button onclick="switchTab('cbt', document.querySelector('[onclick*=&quot;cbt&quot;]')); setTimeout(function() { loadCBTTool('SafetyPlanBuilder'); }, 200); closeCrisisSupport();"
+                    class="btn" style="padding: 12px; margin-top: 10px;">
+                View My Safety Plan
+            </button>
+        </div>
+    </div>
 </body>
 </html>

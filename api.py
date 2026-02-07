@@ -2091,8 +2091,8 @@ class TherapistAI:
         if not self.groq_key:
             raise RuntimeError("GROQ_API_KEY not configured")
     
-    def get_response(self, user_message, history=None, wellness_data=None, memory_context=None):
-        """Get AI therapy response using Groq API with memory context."""
+    def get_response(self, user_message, history=None, wellness_data=None, memory_context=None, risk_context=None):
+        """Get AI therapy response using Groq API with memory context and risk awareness."""
         if not self.groq_key:
             raise RuntimeError("AI service not initialized")
 
@@ -2197,6 +2197,44 @@ class TherapistAI:
                 if wellness_context:
                     system_content += f"\n\nUser's recent wellness check-in:\n" + "\n".join(wellness_context)
                     system_content += "\n\nReference this information naturally in your response to show you're aware of their wellbeing and to provide more personalized support."
+
+            # Add risk-appropriate safety context to system prompt
+            if risk_context and risk_context != 'none':
+                if risk_context == 'critical':
+                    system_content += """
+
+SAFETY PROTOCOL - CRITICAL RISK DETECTED:
+The user may be in immediate distress. You MUST:
+1. Express urgent but calm concern for their safety
+2. Include these crisis resources in your response:
+   - Samaritans: 116 123 (24/7, free, confidential)
+   - NHS Crisis Line: 111 (option 2)
+   - Crisis Text Line: Text SHOUT to 85258
+   - Emergency: 999
+3. Encourage them to reach out to someone they trust right now
+4. Do NOT minimize their feelings or dismiss what they are saying
+5. Stay present and caring - do not end the conversation abruptly
+6. Gently ask if they are safe right now"""
+                elif risk_context == 'high':
+                    system_content += """
+
+SAFETY PROTOCOL - HIGH CONCERN:
+The user may be struggling significantly. You MUST:
+1. Express genuine concern for their wellbeing
+2. Ask gently about their safety if appropriate
+3. Mention that professional support is available (their clinician, GP)
+4. Provide Samaritans number: 116 123 (available 24/7)
+5. Encourage them to review their safety plan
+6. Be warm, present and validating"""
+                elif risk_context == 'moderate':
+                    system_content += """
+
+SAFETY NOTE:
+The user may be experiencing some difficulty. Please:
+1. Acknowledge their feelings empathetically
+2. Explore the situation gently without pushing
+3. Suggest coping strategies they might try
+4. Mention that professional support is always available if needed"""
 
             messages.append({
                 "role": "system",
@@ -2714,6 +2752,97 @@ class RiskScoringEngine:
                 'critical_flags': [],
                 'assessment_id': None
             }
+
+
+def analyze_conversation_risk(username, message, recent_history):
+    """Use Groq AI to analyze conversation for risk indicators in context.
+
+    Returns:
+        dict: {
+            'risk_detected': bool,
+            'risk_type': str,       # suicide/self_harm/crisis/none
+            'confidence': float,    # 0.0-1.0
+            'reasoning': str,
+            'suggested_response_approach': str,
+            'immediate_action_needed': bool
+        }
+    """
+    default_result = {
+        'risk_detected': False, 'risk_type': 'none', 'confidence': 0.0,
+        'reasoning': 'Analysis unavailable', 'suggested_response_approach': 'standard',
+        'immediate_action_needed': False
+    }
+    try:
+        groq_key = secrets_manager.get_secret("GROQ_API_KEY") or os.environ.get("GROQ_API_KEY")
+        if not groq_key:
+            return default_result
+
+        # Build context from recent history
+        history_text = ""
+        if recent_history:
+            for h in recent_history[-5:]:
+                sender = h[0] if len(h) >= 2 else 'unknown'
+                msg = h[1] if len(h) >= 2 else str(h)
+                history_text += f"{sender}: {msg}\n"
+
+        analysis_prompt = f"""Analyze the following therapy chat message for mental health risk indicators.
+
+CONVERSATION CONTEXT:
+{history_text}
+
+CURRENT MESSAGE:
+{message}
+
+INSTRUCTIONS:
+- Analyze IN CONTEXT of the conversation history
+- Distinguish between discussing past experiences vs current intent
+- Identify protective factors (e.g., "I used to feel that way but not anymore")
+- Do NOT over-flag normal emotional expression
+- Consider cultural and linguistic nuances
+- Flag escalating patterns across messages
+
+Respond in EXACTLY this JSON format (no other text):
+{{"risk_detected": true, "risk_type": "suicide", "confidence": 0.8, "reasoning": "explanation", "suggested_response_approach": "urgent", "immediate_action_needed": true}}
+OR
+{{"risk_detected": false, "risk_type": "none", "confidence": 0.1, "reasoning": "no risk", "suggested_response_approach": "standard", "immediate_action_needed": false}}
+
+Valid risk_type: suicide, self_harm, crisis, none
+Valid suggested_response_approach: standard, supportive, concerned, urgent"""
+
+        import requests as req_lib
+        response = req_lib.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+            json={
+                "model": "llama-3.3-70b-versatile",
+                "messages": [
+                    {"role": "system", "content": "You are a clinical risk analysis tool. Return ONLY valid JSON, nothing else."},
+                    {"role": "user", "content": analysis_prompt}
+                ],
+                "max_tokens": 256,
+                "temperature": 0.1
+            },
+            timeout=10
+        )
+
+        if response.status_code == 200:
+            result_text = response.json()['choices'][0]['message']['content'].strip()
+            # Handle potential markdown wrapping
+            if '```' in result_text:
+                parts = result_text.split('```')
+                result_text = parts[1] if len(parts) > 1 else parts[0]
+                result_text = result_text.replace('json', '').strip()
+            parsed = json.loads(result_text)
+            # Validate required fields
+            if 'risk_detected' in parsed and 'risk_type' in parsed:
+                return parsed
+            return default_result
+
+        return default_result
+
+    except Exception as e:
+        print(f"AI risk analysis error: {e}")
+        return default_result
 
 
 # Load secrets
@@ -3292,6 +3421,184 @@ def init_db():
                 print("✓ Migration: patient_wins table created")
         except Exception as e:
             print(f"Migration note (patient_wins): {e}")
+            conn.rollback()
+
+        # Ensure risk assessment tables exist (Risk Assessment System)
+        risk_tables = [
+            ('risk_assessments', """
+                CREATE TABLE IF NOT EXISTS risk_assessments (
+                    id SERIAL PRIMARY KEY,
+                    patient_username TEXT NOT NULL,
+                    risk_score INTEGER NOT NULL DEFAULT 0,
+                    risk_level TEXT NOT NULL DEFAULT 'low',
+                    suicide_risk INTEGER DEFAULT 0,
+                    self_harm_risk INTEGER DEFAULT 0,
+                    crisis_risk INTEGER DEFAULT 0,
+                    deterioration_risk INTEGER DEFAULT 0,
+                    contributing_factors TEXT,
+                    ai_analysis TEXT,
+                    clinical_data_score INTEGER DEFAULT 0,
+                    behavioral_score INTEGER DEFAULT 0,
+                    conversational_score INTEGER DEFAULT 0,
+                    assessed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    assessed_by TEXT DEFAULT 'system',
+                    CONSTRAINT valid_risk_level CHECK (risk_level IN ('critical', 'high', 'moderate', 'low'))
+                )
+            """, [
+                "CREATE INDEX IF NOT EXISTS idx_risk_patient ON risk_assessments(patient_username)",
+                "CREATE INDEX IF NOT EXISTS idx_risk_level ON risk_assessments(risk_level)",
+                "CREATE INDEX IF NOT EXISTS idx_risk_date ON risk_assessments(assessed_at)"
+            ]),
+            ('risk_alerts', """
+                CREATE TABLE IF NOT EXISTS risk_alerts (
+                    id SERIAL PRIMARY KEY,
+                    patient_username TEXT NOT NULL,
+                    clinician_username TEXT,
+                    alert_type TEXT NOT NULL,
+                    severity TEXT NOT NULL DEFAULT 'moderate',
+                    title TEXT NOT NULL,
+                    details TEXT,
+                    source TEXT,
+                    ai_confidence REAL,
+                    risk_score_at_time INTEGER,
+                    acknowledged BOOLEAN DEFAULT FALSE,
+                    acknowledged_by TEXT,
+                    acknowledged_at TIMESTAMP,
+                    action_taken TEXT,
+                    resolved BOOLEAN DEFAULT FALSE,
+                    resolved_at TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT valid_severity CHECK (severity IN ('critical', 'high', 'moderate', 'low'))
+                )
+            """, [
+                "CREATE INDEX IF NOT EXISTS idx_risk_alerts_patient ON risk_alerts(patient_username)",
+                "CREATE INDEX IF NOT EXISTS idx_risk_alerts_unack ON risk_alerts(acknowledged) WHERE acknowledged = FALSE",
+                "CREATE INDEX IF NOT EXISTS idx_risk_alerts_clinician ON risk_alerts(clinician_username)"
+            ]),
+            ('risk_keywords', """
+                CREATE TABLE IF NOT EXISTS risk_keywords (
+                    id SERIAL PRIMARY KEY,
+                    keyword TEXT NOT NULL,
+                    category TEXT NOT NULL,
+                    severity_weight INTEGER DEFAULT 5,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    added_by TEXT DEFAULT 'system',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """, []),
+            ('crisis_contacts', """
+                CREATE TABLE IF NOT EXISTS crisis_contacts (
+                    id SERIAL PRIMARY KEY,
+                    patient_username TEXT NOT NULL,
+                    contact_name TEXT NOT NULL,
+                    relationship TEXT,
+                    phone TEXT,
+                    email TEXT,
+                    is_primary BOOLEAN DEFAULT FALSE,
+                    is_professional BOOLEAN DEFAULT FALSE,
+                    notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """, [
+                "CREATE INDEX IF NOT EXISTS idx_crisis_contacts_patient ON crisis_contacts(patient_username)"
+            ]),
+            ('risk_reviews', """
+                CREATE TABLE IF NOT EXISTS risk_reviews (
+                    id SERIAL PRIMARY KEY,
+                    risk_assessment_id INTEGER REFERENCES risk_assessments(id),
+                    patient_username TEXT NOT NULL,
+                    clinician_username TEXT NOT NULL,
+                    review_notes TEXT,
+                    risk_level_override TEXT,
+                    action_plan TEXT,
+                    next_review_date DATE,
+                    reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """, []),
+            ('enhanced_safety_plans', """
+                CREATE TABLE IF NOT EXISTS enhanced_safety_plans (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT NOT NULL UNIQUE REFERENCES users(username) ON DELETE CASCADE,
+                    warning_signs JSONB DEFAULT '{}',
+                    internal_coping JSONB DEFAULT '{}',
+                    distraction_people_places JSONB DEFAULT '{}',
+                    people_for_help JSONB DEFAULT '{}',
+                    professionals_services JSONB DEFAULT '{}',
+                    environment_safety JSONB DEFAULT '{}',
+                    reasons_for_living JSONB DEFAULT '{}',
+                    emergency_plan JSONB DEFAULT '{}',
+                    last_reviewed TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """, []),
+            ('ai_monitoring_consent', """
+                CREATE TABLE IF NOT EXISTS ai_monitoring_consent (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT NOT NULL REFERENCES users(username) ON DELETE CASCADE,
+                    consent_given BOOLEAN DEFAULT FALSE,
+                    consent_date TIMESTAMP,
+                    withdrawn_date TIMESTAMP,
+                    consent_text TEXT,
+                    ip_address TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """, [])
+        ]
+
+        for table_name, create_sql, indexes in risk_tables:
+            try:
+                cursor.execute(f"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = '{table_name}')")
+                if not cursor.fetchone()[0]:
+                    print(f"Migrating: Creating {table_name} table...")
+                    cursor.execute(create_sql)
+                    for idx_sql in indexes:
+                        cursor.execute(idx_sql)
+                    conn.commit()
+                    print(f"Migration: {table_name} table created")
+            except Exception as e:
+                print(f"Migration note ({table_name}): {e}")
+                conn.rollback()
+
+        # Seed risk keywords if table is empty
+        try:
+            cursor.execute("SELECT COUNT(*) FROM risk_keywords")
+            kw_count = cursor.fetchone()[0]
+            if kw_count == 0:
+                print("Seeding risk keywords...")
+                risk_keyword_data = [
+                    ('want to die', 'suicide', 10), ('kill myself', 'suicide', 10),
+                    ('end it all', 'suicide', 10), ('no point living', 'suicide', 9),
+                    ('better off dead', 'suicide', 9), ('suicidal', 'suicide', 10),
+                    ('take my own life', 'suicide', 10), ('not worth living', 'suicide', 8),
+                    ("can't go on", 'suicide', 7), ('goodbye forever', 'suicide', 9),
+                    ('final goodbye', 'suicide', 9), ('no way out', 'suicide', 7),
+                    ('ending my life', 'suicide', 10), ('overdose', 'suicide', 8),
+                    ('hang myself', 'suicide', 10),
+                    ('cut myself', 'self_harm', 8), ('hurting myself', 'self_harm', 8),
+                    ('self harm', 'self_harm', 7), ('burn myself', 'self_harm', 8),
+                    ('hit myself', 'self_harm', 7), ('punish myself', 'self_harm', 6),
+                    ('scratch myself', 'self_harm', 6), ('deserve pain', 'self_harm', 7),
+                    ('panic attack', 'crisis', 5), ("can't breathe", 'crisis', 6),
+                    ('emergency', 'crisis', 7), ('help me', 'crisis', 5),
+                    ('scared', 'crisis', 3), ('terrified', 'crisis', 5),
+                    ('losing control', 'crisis', 6), ('going crazy', 'crisis', 5),
+                    ('breaking down', 'crisis', 6), ("can't cope", 'crisis', 6),
+                    ('drinking too much', 'substance', 6), ('taking drugs', 'substance', 7),
+                    ('relapsed', 'substance', 8), ('need a drink', 'substance', 5),
+                    ('using again', 'substance', 7),
+                    ('hurt someone', 'violence', 8), ('want to hit', 'violence', 7),
+                    ('violent thoughts', 'violence', 8), ('rage', 'violence', 5)
+                ]
+                for keyword, category, weight in risk_keyword_data:
+                    cursor.execute(
+                        "INSERT INTO risk_keywords (keyword, category, severity_weight, added_by) VALUES (%s, %s, %s, 'system')",
+                        (keyword, category, weight)
+                    )
+                conn.commit()
+                print(f"Seeded {len(risk_keyword_data)} risk keywords")
+        except Exception as e:
+            print(f"Risk keyword seeding note: {e}")
             conn.rollback()
 
         # Verify the database is accessible
@@ -5735,11 +6042,62 @@ def therapy_chat():
         except Exception as mem_ctx_error:
             print(f"AI memory context fetch error (non-critical): {mem_ctx_error}")
 
+        # === RISK SCANNING (Phase 2) ===
+        detected_risk_level = 'none'
+        try:
+            # Quick keyword scan against risk_keywords table
+            risk_keywords_rows = cur.execute(
+                "SELECT keyword, category, severity_weight FROM risk_keywords WHERE is_active = TRUE"
+            ).fetchall()
+
+            message_lower = message.lower()
+            keyword_hits = []
+            for kw, cat, weight in risk_keywords_rows:
+                if kw.lower() in message_lower:
+                    keyword_hits.append({'keyword': kw, 'category': cat, 'weight': weight})
+
+            if keyword_hits:
+                max_weight = max(h['weight'] for h in keyword_hits)
+                has_suicide = any(h['category'] == 'suicide' for h in keyword_hits)
+
+                # Run AI contextual analysis for keyword hits
+                risk_analysis = analyze_conversation_risk(username, message, history[::-1] if history else [])
+
+                if risk_analysis.get('risk_detected') and risk_analysis.get('confidence', 0) > 0.5:
+                    if risk_analysis.get('immediate_action_needed') or has_suicide:
+                        detected_risk_level = 'critical'
+                    elif max_weight >= 7:
+                        detected_risk_level = 'high'
+                    else:
+                        detected_risk_level = 'moderate'
+
+                    # Create risk alert for clinician
+                    clinician = cur.execute("SELECT clinician_id FROM users WHERE username = %s", (username,)).fetchone()
+                    clinician_username = clinician[0] if clinician and clinician[0] else None
+
+                    cur.execute(
+                        """INSERT INTO risk_alerts
+                           (patient_username, clinician_username, alert_type, severity, title, details, source, ai_confidence, risk_score_at_time)
+                           VALUES (%s, %s, %s, %s, %s, %s, 'chat', %s, 0)""",
+                        (username, clinician_username, risk_analysis.get('risk_type', 'unknown'),
+                         detected_risk_level,
+                         f"Chat risk detected: {risk_analysis.get('risk_type', 'unknown')}",
+                         f"Keywords: {[h['keyword'] for h in keyword_hits][:3]}. AI reasoning: {risk_analysis.get('reasoning', '')[:300]}",
+                         risk_analysis.get('confidence', 0))
+                    )
+                    conn.commit()
+
+                    log_event(username, 'risk', f'chat_risk_{detected_risk_level}',
+                              f"Keywords: {[h['keyword'] for h in keyword_hits][:3]}, AI confidence: {risk_analysis.get('confidence', 0)}")
+        except Exception as risk_err:
+            print(f"Risk scanning error (non-critical): {risk_err}")
+            detected_risk_level = 'none'
+
         conn.close()
 
-        # Get AI response with memory context
+        # Get AI response with memory context and risk awareness
         try:
-            response = ai.get_response(message, history[::-1], wellness_data, memory_context=ai_memory_context)
+            response = ai.get_response(message, history[::-1], wellness_data, memory_context=ai_memory_context, risk_context=detected_risk_level)
         except Exception as resp_error:
             log_event(username, 'error', 'ai_response_error', str(resp_error))
             print(f"AI response error: {resp_error}")
@@ -5787,7 +6145,21 @@ def therapy_chat():
 
         conn.commit()
         conn.close()
-        
+
+        # Trigger background risk score recalculation if risk was detected in chat
+        if detected_risk_level in ('moderate', 'high', 'critical'):
+            try:
+                import threading
+                def _recalculate_risk_async(uname):
+                    try:
+                        RiskScoringEngine.calculate_risk_score(uname)
+                    except Exception as calc_err:
+                        print(f"Async risk calc error: {calc_err}")
+                thread = threading.Thread(target=_recalculate_risk_async, args=(username,), daemon=True)
+                thread.start()
+            except Exception as bg_err:
+                print(f"Background risk calc error: {bg_err}")
+
         # Collect for training if user has consented
         try:
             if training_manager.check_user_consent(username):
@@ -11744,6 +12116,7 @@ def get_risk_alerts():
 
 
 @app.route('/api/risk/alert', methods=['POST'])
+@CSRFProtection.require_csrf
 def create_risk_alert():
     """Create a manual risk alert (clinician-initiated)."""
     try:
@@ -11800,6 +12173,7 @@ def create_risk_alert():
 
 
 @app.route('/api/risk/alert/<int:alert_id>/acknowledge', methods=['PATCH'])
+@CSRFProtection.require_csrf
 def acknowledge_risk_alert(alert_id):
     """Acknowledge a risk alert."""
     try:
@@ -11842,6 +12216,7 @@ def acknowledge_risk_alert(alert_id):
 
 
 @app.route('/api/risk/alert/<int:alert_id>/resolve', methods=['PATCH'])
+@CSRFProtection.require_csrf
 def resolve_risk_alert(alert_id):
     """Resolve a risk alert with action notes."""
     try:
@@ -11935,6 +12310,7 @@ def get_risk_keywords():
 
 
 @app.route('/api/risk/keywords', methods=['POST'])
+@CSRFProtection.require_csrf
 def add_risk_keyword():
     """Add a new risk keyword."""
     try:
@@ -12101,6 +12477,485 @@ def get_risk_dashboard():
 
     except Exception as e:
         return handle_exception(e, 'get_risk_dashboard')
+
+
+# ==================== ENHANCED SAFETY PLAN ENDPOINTS ====================
+
+@app.route('/api/safety-plan/<username>', methods=['GET'])
+def get_enhanced_safety_plan(username):
+    """Get enhanced safety plan (8 NHS-compliant sections)."""
+    try:
+        auth_user = get_authenticated_username()
+        if not auth_user:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+
+        # Allow patient to view own plan, or clinician to view their patient's plan
+        if auth_user != username:
+            role = cur.execute("SELECT role FROM users WHERE username = %s", (auth_user,)).fetchone()
+            if not role or role[0] not in ('clinician', 'developer'):
+                conn.close()
+                return jsonify({'error': 'Unauthorized'}), 403
+
+        plan = cur.execute(
+            """SELECT warning_signs, internal_coping, distraction_people_places,
+                      people_for_help, professionals_services, environment_safety,
+                      reasons_for_living, emergency_plan, last_reviewed, updated_at
+               FROM enhanced_safety_plans WHERE username = %s""",
+            (username,)
+        ).fetchone()
+
+        conn.close()
+
+        if not plan:
+            return jsonify({
+                'success': True,
+                'plan': {
+                    'warning_signs': {}, 'internal_coping': {}, 'distraction_people_places': {},
+                    'people_for_help': {}, 'professionals_services': {}, 'environment_safety': {},
+                    'reasons_for_living': {}, 'emergency_plan': {},
+                    'last_reviewed': None, 'updated_at': None
+                },
+                'exists': False
+            }), 200
+
+        return jsonify({
+            'success': True,
+            'plan': {
+                'warning_signs': plan[0] or {},
+                'internal_coping': plan[1] or {},
+                'distraction_people_places': plan[2] or {},
+                'people_for_help': plan[3] or {},
+                'professionals_services': plan[4] or {},
+                'environment_safety': plan[5] or {},
+                'reasons_for_living': plan[6] or {},
+                'emergency_plan': plan[7] or {},
+                'last_reviewed': plan[8].isoformat() if plan[8] else None,
+                'updated_at': plan[9].isoformat() if plan[9] else None
+            },
+            'exists': True
+        }), 200
+
+    except Exception as e:
+        return handle_exception(e, 'get_enhanced_safety_plan')
+
+
+@app.route('/api/safety-plan/<username>', methods=['PUT'])
+@CSRFProtection.require_csrf
+def update_enhanced_safety_plan(username):
+    """Update enhanced safety plan."""
+    try:
+        auth_user = get_authenticated_username()
+        if not auth_user:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        # Only the patient themselves can update their plan
+        if auth_user != username:
+            return jsonify({'error': 'You can only update your own safety plan'}), 403
+
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+
+        cur.execute(
+            """INSERT INTO enhanced_safety_plans
+               (username, warning_signs, internal_coping, distraction_people_places,
+                people_for_help, professionals_services, environment_safety,
+                reasons_for_living, emergency_plan, last_reviewed, updated_at)
+               VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+               ON CONFLICT (username) DO UPDATE SET
+                warning_signs = EXCLUDED.warning_signs,
+                internal_coping = EXCLUDED.internal_coping,
+                distraction_people_places = EXCLUDED.distraction_people_places,
+                people_for_help = EXCLUDED.people_for_help,
+                professionals_services = EXCLUDED.professionals_services,
+                environment_safety = EXCLUDED.environment_safety,
+                reasons_for_living = EXCLUDED.reasons_for_living,
+                emergency_plan = EXCLUDED.emergency_plan,
+                last_reviewed = CURRENT_TIMESTAMP,
+                updated_at = CURRENT_TIMESTAMP""",
+            (username,
+             json.dumps(data.get('warning_signs', {})),
+             json.dumps(data.get('internal_coping', {})),
+             json.dumps(data.get('distraction_people_places', {})),
+             json.dumps(data.get('people_for_help', {})),
+             json.dumps(data.get('professionals_services', {})),
+             json.dumps(data.get('environment_safety', {})),
+             json.dumps(data.get('reasons_for_living', {})),
+             json.dumps(data.get('emergency_plan', {})))
+        )
+        conn.commit()
+        conn.close()
+
+        log_event(username, 'safety', 'safety_plan_updated', 'Enhanced safety plan updated')
+
+        return jsonify({'success': True, 'message': 'Safety plan saved'}), 200
+
+    except Exception as e:
+        return handle_exception(e, 'update_enhanced_safety_plan')
+
+
+# ==================== SAFETY CHECK-IN ENDPOINT ====================
+
+@app.route('/api/safety/check-in/<username>', methods=['GET'])
+def get_safety_checkin(username):
+    """Check if a patient needs a safety check-in based on risk level."""
+    try:
+        auth_user = get_authenticated_username()
+        if not auth_user:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        if auth_user != username:
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+
+        # Get latest risk assessment
+        latest_risk = cur.execute(
+            """SELECT risk_score, risk_level, assessed_at
+               FROM risk_assessments WHERE patient_username = %s
+               ORDER BY assessed_at DESC LIMIT 1""",
+            (username,)
+        ).fetchone()
+
+        needs_checkin = False
+        check_type = 'none'
+        message = ''
+
+        if latest_risk:
+            risk_score, risk_level, assessed_at = latest_risk
+
+            if risk_level in ('critical', 'high'):
+                # Check if they've already done a check-in today
+                today_checkin = cur.execute(
+                    """SELECT id FROM ai_memory_events
+                       WHERE username = %s AND event_type = 'safety_checkin'
+                       AND timestamp >= CURRENT_DATE""",
+                    (username,)
+                ).fetchone()
+
+                if not today_checkin:
+                    needs_checkin = True
+                    check_type = 'daily_safety'
+                    message = "We noticed things might be tough right now. Would you like to check in on how you're feeling?"
+
+        # Also check for inactivity (no login in 48 hours for patients with elevated risk)
+        if not needs_checkin and latest_risk and latest_risk[1] in ('critical', 'high', 'moderate'):
+            last_login = cur.execute(
+                "SELECT last_login FROM users WHERE username = %s", (username,)
+            ).fetchone()
+
+            if last_login and last_login[0]:
+                hours_since_login = (datetime.now() - last_login[0]).total_seconds() / 3600
+                if hours_since_login > 48:
+                    needs_checkin = True
+                    check_type = 'inactivity'
+                    message = "Welcome back! We missed you. How are you feeling today?"
+
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'needs_checkin': needs_checkin,
+            'check_type': check_type,
+            'message': message
+        }), 200
+
+    except Exception as e:
+        return handle_exception(e, 'get_safety_checkin')
+
+
+# ==================== AI MONITORING CONSENT ENDPOINTS ====================
+
+@app.route('/api/consent/ai-monitoring/<username>', methods=['GET'])
+def get_ai_monitoring_consent(username):
+    """Check if patient has consented to AI conversation monitoring."""
+    try:
+        auth_user = get_authenticated_username()
+        if not auth_user:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        if auth_user != username:
+            conn = get_db_connection()
+            cur = get_wrapped_cursor(conn)
+            role = cur.execute("SELECT role FROM users WHERE username = %s", (auth_user,)).fetchone()
+            conn.close()
+            if not role or role[0] not in ('clinician', 'developer'):
+                return jsonify({'error': 'Unauthorized'}), 403
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+
+        consent = cur.execute(
+            """SELECT consent_given, consent_date, withdrawn_date
+               FROM ai_monitoring_consent
+               WHERE username = %s AND consent_given = TRUE AND withdrawn_date IS NULL
+               ORDER BY consent_date DESC LIMIT 1""",
+            (username,)
+        ).fetchone()
+
+        conn.close()
+
+        return jsonify({
+            'success': True,
+            'has_consent': consent is not None,
+            'consent_date': consent[1].isoformat() if consent and consent[1] else None
+        }), 200
+
+    except Exception as e:
+        return handle_exception(e, 'get_ai_monitoring_consent')
+
+
+@app.route('/api/consent/ai-monitoring/<username>', methods=['POST'])
+@CSRFProtection.require_csrf
+def give_ai_monitoring_consent(username):
+    """Record patient consent for AI conversation monitoring."""
+    try:
+        auth_user = get_authenticated_username()
+        if not auth_user or auth_user != username:
+            return jsonify({'error': 'You can only manage your own consent'}), 403
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+
+        cur.execute(
+            """INSERT INTO ai_monitoring_consent (username, consent_given, consent_date, consent_text, ip_address)
+               VALUES (%s, TRUE, CURRENT_TIMESTAMP, %s, %s)""",
+            (username,
+             'I consent to AI-powered conversation monitoring for safety purposes.',
+             request.remote_addr)
+        )
+        conn.commit()
+        conn.close()
+
+        log_event(username, 'consent', 'ai_monitoring_consent_given', 'Patient consented to AI monitoring')
+
+        return jsonify({'success': True, 'message': 'Consent recorded'}), 200
+
+    except Exception as e:
+        return handle_exception(e, 'give_ai_monitoring_consent')
+
+
+@app.route('/api/consent/ai-monitoring/<username>', methods=['DELETE'])
+@CSRFProtection.require_csrf
+def withdraw_ai_monitoring_consent(username):
+    """Withdraw patient consent for AI conversation monitoring."""
+    try:
+        auth_user = get_authenticated_username()
+        if not auth_user or auth_user != username:
+            return jsonify({'error': 'You can only manage your own consent'}), 403
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+
+        cur.execute(
+            """UPDATE ai_monitoring_consent
+               SET withdrawn_date = CURRENT_TIMESTAMP
+               WHERE username = %s AND consent_given = TRUE AND withdrawn_date IS NULL""",
+            (username,)
+        )
+        conn.commit()
+        conn.close()
+
+        log_event(username, 'consent', 'ai_monitoring_consent_withdrawn', 'Patient withdrew AI monitoring consent')
+
+        return jsonify({'success': True, 'message': 'Consent withdrawn'}), 200
+
+    except Exception as e:
+        return handle_exception(e, 'withdraw_ai_monitoring_consent')
+
+
+# ==================== CLINICAL REPORTING ENDPOINTS ====================
+
+@app.route('/api/risk/report/individual/<username>', methods=['GET'])
+def get_individual_risk_report(username):
+    """Generate individual patient risk report for clinical governance."""
+    try:
+        auth_user = get_authenticated_username()
+        if not auth_user:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+
+        role = cur.execute("SELECT role FROM users WHERE username = %s", (auth_user,)).fetchone()
+        if not role or role[0] not in ('clinician', 'developer'):
+            conn.close()
+            return jsonify({'error': 'Clinician role required'}), 403
+
+        # Patient info
+        patient = cur.execute(
+            "SELECT full_name, last_login, role FROM users WHERE username = %s",
+            (username,)
+        ).fetchone()
+
+        if not patient:
+            conn.close()
+            return jsonify({'error': 'Patient not found'}), 404
+
+        # Risk assessment history (last 90 days)
+        assessments = cur.execute(
+            """SELECT risk_score, risk_level, clinical_data_score, behavioral_score,
+                      conversational_score, contributing_factors, assessed_at
+               FROM risk_assessments WHERE patient_username = %s
+               AND assessed_at >= CURRENT_TIMESTAMP - INTERVAL '90 days'
+               ORDER BY assessed_at DESC LIMIT 30""",
+            (username,)
+        ).fetchall()
+
+        # Alert history
+        alerts = cur.execute(
+            """SELECT alert_type, severity, title, source, acknowledged, resolved,
+                      action_taken, created_at
+               FROM risk_alerts WHERE patient_username = %s
+               ORDER BY created_at DESC LIMIT 20""",
+            (username,)
+        ).fetchall()
+
+        # Clinical scales history
+        scales = cur.execute(
+            """SELECT scale_name, score, severity, entry_timestamp
+               FROM clinical_scales WHERE username = %s
+               ORDER BY entry_timestamp DESC LIMIT 10""",
+            (username,)
+        ).fetchall()
+
+        # Mood trend (last 30 days)
+        moods = cur.execute(
+            """SELECT mood_val, entrestamp FROM mood_logs
+               WHERE username = %s AND entrestamp >= CURRENT_TIMESTAMP - INTERVAL '30 days'
+               AND deleted_at IS NULL
+               ORDER BY entrestamp DESC""",
+            (username,)
+        ).fetchall()
+
+        conn.close()
+
+        log_event(auth_user, 'risk', 'individual_report_generated', f'Generated risk report for {username}')
+
+        return jsonify({
+            'success': True,
+            'report': {
+                'patient': {
+                    'username': username,
+                    'full_name': patient[0],
+                    'last_login': patient[1].isoformat() if patient[1] else None
+                },
+                'risk_history': [{
+                    'risk_score': a[0], 'risk_level': a[1],
+                    'clinical_score': a[2], 'behavioral_score': a[3],
+                    'conversational_score': a[4],
+                    'contributing_factors': a[5],
+                    'assessed_at': a[6].isoformat() if a[6] else None
+                } for a in assessments],
+                'alerts': [{
+                    'alert_type': a[0], 'severity': a[1], 'title': a[2],
+                    'source': a[3], 'acknowledged': a[4], 'resolved': a[5],
+                    'action_taken': a[6],
+                    'created_at': a[7].isoformat() if a[7] else None
+                } for a in alerts],
+                'clinical_scales': [{
+                    'scale_name': s[0], 'score': s[1], 'severity': s[2],
+                    'date': s[3].isoformat() if s[3] else None
+                } for s in scales],
+                'mood_trend': [{
+                    'mood': m[0], 'date': m[1].isoformat() if m[1] else None
+                } for m in moods],
+                'generated_at': datetime.now().isoformat(),
+                'generated_by': auth_user
+            }
+        }), 200
+
+    except Exception as e:
+        return handle_exception(e, 'get_individual_risk_report')
+
+
+@app.route('/api/risk/report/caseload', methods=['GET'])
+def get_caseload_report():
+    """Generate caseload risk report for clinician."""
+    try:
+        auth_user = get_authenticated_username()
+        if not auth_user:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+
+        role = cur.execute("SELECT role FROM users WHERE username = %s", (auth_user,)).fetchone()
+        if not role or role[0] not in ('clinician', 'developer'):
+            conn.close()
+            return jsonify({'error': 'Clinician role required'}), 403
+
+        # Get all patients
+        if role[0] == 'clinician':
+            patients = cur.execute(
+                """SELECT pa.patient_username, u.full_name
+                   FROM patient_approvals pa
+                   JOIN users u ON pa.patient_username = u.username
+                   WHERE pa.clinician_username = %s AND pa.status = 'approved'""",
+                (auth_user,)
+            ).fetchall()
+        else:
+            patients = cur.execute(
+                "SELECT username, full_name FROM users WHERE role = 'user'"
+            ).fetchall()
+
+        caseload = []
+        risk_distribution = {'critical': 0, 'high': 0, 'moderate': 0, 'low': 0}
+        total_unreviewed = 0
+
+        for p_user, p_name in patients:
+            latest = cur.execute(
+                """SELECT risk_score, risk_level, assessed_at
+                   FROM risk_assessments WHERE patient_username = %s
+                   ORDER BY assessed_at DESC LIMIT 1""",
+                (p_user,)
+            ).fetchone()
+
+            unreviewed = cur.execute(
+                "SELECT COUNT(*) FROM risk_alerts WHERE patient_username = %s AND acknowledged = FALSE",
+                (p_user,)
+            ).fetchone()[0]
+
+            level = latest[1] if latest else 'low'
+            risk_distribution[level] = risk_distribution.get(level, 0) + 1
+            total_unreviewed += unreviewed
+
+            caseload.append({
+                'username': p_user,
+                'full_name': p_name,
+                'risk_score': latest[0] if latest else 0,
+                'risk_level': level,
+                'last_assessed': latest[2].isoformat() if latest and latest[2] else None,
+                'unreviewed_alerts': unreviewed
+            })
+
+        caseload.sort(key=lambda x: x['risk_score'], reverse=True)
+
+        conn.close()
+
+        log_event(auth_user, 'risk', 'caseload_report_generated', f'Generated caseload report ({len(caseload)} patients)')
+
+        return jsonify({
+            'success': True,
+            'report': {
+                'total_patients': len(caseload),
+                'risk_distribution': risk_distribution,
+                'total_unreviewed_alerts': total_unreviewed,
+                'patients': caseload,
+                'generated_at': datetime.now().isoformat(),
+                'generated_by': auth_user
+            }
+        }), 200
+
+    except Exception as e:
+        return handle_exception(e, 'get_caseload_report')
 
 
 # ==================== HOME TAB ENDPOINTS ====================

@@ -437,3 +437,32 @@ CREATE TABLE risk_reviews (
     next_review_date DATE,
     reviewed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Enhanced safety plans (8 NHS-compliant sections)
+CREATE TABLE IF NOT EXISTS enhanced_safety_plans (
+    id SERIAL PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE REFERENCES users(username) ON DELETE CASCADE,
+    warning_signs JSONB DEFAULT '{}',
+    internal_coping JSONB DEFAULT '{}',
+    distraction_people_places JSONB DEFAULT '{}',
+    people_for_help JSONB DEFAULT '{}',
+    professionals_services JSONB DEFAULT '{}',
+    environment_safety JSONB DEFAULT '{}',
+    reasons_for_living JSONB DEFAULT '{}',
+    emergency_plan JSONB DEFAULT '{}',
+    last_reviewed TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- AI monitoring consent
+CREATE TABLE IF NOT EXISTS ai_monitoring_consent (
+    id SERIAL PRIMARY KEY,
+    username TEXT NOT NULL REFERENCES users(username) ON DELETE CASCADE,
+    consent_given BOOLEAN DEFAULT FALSE,
+    consent_date TIMESTAMP,
+    withdrawn_date TIMESTAMP,
+    consent_text TEXT,
+    ip_address TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
