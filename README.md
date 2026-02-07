@@ -8,14 +8,21 @@
 
 ## 📚 Quick Navigation
 
-**New to this project?** Start here:
-- 🚀 [Quick Start Guide](./documentation/QUICKSTART.md) - Get up and running in 5 minutes
-- 📖 [User Guide](./documentation/user_guides/USER_GUIDE.md) - For patients and clinicians
-- 🔧 [Developer Setup](./documentation/developer_guides/QUICKSTART.md) - For developers
+### 🎯 Core Documentation
+**Start with these canonical documents:**
+- 📖 [Project Overview](./docs/PROJECT_OVERVIEW.md) – Architecture, design, security
+- 🗺️ [Roadmap](./docs/ROADMAP.md) – What's built, what's next
+- 📋 [Change Log](./docs/CHANGELOG.md) – Version history
+- 🐛 [Known Issues](./docs/BUGS_AND_TECH_DEBT.md) – Current problems & workarounds
+- 🔐 [Security & Compliance](./docs/SECURITY_AND_COMPLIANCE.md) – GDPR, HIPAA, NHS
 
-**Need to find something?** See our complete documentation index:
-- 📑 [Full Documentation Index](./documentation/00_INDEX.md) - Navigate all documentation
-- 📂 [Project Management Hub](./project_management/README.md) - Status, decisions, roadmap
+**For navigation help:** See [Documentation Index](./docs/INDEX.md)
+
+### 👤 Role-Based Guides
+**Users:** [User Guide](./documentation/user_guides/USER_GUIDE.md)  
+**Developers:** [Developer Setup](./documentation/developer_guides/QUICKSTART.md)  
+**Clinicians:** [Clinician Guide](./documentation/user_guides/CLINICIAN_GUIDE.md)  
+**DevOps:** [Railway Deployment](./documentation/infra_and_deployment/RAILWAY_DEPLOYMENT.md)
 
 ---
 
