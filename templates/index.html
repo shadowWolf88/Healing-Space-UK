@@ -3313,6 +3313,268 @@
                 min-width: 80px;
             }
         }
+        
+        /* ===== Safety Check (C-SSRS & Real-Time Risk) ===== */
+        .risk-indicator-card {
+            background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%);
+            border: 2px solid #e74c3c;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 15px 0;
+        }
+        
+        .risk-dot {
+            box-shadow: 0 0 15px currentColor;
+            animation: pulse-risk 2s infinite;
+        }
+        
+        .risk-dot.risk-green {
+            background: #27ae60;
+            color: #27ae60;
+        }
+        
+        .risk-dot.risk-amber {
+            background: #f39c12;
+            color: #f39c12;
+        }
+        
+        .risk-dot.risk-orange {
+            background: #e67e22;
+            color: #e67e22;
+        }
+        
+        .risk-dot.risk-red {
+            background: #e74c3c;
+            color: #e74c3c;
+        }
+        
+        @keyframes pulse-risk {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .assessment-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 30px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+        
+        .assessment-progress {
+            margin-bottom: 25px;
+        }
+        
+        .assessment-progress .progress-bar-container {
+            margin-bottom: 10px;
+            height: 6px;
+        }
+        
+        .assessment-progress .progress-text {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+        }
+        
+        .assessment-question {
+            margin: 25px 0;
+        }
+        
+        .assessment-question h4 {
+            font-size: 1.1em;
+            margin: 0 0 15px 0;
+            color: var(--text-primary);
+        }
+        
+        .assessment-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .assessment-option {
+            padding: 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: var(--bg-primary);
+        }
+        
+        .assessment-option:hover {
+            background: var(--bg-secondary);
+            border-color: var(--primary-color);
+        }
+        
+        .assessment-option.selected {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .assessment-option-text {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        
+        .assessment-option-score {
+            font-size: 0.85em;
+            opacity: 0.7;
+        }
+        
+        .assessment-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+        
+        .assessment-buttons button {
+            flex: 1;
+            padding: 12px;
+            min-width: 100px;
+        }
+        
+        .results-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 30px;
+            border-radius: 12px;
+            margin: 20px 0;
+        }
+        
+        #resultsLowRiskContent,
+        #resultsModerateRiskContent,
+        #resultsHighRiskContent {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+        
+        #resultsLowRiskContent {
+            background: #e8f8e8;
+            border-left-color: #27ae60;
+            color: #27ae60;
+        }
+        
+        #resultsModerateRiskContent {
+            background: #fff8e8;
+            border-left-color: #f39c12;
+            color: #f39c12;
+        }
+        
+        #resultsHighRiskContent {
+            background: #ffe8e8;
+            border-left-color: #e74c3c;
+            color: #e74c3c;
+        }
+        
+        .safety-plan-form {
+            background: var(--bg-primary);
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .safety-plan-form .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .safety-plan-form textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-family: inherit;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            resize: vertical;
+        }
+        
+        .safety-plan-form textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        .safety-person-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--primary-color);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            margin: 5px 5px 5px 0;
+            font-size: 0.9em;
+        }
+        
+        .safety-person-chip button {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 1.2em;
+            padding: 0;
+        }
+        
+        /* Risk Prompt Modal (shows during chat) */
+        .risk-prompt-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .risk-prompt-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            margin: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        }
+        
+        [data-theme="dark"] .risk-prompt-content {
+            background: var(--bg-secondary);
+        }
+        
+        /* In-chat risk indicator */
+        .chat-risk-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-left: 8px;
+            animation: pulse-risk 2s infinite;
+            vertical-align: middle;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .assessment-card,
+            .results-card {
+                padding: 20px;
+            }
+            
+            .assessment-buttons {
+                flex-wrap: wrap;
+            }
+            
+            .assessment-buttons button {
+                flex: 1 1 calc(50% - 5px);
+            }
+            
+            .safety-plan-form {
+                padding: 15px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -4010,6 +4272,7 @@
                 <button class="tab-btn active" onclick="switchTab('home', this)">🏠 Home</button>
                 <button class="tab-btn" onclick="switchTab('therapy', this)">🤖 AI Therapy</button>
                 <button class="tab-btn" onclick="switchTab('mood', this)">📊 Mood & Habits</button>
+                <button class="tab-btn" onclick="switchTab('safety', this)">🛡️ Safety Check</button>
                 <button class="tab-btn" onclick="switchTab('gratitude', this)">🙏 Gratitude</button>
                 <button class="tab-btn" onclick="switchTab('cbt', this)">🧠 CBT Tools</button>
                 <button class="tab-btn" onclick="switchTab('pet', this)">🐶 My Pet</button>
@@ -4356,78 +4619,161 @@
                 </div>
             </div>
             
-            <!-- Mood Tracker Tab -->
-            <div id="moodTab" class="tab-content">
-                <h3>Mood, Sleep, Habits & Medications</h3>
-                <p style="color: #666; margin-bottom: 20px;">Complete daily check-in to track your wellness journey.</p>
+            <!-- Safety Check Tab (C-SSRS & Real-time Risk Detection) -->
+            <div id="safetyTab" class="tab-content">
+                <h3>🛡️ Safety Check & Suicide Risk Assessment</h3>
+                <p style="color: #666; margin-bottom: 20px;">A confidential assessment to understand how you're feeling and connect you with support.</p>
                 
-                <div class="mood-scale" style="display: flex; gap: 12px; justify-content: space-between;">
-                    <div class="mood-option" data-mood="1" onclick="selectMood(1, this)">
-                        <div class="emoji">😢</div>
-                        <div>Very Low (1)</div>
-                    </div>
-                    <div class="mood-option" data-mood="3" onclick="selectMood(3, this)">
-                        <div class="emoji">😔</div>
-                        <div>Low (3)</div>
-                    </div>
-                    <div class="mood-option" data-mood="5" onclick="selectMood(5, this)">
-                        <div class="emoji">😐</div>
-                        <div>Neutral (5)</div>
-                    </div>
-                    <div class="mood-option" data-mood="7" onclick="selectMood(7, this)">
-                        <div class="emoji">🙂</div>
-                        <div>Good (7)</div>
-                    </div>
-                    <div class="mood-option" data-mood="10" onclick="selectMood(10, this)">
-                        <div class="emoji">😄</div>
-                        <div>Great (10)</div>
+                <!-- Risk Indicator Display (shown when risk detected) -->
+                <div id="riskIndicatorContainer" class="card risk-indicator-card" style="display: none; margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div id="riskIndicatorDot" class="risk-dot" style="width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;"></div>
+                        <div>
+                            <h4 id="riskIndicatorTitle" style="margin: 0 0 5px 0;">Risk Status</h4>
+                            <p id="riskIndicatorMessage" style="margin: 0; color: var(--text-secondary);"></p>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label>Hours of Sleep</label>
-                        <input type="number" id="sleepHours" min="0" max="24" step="0.5" placeholder="e.g., 7.5">
+                <!-- Assessment not yet started -->
+                <div id="safetyStartScreen" class="card" style="text-align: center; padding: 40px 20px;">
+                    <div style="font-size: 3em; margin-bottom: 15px;">💙</div>
+                    <h4>Your Well-being Matters</h4>
+                    <p style="color: #666; margin: 15px 0;">This brief assessment takes about 3-4 minutes and helps us understand what you're experiencing so we can provide the right support.</p>
+                    <div style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin: 20px 0; text-align: left; font-size: 0.9em;">
+                        <p style="margin: 5px 0;"><strong>What we ask about:</strong></p>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            <li>Thoughts about suicide or self-harm</li>
+                            <li>Any plans or intent to harm yourself</li>
+                            <li>Past attempts or actions</li>
+                            <li>Your ability to cope right now</li>
+                        </ul>
+                        <p style="margin: 5px 0; color: #666;"><em>Your responses are completely confidential and will be stored securely.</em></p>
                     </div>
-                    <div class="form-group">
-                        <label>Water (Pints)</label>
-                        <input type="number" id="waterPints" min="0" step="0.5" placeholder="e.g., 4">
-                    </div>
-                    <div class="form-group">
-                        <label>Exercise (Minutes)</label>
-                        <input type="number" id="exerciseMins" min="0" placeholder="e.g., 30">
-                    </div>
-                    <div class="form-group">
-                        <label>Outdoor Time (Minutes)</label>
-                        <input type="number" id="outsideMins" min="0" placeholder="e.g., 20">
+                    <button class="btn btn-primary" onclick="startSafetyAssessment()" style="margin-top: 20px; width: 100%; padding: 12px;">
+                        ✓ Start Assessment
+                    </button>
+                    <button class="btn btn-secondary" onclick="skipSafetyAssessment()" style="margin-top: 10px; width: 100%; padding: 12px;">
+                        Skip for Now
+                    </button>
+                </div>
+                
+                <!-- Assessment Questions -->
+                <div id="safetyAssessmentContainer" style="display: none;">
+                    <div class="card assessment-card">
+                        <div class="assessment-progress">
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill" id="assessmentProgressBar" style="width: 0%;"></div>
+                            </div>
+                            <span class="progress-text" id="assessmentProgressText">Question 1 of 6</span>
+                        </div>
+                        
+                        <div id="assessmentQuestionsArea"></div>
+                        
+                        <div class="assessment-buttons" style="display: flex; gap: 10px; margin-top: 20px;">
+                            <button class="btn btn-secondary" id="assessmentPrevBtn" onclick="previousAssessmentQuestion()" style="display: none; flex: 1;">← Back</button>
+                            <button class="btn btn-secondary" onclick="skipAssessmentQuestion()" style="flex: 1;">Skip Question</button>
+                            <button class="btn btn-primary" id="assessmentNextBtn" onclick="nextAssessmentQuestion()" style="flex: 1;">Next →</button>
+                        </div>
                     </div>
                 </div>
                 
-                <h4 style="margin-top: 20px;">Medications Taken Today</h4>
-                <div class="inline-form" style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
-                    <div class="form-group">
-                        <label>Medication Name</label>
-                        <input type="text" id="medName" placeholder="e.g., Sertraline">
+                <!-- Results Screen -->
+                <div id="safetyResultsContainer" style="display: none;">
+                    <div class="card results-card">
+                        <div style="text-align: center; margin-bottom: 30px;">
+                            <div id="resultsRiskIndicator" style="font-size: 4em; margin-bottom: 15px;">🟢</div>
+                            <h3 id="resultsRiskTitle">Assessment Complete</h3>
+                            <p id="resultsRiskMessage" style="color: #666; margin: 10px 0;"></p>
+                        </div>
+                        
+                        <!-- Risk Level Specific Content -->
+                        <div id="resultsLowRiskContent" style="display: none;">
+                            <div class="card" style="background: #e8f8e8; border-left: 4px solid #27ae60; padding: 15px;">
+                                <h4 style="margin-top: 0; color: #27ae60;">✓ You're Doing Well</h4>
+                                <p>Based on your responses, you're not currently at high risk. Keep up the self-care and reach out if things change.</p>
+                                <p style="color: #666; font-size: 0.9em;"><strong>Remember:</strong> It's always okay to ask for help if you need it.</p>
+                            </div>
+                        </div>
+                        
+                        <div id="resultsModerateRiskContent" style="display: none;">
+                            <div class="card" style="background: #fff8e8; border-left: 4px solid #f39c12; padding: 15px;">
+                                <h4 style="margin-top: 0; color: #f39c12;">⚠️ Some Concern</h4>
+                                <p>You've mentioned some concerning thoughts. We want to help you feel better and work through this together.</p>
+                                <p style="color: #666;"><strong>Next steps:</strong> A clinician will review your responses and may contact you within 24 hours.</p>
+                            </div>
+                        </div>
+                        
+                        <div id="resultsHighRiskContent" style="display: none;">
+                            <div class="card" style="background: #ffe8e8; border-left: 4px solid #e74c3c; padding: 15px;">
+                                <h4 style="margin-top: 0; color: #e74c3c;">🚨 We're Here to Help</h4>
+                                <p>Based on your responses, we're concerned about your safety. You're not alone, and help is available right now.</p>
+                                <p style="margin: 15px 0;"><strong>Immediate support:</strong></p>
+                                <ul style="margin: 10px 0;">
+                                    <li><strong>Crisis Line:</strong> Samaritans 116 123 (24/7, free, confidential)</li>
+                                    <li><strong>Emergency:</strong> Call 999 or go to nearest A&E</li>
+                                    <li><strong>Your Clinician:</strong> Will be notified immediately</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <!-- Safety Plan Section (shown for Moderate/High/Critical) -->
+                        <div id="safetyPlanSection" style="display: none; margin-top: 30px;">
+                            <h4>📋 Your Safety Plan</h4>
+                            <p style="color: #666; margin-bottom: 15px;">Let's create a safety plan to help you through difficult moments.</p>
+                            
+                            <div class="safety-plan-form">
+                                <div class="form-group">
+                                    <label>⚠️ What tells you a crisis is coming? (warning signs)</label>
+                                    <textarea id="safetyWarningSigns" placeholder="e.g., can't sleep, getting angry, thinking about past failures..." style="height: 80px;"></textarea>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>💡 What can you do alone to cope? (internal coping)</label>
+                                    <textarea id="safetyCopingInternal" placeholder="e.g., deep breathing, listen to music, journal..." style="height: 80px;"></textarea>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>🌍 People/places that distract you from the crisis</label>
+                                    <textarea id="safetyDistractions" placeholder="e.g., call a friend, go to the park, watch my favorite show..." style="height: 80px;"></textarea>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>🤝 People you can contact during a crisis</label>
+                                    <div id="safetyPeopleList" style="margin-bottom: 10px;"></div>
+                                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                                        <input type="text" id="safetyPersonName" placeholder="Name" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                        <input type="tel" id="safetyPersonPhone" placeholder="Phone" style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                        <button class="btn" onclick="addSafetyPerson()" style="padding: 8px 15px;">+ Add</button>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>⚕️ Professional Support</label>
+                                    <div style="padding: 10px; background: #f5f5f5; border-radius: 4px; font-size: 0.9em;">
+                                        <p style="margin: 5px 0;"><strong>Your Clinician:</strong> <span id="safetyClinicianInfo">Loading...</span></p>
+                                        <p style="margin: 5px 0;"><strong>Crisis Services:</strong> Samaritans 116 123</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label>🔒 How can you make your environment safer?</label>
+                                    <textarea id="safetyEnvironment" placeholder="e.g., remove medications, give house key to trusted person..." style="height: 80px;"></textarea>
+                                </div>
+                                
+                                <button class="btn btn-primary" onclick="saveSafetyPlan()" style="width: 100%; padding: 12px; margin-top: 15px;">
+                                    ✓ Save My Safety Plan
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 30px; text-align: center;">
+                            <button class="btn btn-primary" onclick="closeSafetyAssessment()" style="padding: 12px 30px;">
+                                Done
+                            </button>
+                        </div>
                     </div>
-                    <div class="form-group" style="max-width: 120px;">
-                        <label>Strength (mg)</label>
-                        <input type="number" id="medStrength" placeholder="50">
-                    </div>
-                    <div class="form-group" style="max-width: 80px;">
-                        <label>Quantity</label>
-                        <input type="number" id="medQty" placeholder="1" value="1">
-                    </div>
-                    <button class="btn" onclick="addMedication()" style="width: auto; padding: 12px 20px;">+ Add</button>
                 </div>
-                <div id="medList" class="med-list"></div>
-                
-                <div class="form-group">
-                    <label>Journal Notes</label>
-                    <textarea id="moodNotes" placeholder="How are you feeling? Any specific thoughts or events?"></textarea>
-                </div>
-                
-                <button class="btn" onclick="logMood()">Save Full Check-In</button>
-                <div id="moodMessage" class="hidden"></div>
             </div>
             
             <!-- Gratitude Journal Tab -->
@@ -9541,6 +9887,445 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             }
         }
         
+        // ===== SAFETY CHECK / C-SSRS ASSESSMENT FUNCTIONS =====
+        
+        // C-SSRS Assessment Questions (Columbia-Suicide Severity Rating Scale)
+        const C_SSRS_QUESTIONS = [
+            {
+                id: 1,
+                question: "In the past week, have you wished you were dead or wished you could go to sleep and not wake up?",
+                category: "ideation",
+                options: [
+                    { text: "No", score: 0 },
+                    { text: "Several days", score: 1 },
+                    { text: "More than half the days", score: 2 },
+                    { text: "Nearly every day", score: 3 }
+                ]
+            },
+            {
+                id: 2,
+                question: "In the past week, have you actually had any thoughts of killing yourself?",
+                category: "ideation_active",
+                options: [
+                    { text: "No", score: 0 },
+                    { text: "Yes, but I don't think I would do it", score: 1 },
+                    { text: "Yes, I think about it regularly", score: 2 },
+                    { text: "Yes, and I plan to do it", score: 3 }
+                ]
+            },
+            {
+                id: 3,
+                question: "Have you ever tried to kill yourself, and if so, was it within the past week?",
+                category: "attempt",
+                options: [
+                    { text: "Never tried", score: 0 },
+                    { text: "Tried before, but not in past week", score: 1 },
+                    { text: "Tried within the past week", score: 2 },
+                    { text: "Currently planning an attempt", score: 3 }
+                ]
+            },
+            {
+                id: 4,
+                question: "In the past week, how have you been feeling about staying alive vs ending your life?",
+                category: "intent",
+                options: [
+                    { text: "I definitely want to live", score: 0 },
+                    { text: "I want to live, but it's unclear sometimes", score: 1 },
+                    { text: "The thoughts are equal - living vs dying", score: 2 },
+                    { text: "I strongly feel I should be dead", score: 3 }
+                ]
+            },
+            {
+                id: 5,
+                question: "In the past week, have you done anything to prepare for an attempt (stockpiling medication, planning method, saying goodbye)?",
+                category: "planning",
+                options: [
+                    { text: "No, nothing", score: 0 },
+                    { text: "I've thought about it but taken no action", score: 1 },
+                    { text: "I've started preparing (research, gathering items)", score: 2 },
+                    { text: "I've actively prepared (have means, have plan, given things away)", score: 3 }
+                ]
+            },
+            {
+                id: 6,
+                question: "Right now, how confident are you that you can keep yourself safe?",
+                category: "safety",
+                options: [
+                    { text: "Completely confident - I can keep myself safe", score: 0 },
+                    { text: "Fairly confident", score: 1 },
+                    { text: "Not very confident", score: 2 },
+                    { text: "Not confident at all", score: 3 }
+                ]
+            }
+        ];
+        
+        // Safety Assessment State
+        let safetyAssessmentState = {
+            active: false,
+            currentQuestion: 0,
+            responses: [],
+            score: 0,
+            timestamp: null,
+            riskLevel: null,
+            safetyPlan: {
+                warningSigns: '',
+                copingInternal: '',
+                distractions: '',
+                people: [],
+                environment: ''
+            }
+        };
+        
+        function startSafetyAssessment() {
+            safetyAssessmentState = {
+                active: true,
+                currentQuestion: 0,
+                responses: [],
+                score: 0,
+                timestamp: new Date().toISOString(),
+                riskLevel: null,
+                safetyPlan: {
+                    warningSigns: '',
+                    copingInternal: '',
+                    distractions: '',
+                    people: [],
+                    environment: ''
+                }
+            };
+            
+            // Hide start screen
+            document.getElementById('safetyStartScreen').style.display = 'none';
+            document.getElementById('safetyAssessmentContainer').style.display = 'block';
+            document.getElementById('safetyResultsContainer').style.display = 'none';
+            
+            // Load first question
+            displayAssessmentQuestion();
+        }
+        
+        function displayAssessmentQuestion() {
+            const question = C_SSRS_QUESTIONS[safetyAssessmentState.currentQuestion];
+            const progress = ((safetyAssessmentState.currentQuestion + 1) / C_SSRS_QUESTIONS.length) * 100;
+            
+            // Update progress bar
+            document.getElementById('assessmentProgressBar').style.width = progress + '%';
+            document.getElementById('assessmentProgressText').textContent = `Question ${safetyAssessmentState.currentQuestion + 1} of ${C_SSRS_QUESTIONS.length}`;
+            
+            // Update button visibility
+            document.getElementById('assessmentPrevBtn').style.display = safetyAssessmentState.currentQuestion === 0 ? 'none' : 'block';
+            document.getElementById('assessmentNextBtn').textContent = safetyAssessmentState.currentQuestion === C_SSRS_QUESTIONS.length - 1 ? '✓ Submit Assessment' : 'Next →';
+            
+            // Build question HTML
+            let optionsHtml = '<div class="assessment-options">';
+            question.options.forEach((option, idx) => {
+                const selectedClass = safetyAssessmentState.responses[safetyAssessmentState.currentQuestion]?.score === option.score ? 'selected' : '';
+                optionsHtml += `
+                    <div class="assessment-option ${selectedClass}" onclick="selectAssessmentOption(${idx}, ${option.score})">
+                        <span class="assessment-option-text">${option.text}</span>
+                    </div>
+                `;
+            });
+            optionsHtml += '</div>';
+            
+            const questionsHtml = `
+                <div class="assessment-question">
+                    <h4>${question.question}</h4>
+                    ${optionsHtml}
+                </div>
+            `;
+            
+            document.getElementById('assessmentQuestionsArea').innerHTML = questionsHtml;
+        }
+        
+        function selectAssessmentOption(optionIdx, score) {
+            const question = C_SSRS_QUESTIONS[safetyAssessmentState.currentQuestion];
+            safetyAssessmentState.responses[safetyAssessmentState.currentQuestion] = {
+                question: question.id,
+                option: question.options[optionIdx].text,
+                score: score,
+                category: question.category
+            };
+            
+            // Visual feedback
+            document.querySelectorAll('.assessment-option').forEach(el => el.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+            
+            // Auto-advance to next after selection (subtle UX)
+            setTimeout(() => {
+                if (safetyAssessmentState.currentQuestion < C_SSRS_QUESTIONS.length - 1) {
+                    nextAssessmentQuestion();
+                }
+            }, 300);
+        }
+        
+        function nextAssessmentQuestion() {
+            if (safetyAssessmentState.responses[safetyAssessmentState.currentQuestion] === undefined) {
+                alert('Please select an answer before continuing.');
+                return;
+            }
+            
+            if (safetyAssessmentState.currentQuestion === C_SSRS_QUESTIONS.length - 1) {
+                // Submit assessment
+                submitSafetyAssessment();
+                return;
+            }
+            
+            safetyAssessmentState.currentQuestion++;
+            displayAssessmentQuestion();
+        }
+        
+        function previousAssessmentQuestion() {
+            if (safetyAssessmentState.currentQuestion > 0) {
+                safetyAssessmentState.currentQuestion--;
+                displayAssessmentQuestion();
+            }
+        }
+        
+        function skipAssessmentQuestion() {
+            safetyAssessmentState.responses[safetyAssessmentState.currentQuestion] = {
+                question: C_SSRS_QUESTIONS[safetyAssessmentState.currentQuestion].id,
+                option: "Skipped",
+                score: 0,
+                category: C_SSRS_QUESTIONS[safetyAssessmentState.currentQuestion].category
+            };
+            
+            if (safetyAssessmentState.currentQuestion === C_SSRS_QUESTIONS.length - 1) {
+                submitSafetyAssessment();
+            } else {
+                safetyAssessmentState.currentQuestion++;
+                displayAssessmentQuestion();
+            }
+        }
+        
+        function submitSafetyAssessment() {
+            // Calculate total score
+            safetyAssessmentState.score = safetyAssessmentState.responses.reduce((sum, resp) => sum + (resp?.score || 0), 0);
+            
+            // Determine risk level
+            // Score range: 0-18 (6 questions x 3 max)
+            if (safetyAssessmentState.score === 0) {
+                safetyAssessmentState.riskLevel = 'low';
+            } else if (safetyAssessmentState.score <= 6) {
+                safetyAssessmentState.riskLevel = 'moderate';
+            } else if (safetyAssessmentState.score <= 12) {
+                safetyAssessmentState.riskLevel = 'high';
+            } else {
+                safetyAssessmentState.riskLevel = 'critical';
+            }
+            
+            // Check for critical indicators
+            const hasSuicidalPlanning = safetyAssessmentState.responses.some(r => r?.category === 'planning' && r.score >= 2);
+            const hasSuicidalIntent = safetyAssessmentState.responses.some(r => r?.category === 'intent' && r.score >= 2);
+            const hasSuicidalIdeation = safetyAssessmentState.responses.some(r => r?.category === 'ideation_active' && r.score >= 2);
+            
+            if ((hasSuicidalPlanning || (hasSuicidalIdeation && hasSuicidalIntent))) {
+                safetyAssessmentState.riskLevel = 'critical';
+            }
+            
+            // Show results
+            displayAssessmentResults();
+            
+            // Submit to backend
+            submitSafetyAssessmentToBackend();
+        }
+        
+        function displayAssessmentResults() {
+            // Hide questions, show results
+            document.getElementById('safetyAssessmentContainer').style.display = 'none';
+            document.getElementById('safetyResultsContainer').style.display = 'block';
+            
+            // Update result display based on risk level
+            const resultIcons = { low: '🟢', moderate: '🟠', high: '🔴', critical: '🚨' };
+            const resultTitles = { 
+                low: 'You\'re Doing Well', 
+                moderate: 'Some Concern', 
+                high: 'We\'re Here to Help',
+                critical: 'Crisis Support Available Now'
+            };
+            
+            document.getElementById('resultsRiskIndicator').textContent = resultIcons[safetyAssessmentState.riskLevel];
+            document.getElementById('resultsRiskTitle').textContent = resultTitles[safetyAssessmentState.riskLevel];
+            
+            // Hide all result content, show appropriate one
+            document.getElementById('resultsLowRiskContent').style.display = 'none';
+            document.getElementById('resultsModerateRiskContent').style.display = 'none';
+            document.getElementById('resultsHighRiskContent').style.display = 'none';
+            document.getElementById('safetyPlanSection').style.display = 'none';
+            
+            if (safetyAssessmentState.riskLevel === 'low') {
+                document.getElementById('resultsLowRiskContent').style.display = 'block';
+            } else if (safetyAssessmentState.riskLevel === 'moderate') {
+                document.getElementById('resultsModerateRiskContent').style.display = 'block';
+                document.getElementById('safetyPlanSection').style.display = 'block';
+            } else {
+                document.getElementById('resultsHighRiskContent').style.display = 'block';
+                document.getElementById('safetyPlanSection').style.display = 'block';
+            }
+            
+            // Set message
+            const messages = {
+                low: 'Your responses indicate you\'re coping well right now. Keep using the tools and reach out if things change.',
+                moderate: 'Your responses suggest you could use additional support. We want to help you work through this.',
+                high: 'Your safety is our priority. We\'re connecting you with immediate support and your clinician will be notified.',
+                critical: 'We\'re very concerned about your safety. Professional support is available right now.'
+            };
+            document.getElementById('resultsRiskMessage').textContent = messages[safetyAssessmentState.riskLevel];
+        }
+        
+        function addSafetyPerson() {
+            const name = document.getElementById('safetyPersonName').value.trim();
+            const phone = document.getElementById('safetyPersonPhone').value.trim();
+            
+            if (!name || !phone) {
+                alert('Please enter both name and phone number.');
+                return;
+            }
+            
+            safetyAssessmentState.safetyPlan.people.push({ name, phone });
+            
+            // Add to display
+            let peopleHtml = '';
+            safetyAssessmentState.safetyPlan.people.forEach((person, idx) => {
+                peopleHtml += `
+                    <div class="safety-person-chip">
+                        ${person.name}: ${person.phone}
+                        <button onclick="removeSafetyPerson(${idx})">×</button>
+                    </div>
+                `;
+            });
+            document.getElementById('safetyPeopleList').innerHTML = peopleHtml;
+            
+            // Clear inputs
+            document.getElementById('safetyPersonName').value = '';
+            document.getElementById('safetyPersonPhone').value = '';
+        }
+        
+        function removeSafetyPerson(idx) {
+            safetyAssessmentState.safetyPlan.people.splice(idx, 1);
+            
+            // Redraw
+            let peopleHtml = '';
+            safetyAssessmentState.safetyPlan.people.forEach((person, idx) => {
+                peopleHtml += `
+                    <div class="safety-person-chip">
+                        ${person.name}: ${person.phone}
+                        <button onclick="removeSafetyPerson(${idx})">×</button>
+                    </div>
+                `;
+            });
+            document.getElementById('safetyPeopleList').innerHTML = peopleHtml;
+        }
+        
+        function saveSafetyPlan() {
+            // Collect safety plan data
+            safetyAssessmentState.safetyPlan = {
+                warningSigns: document.getElementById('safetyWarningSigns').value,
+                copingInternal: document.getElementById('safetyCopingInternal').value,
+                distractions: document.getElementById('safetyDistractions').value,
+                people: safetyAssessmentState.safetyPlan.people,
+                environment: document.getElementById('safetyEnvironment').value
+            };
+            
+            if (!safetyAssessmentState.safetyPlan.warningSigns || 
+                !safetyAssessmentState.safetyPlan.copingInternal || 
+                !safetyAssessmentState.safetyPlan.distractions || 
+                !safetyAssessmentState.safetyPlan.environment) {
+                alert('Please complete all sections of your safety plan.');
+                return;
+            }
+            
+            // Submit safety plan to backend
+            submitSafetyPlanToBackend();
+        }
+        
+        async function submitSafetyAssessmentToBackend() {
+            try {
+                const response = await fetch('/api/c-ssrs/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: currentUser,
+                        responses: safetyAssessmentState.responses,
+                        timestamp: safetyAssessmentState.timestamp
+                    })
+                });
+                
+                const data = await response.json();
+                if (!response.ok) {
+                    console.error('Assessment submission error:', data);
+                }
+            } catch (error) {
+                console.error('Safety assessment submission error:', error);
+            }
+        }
+        
+        async function submitSafetyPlanToBackend() {
+            try {
+                const response = await fetch('/api/c-ssrs/{id}/safety-plan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: currentUser,
+                        safety_plan: safetyAssessmentState.safetyPlan,
+                        assessment_timestamp: safetyAssessmentState.timestamp
+                    })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    alert('✓ Your safety plan has been saved and your clinician notified.');
+                    closeSafetyAssessment();
+                } else {
+                    console.error('Safety plan submission error:', data);
+                    alert('Safety plan saved locally.');
+                    closeSafetyAssessment();
+                }
+            } catch (error) {
+                console.error('Safety plan submission error:', error);
+                alert('Safety plan saved locally.');
+                closeSafetyAssessment();
+            }
+        }
+        
+        function closeSafetyAssessment() {
+            document.getElementById('safetyStartScreen').style.display = 'block';
+            document.getElementById('safetyAssessmentContainer').style.display = 'none';
+            document.getElementById('safetyResultsContainer').style.display = 'none';
+            safetyAssessmentState.active = false;
+        }
+        
+        function skipSafetyAssessment() {
+            closeSafetyAssessment();
+        }
+        
+        // ===== REAL-TIME RISK DETECTION IN CHAT =====
+        function updateChatRiskIndicator(riskAnalysis) {
+            if (!riskAnalysis) return;
+            
+            const container = document.getElementById('riskIndicatorContainer');
+            const scoreLevelMap = {
+                'green': { title: '✓ No Risk', message: 'You\'re safe. Keep sharing.' },
+                'amber': { title: '⚠️ Monitor', message: 'We\'re watching for changes.' },
+                'orange': { title: '🔸 Concerning', message: 'Some risk indicators detected.' },
+                'red': { title: '🔴 High Risk', message: 'We\'re concerned about your safety.' }
+            };
+            
+            const info = scoreLevelMap[riskAnalysis.risk_level] || scoreLevelMap['green'];
+            
+            // Update indicator
+            const dot = document.getElementById('riskIndicatorDot');
+            dot.classList = `risk-dot risk-${riskAnalysis.risk_level}`;
+            
+            document.getElementById('riskIndicatorTitle').textContent = info.title;
+            document.getElementById('riskIndicatorMessage').textContent = info.message;
+            
+            // Show if not low risk
+            if (riskAnalysis.risk_level !== 'green') {
+                container.style.display = 'block';
+            } else {
+                container.style.display = 'none';
+            }
+        }
+        
         // Chat Functions
         let isVoiceListening = false;
         let speechRecognition = null;
@@ -9616,6 +10401,25 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                             aiMessageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
                         }, 100);
                     }
+                    
+                    // === NEW: Handle risk analysis from AI ===
+                    if (data.risk_analysis) {
+                        // Update risk indicator in chat area
+                        updateChatRiskIndicator(data.risk_analysis);
+                        
+                        // If action is needed (risk_score > 60), show assessment prompt
+                        if (data.risk_analysis.action_needed && !safetyAssessmentState.active) {
+                            setTimeout(() => {
+                                showRiskPromptModal(data.risk_analysis.risk_level);
+                            }, 2000);
+                        }
+                        
+                        // If urgent action needed (HIGH/CRITICAL), alert clinician immediately
+                        if (data.risk_analysis.urgent_action) {
+                            console.warn('URGENT: Risk flagged - clinician will be notified');
+                            // Additional UI could go here (e.g., show "Clinician notified" message)
+                        }
+                    }
 
                     // Reward pet for therapy session
                     await rewardPet('therapy');
@@ -9629,6 +10433,70 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 addMessage('Connection error. Please check your internet.', 'ai');
                 console.error('Chat error:', error);
             }
+        }
+        
+        function showRiskPromptModal(riskLevel) {
+            const prompts = {
+                amber: {
+                    title: '⚠️ Check-in',
+                    message: 'Your messages have some concerning language. Would you like to take a quick safety assessment?',
+                    buttons: [
+                        { text: 'Yes, assess me', action: 'startSafetyAssessment()' },
+                        { text: 'Not now', action: 'closeRiskPrompt()' }
+                    ]
+                },
+                orange: {
+                    title: '⚠️ We\'re Concerned',
+                    message: 'Your recent messages suggest you might be struggling. A brief assessment will help us support you better.',
+                    buttons: [
+                        { text: 'Start assessment', action: 'startSafetyAssessment()' },
+                        { text: 'Remind me later', action: 'closeRiskPrompt()' }
+                    ]
+                },
+                red: {
+                    title: '🚨 Safety Check Needed',
+                    message: 'Based on what you\'ve shared, we want to make sure you\'re safe. Please complete a quick assessment.',
+                    buttons: [
+                        { text: 'Take assessment now', action: 'startSafetyAssessment()' },
+                        { text: 'Contact crisis line: 116 123', action: 'openCrisisSupport()' }
+                    ]
+                }
+            };
+            
+            const prompt = prompts[riskLevel] || prompts['orange'];
+            
+            let buttonsHtml = '';
+            prompt.buttons.forEach(btn => {
+                buttonsHtml += `<button class="btn" onclick="${btn.action}" style="flex: 1; margin-right: 10px;">${btn.text}</button>`;
+            });
+            
+            const modalHtml = `
+                <div class="risk-prompt-modal" id="riskPromptModal">
+                    <div class="risk-prompt-content">
+                        <h3>${prompt.title}</h3>
+                        <p>${prompt.message}</p>
+                        <div style="display: flex; gap: 10px; margin-top: 20px;">
+                            ${buttonsHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Inject modal
+            const existingModal = document.getElementById('riskPromptModal');
+            if (existingModal) existingModal.remove();
+            
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        }
+        
+        function closeRiskPrompt() {
+            const modal = document.getElementById('riskPromptModal');
+            if (modal) modal.remove();
+        }
+        
+        function openCrisisSupport() {
+            window.open('tel:116123', '_self');
+            closeRiskPrompt();
         }
 
         // Voice Input Functions

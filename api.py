@@ -18,6 +18,23 @@ import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+# Import C-SSRS Assessment Module
+try:
+    from c_ssrs_assessment import CSSRSAssessment, SafetyPlan
+except ImportError:
+    print("⚠️  Warning: c_ssrs_assessment module not found. C-SSRS endpoints will be disabled.")
+    CSSRSAssessment = None
+    SafetyPlan = None
+
+# Import Safety Monitor for real-time chat risk detection
+try:
+    from safety_monitor import analyze_chat_message
+    HAS_SAFETY_MONITOR = True
+except ImportError:
+    print("⚠️  Warning: safety_monitor module not found. Real-time risk detection disabled.")
+    HAS_SAFETY_MONITOR = False
+    analyze_chat_message = None
+
 # --- Pet Table Ensurer ---
 def ensure_pet_table():
     """Ensure the pet table exists in PostgreSQL with username support"""
@@ -3543,7 +3560,42 @@ def init_db():
                     ip_address TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
-            """, [])
+            """, []),
+            ('c_ssrs_assessments', """
+                CREATE TABLE IF NOT EXISTS c_ssrs_assessments (
+                    id SERIAL PRIMARY KEY,
+                    patient_username TEXT NOT NULL REFERENCES users(username) ON DELETE CASCADE,
+                    clinician_username TEXT REFERENCES users(username) ON DELETE SET NULL,
+                    q1_ideation INTEGER NOT NULL DEFAULT 0,
+                    q2_frequency INTEGER NOT NULL DEFAULT 0,
+                    q3_duration INTEGER NOT NULL DEFAULT 0,
+                    q4_planning INTEGER NOT NULL DEFAULT 0,
+                    q5_intent INTEGER NOT NULL DEFAULT 0,
+                    q6_behavior INTEGER NOT NULL DEFAULT 0,
+                    total_score INTEGER NOT NULL DEFAULT 0,
+                    risk_level TEXT NOT NULL DEFAULT 'low',
+                    risk_category_score INTEGER NOT NULL DEFAULT 0,
+                    reasoning TEXT,
+                    has_planning BOOLEAN DEFAULT FALSE,
+                    has_intent BOOLEAN DEFAULT FALSE,
+                    has_behavior BOOLEAN DEFAULT FALSE,
+                    alert_sent BOOLEAN DEFAULT FALSE,
+                    alert_sent_at TIMESTAMP,
+                    alert_acknowledged BOOLEAN DEFAULT FALSE,
+                    alert_acknowledged_at TIMESTAMP,
+                    alert_acknowledged_by TEXT,
+                    clinician_response TEXT,
+                    clinician_response_at TIMESTAMP,
+                    safety_plan_completed BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT valid_c_ssrs_level CHECK (risk_level IN ('low', 'moderate', 'high', 'critical'))
+                )
+            """, [
+                "CREATE INDEX IF NOT EXISTS idx_c_ssrs_patient ON c_ssrs_assessments(patient_username)",
+                "CREATE INDEX IF NOT EXISTS idx_c_ssrs_risk_level ON c_ssrs_assessments(risk_level)",
+                "CREATE INDEX IF NOT EXISTS idx_c_ssrs_date ON c_ssrs_assessments(created_at)",
+                "CREATE INDEX IF NOT EXISTS idx_c_ssrs_clinician ON c_ssrs_assessments(clinician_username)"
+            ])
         ]
 
         for table_name, create_sql, indexes in risk_tables:
@@ -6236,11 +6288,56 @@ def therapy_chat():
 
         log_event(username, 'api', 'therapy_chat', 'Chat message sent')
 
-        return jsonify({
+        # === NEW: Real-time Risk Detection (SafetyMonitor) ===
+        risk_analysis = None
+        if HAS_SAFETY_MONITOR and analyze_chat_message:
+            try:
+                # Get recent conversation history for context
+                conn = get_db_connection()
+                cur = get_wrapped_cursor(conn)
+                recent_history = cur.execute(
+                    "SELECT sender, message FROM chat_history WHERE chat_session_id = %s ORDER BY timestamp DESC LIMIT 6",
+                    (chat_session_id,)
+                ).fetchall()
+                conn.close()
+                
+                # Convert to expected format (newest first, then reverse for chronological)
+                history_for_monitor = [
+                    {'role': 'user' if h[0] == 'user' else 'ai', 'content': h[1]}
+                    for h in recent_history[::-1]
+                ]
+                
+                # Analyze current message for risk
+                risk_analysis = analyze_chat_message(message, history_for_monitor)
+                
+                # Log risk analysis result
+                if risk_analysis and risk_analysis.get('risk_score', 0) > 30:
+                    log_event(username, 'safety', 'risk_detected', 
+                             f"Score: {risk_analysis.get('risk_score')}, Level: {risk_analysis.get('risk_level')}")
+            except Exception as monitor_error:
+                print(f"Safety monitor error (non-critical): {monitor_error}")
+                # Continue even if monitoring fails - don't break the chat
+                pass
+
+        # Build response with risk data
+        response_data = {
             'success': True,
             'response': response,
             'timestamp': datetime.now().isoformat()
-        }), 200
+        }
+        
+        # Include risk analysis if available
+        if risk_analysis:
+            response_data['risk_analysis'] = {
+                'risk_score': risk_analysis.get('risk_score', 0),
+                'risk_level': risk_analysis.get('risk_level', 'green'),
+                'risk_category': risk_analysis.get('risk_category', 'low'),
+                'action_needed': risk_analysis.get('action_needed', False),
+                'urgent_action': risk_analysis.get('urgent_action', False),
+                'indicators': risk_analysis.get('indicators', []),
+            }
+
+        return jsonify(response_data), 200
 
     except Exception as e:
         # Log the actual error for debugging, but return a user-friendly message
@@ -15611,6 +15708,448 @@ def get_wins_stats():
 
     except Exception as e:
         return handle_exception(e, request.endpoint or 'wins/stats')
+
+
+# ==================== C-SSRS ASSESSMENT ENDPOINTS ====================
+
+@app.route('/api/c-ssrs/start', methods=['POST'])
+def start_c_ssrs_assessment():
+    """Start a new C-SSRS assessment session"""
+    try:
+        if not CSSRSAssessment:
+            return jsonify({'error': 'C-SSRS module not available'}), 503
+        
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        clinician_username = request.json.get('clinician_username') if request.json else None
+        
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+        
+        # Get or create assessment session
+        assessment_id = secrets.randbelow(999999)
+        
+        # Log event
+        log_event(username, 'c_ssrs', 'assessment_started', f"Clinician: {clinician_username or 'self'}")
+        
+        conn.close()
+        
+        return jsonify({
+            'assessment_id': assessment_id,
+            'questions': CSSRSAssessment.QUESTIONS,
+            'answer_options': CSSRSAssessment.ANSWER_OPTIONS,
+            'message': 'C-SSRS assessment started. Please answer all 6 questions honestly.'
+        }), 200
+    
+    except Exception as e:
+        return handle_exception(e, 'start_c_ssrs_assessment')
+
+
+@app.route('/api/c-ssrs/submit', methods=['POST'])
+def submit_c_ssrs_assessment():
+    """Submit completed C-SSRS assessment and calculate risk level"""
+    try:
+        if not CSSRSAssessment:
+            return jsonify({'error': 'C-SSRS module not available'}), 503
+        
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No assessment data provided'}), 400
+        
+        # Extract responses (Q1-Q6)
+        responses = {
+            1: int(data.get('q1', 0)),
+            2: int(data.get('q2', 0)),
+            3: int(data.get('q3', 0)),
+            4: int(data.get('q4', 0)),
+            5: int(data.get('q5', 0)),
+            6: int(data.get('q6', 0))
+        }
+        
+        # Validate responses
+        for key, val in responses.items():
+            if not (0 <= val <= 5):
+                return jsonify({'error': f'Question {key} must be 0-5'}), 400
+        
+        # Calculate risk score
+        risk_data = CSSRSAssessment.calculate_risk_score(responses)
+        
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+        
+        # Store assessment in database
+        cur.execute("""
+            INSERT INTO c_ssrs_assessments (
+                patient_username, clinician_username,
+                q1_ideation, q2_frequency, q3_duration,
+                q4_planning, q5_intent, q6_behavior,
+                total_score, risk_level, risk_category_score,
+                reasoning, has_planning, has_intent, has_behavior
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+        """, (
+            username,
+            data.get('clinician_username'),
+            responses[1], responses[2], responses[3],
+            responses[4], responses[5], responses[6],
+            risk_data['total_score'],
+            risk_data['risk_level'],
+            risk_data['risk_category_score'],
+            risk_data['reasoning'],
+            risk_data['has_planning'],
+            risk_data['has_intent'],
+            risk_data['has_behavior']
+        ))
+        
+        assessment_id = cur.fetchone()[0]
+        conn.commit()
+        
+        # Log assessment
+        log_event(username, 'c_ssrs', 'assessment_submitted', 
+                 f"Risk Level: {risk_data['risk_level']}, Score: {risk_data['total_score']}")
+        
+        # Check if alert needed
+        alert_config = CSSRSAssessment.get_alert_threshold(risk_data['risk_level'])
+        alert_sent = False
+        
+        if alert_config['should_alert']:
+            clinician_username = data.get('clinician_username')
+            if clinician_username:
+                # Send alert to clinician
+                subject = f"[URGENT] Patient {username} - C-SSRS Risk Assessment {risk_data['risk_level'].upper()}"
+                body = f"""
+C-SSRS Assessment Alert
+
+Patient: {username}
+Risk Level: {risk_data['risk_level'].upper()}
+Risk Score: {risk_data['total_score']}/30
+Reasoning: {risk_data['reasoning']}
+
+Response Details:
+- Suicidal Ideation: {responses[1]}
+- Frequency: {responses[2]}
+- Duration: {responses[3]}
+- Planning: {responses[4]}
+- Intent: {responses[5]}
+- Behavior: {responses[6]}
+
+REQUIRED ACTION: Respond within {alert_config['response_time_minutes']} minutes
+
+Link: [Assessment Dashboard]
+
+Emergency: 999 | Samaritans: 116 123
+"""
+                try:
+                    send_email(clinician_username, subject, body)
+                    
+                    # Mark alert as sent
+                    cur.execute("""
+                        UPDATE c_ssrs_assessments 
+                        SET alert_sent = TRUE, alert_sent_at = NOW()
+                        WHERE id = %s
+                    """, (assessment_id,))
+                    conn.commit()
+                    alert_sent = True
+                except:
+                    pass  # Email failure shouldn't block submission
+        
+        # Get patient-facing message
+        patient_message = CSSRSAssessment.format_for_patient(risk_data)
+        
+        conn.close()
+        
+        response = {
+            'assessment_id': assessment_id,
+            'risk_level': risk_data['risk_level'],
+            'total_score': risk_data['total_score'],
+            'reasoning': risk_data['reasoning'],
+            'patient_message': patient_message['message'],
+            'next_steps': patient_message['next_steps'],
+            'emergency_contacts': patient_message['emergency_contacts'],
+            'requires_safety_plan': alert_config['requires_safety_plan'],
+            'alert_sent': alert_sent
+        }
+        
+        return jsonify(response), 201
+    
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        return handle_exception(e, 'submit_c_ssrs_assessment')
+
+
+@app.route('/api/c-ssrs/history', methods=['GET'])
+def get_c_ssrs_history():
+    """Get patient's C-SSRS assessment history"""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+        
+        # Get assessments
+        cur.execute("""
+            SELECT id, risk_level, total_score, reasoning, created_at
+            FROM c_ssrs_assessments
+            WHERE patient_username = %s
+            ORDER BY created_at DESC
+            LIMIT 20
+        """, (username,))
+        
+        assessments = []
+        for row in cur.fetchall():
+            assessments.append({
+                'assessment_id': row[0],
+                'risk_level': row[1],
+                'total_score': row[2],
+                'reasoning': row[3],
+                'created_at': row[4].isoformat() if row[4] else None
+            })
+        
+        conn.close()
+        
+        return jsonify({
+            'assessments': assessments,
+            'total_count': len(assessments)
+        }), 200
+    
+    except Exception as e:
+        return handle_exception(e, 'get_c_ssrs_history')
+
+
+@app.route('/api/c-ssrs/<int:assessment_id>', methods=['GET'])
+def get_c_ssrs_assessment(assessment_id):
+    """Get specific C-SSRS assessment details"""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+        
+        # Get assessment (patient can only see their own, clinician can see assigned)
+        cur.execute("""
+            SELECT id, patient_username, clinician_username,
+                   q1_ideation, q2_frequency, q3_duration,
+                   q4_planning, q5_intent, q6_behavior,
+                   total_score, risk_level, reasoning,
+                   has_planning, has_intent, has_behavior,
+                   clinician_response, clinician_response_at,
+                   created_at
+            FROM c_ssrs_assessments
+            WHERE id = %s AND (patient_username = %s OR clinician_username = %s)
+        """, (assessment_id, username, username))
+        
+        row = cur.fetchone()
+        if not row:
+            conn.close()
+            return jsonify({'error': 'Assessment not found'}), 404
+        
+        assessment = {
+            'assessment_id': row[0],
+            'patient': row[1],
+            'clinician': row[2],
+            'responses': {
+                'q1_ideation': row[3],
+                'q2_frequency': row[4],
+                'q3_duration': row[5],
+                'q4_planning': row[6],
+                'q5_intent': row[7],
+                'q6_behavior': row[8]
+            },
+            'total_score': row[9],
+            'risk_level': row[10],
+            'reasoning': row[11],
+            'risk_factors': {
+                'has_planning': row[12],
+                'has_intent': row[13],
+                'has_behavior': row[14]
+            },
+            'clinician_response': row[15],
+            'clinician_response_at': row[16].isoformat() if row[16] else None,
+            'created_at': row[17].isoformat() if row[17] else None
+        }
+        
+        conn.close()
+        
+        return jsonify(assessment), 200
+    
+    except Exception as e:
+        return handle_exception(e, 'get_c_ssrs_assessment')
+
+
+@app.route('/api/c-ssrs/<int:assessment_id>/clinician-response', methods=['POST'])
+def clinician_c_ssrs_response(assessment_id):
+    """Clinician response to C-SSRS alert"""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No response data provided'}), 400
+        
+        response_action = data.get('action')  # 'call', 'emergency_contact', 'emergency_services', 'documented'
+        notes = data.get('notes', '')
+        
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+        
+        # Update assessment with clinician response
+        cur.execute("""
+            UPDATE c_ssrs_assessments
+            SET alert_acknowledged = TRUE,
+                alert_acknowledged_at = NOW(),
+                alert_acknowledged_by = %s,
+                clinician_response = %s
+            WHERE id = %s AND clinician_username = %s
+        """, (username, response_action, assessment_id, username))
+        
+        if cur.rowcount == 0:
+            conn.close()
+            return jsonify({'error': 'Assessment not found or not assigned to you'}), 404
+        
+        conn.commit()
+        
+        # Log clinician response
+        log_event(username, 'c_ssrs', 'clinician_response',
+                 f"Assessment {assessment_id}: Action = {response_action}")
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Response recorded',
+            'action': response_action,
+            'recorded_at': datetime.now().isoformat()
+        }), 200
+    
+    except Exception as e:
+        return handle_exception(e, 'clinician_c_ssrs_response')
+
+
+@app.route('/api/c-ssrs/<int:assessment_id>/safety-plan', methods=['POST'])
+def submit_safety_plan(assessment_id):
+    """Submit safety plan for high-risk patient"""
+    try:
+        if not SafetyPlan:
+            return jsonify({'error': 'Safety planning module not available'}), 503
+        
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No safety plan data provided'}), 400
+        
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+        
+        # Verify assessment belongs to patient
+        cur.execute("""
+            SELECT id, risk_level FROM c_ssrs_assessments
+            WHERE id = %s AND patient_username = %s
+        """, (assessment_id, username))
+        
+        assessment = cur.fetchone()
+        if not assessment:
+            conn.close()
+            return jsonify({'error': 'Assessment not found'}), 404
+        
+        if assessment[1] not in ['high', 'critical']:
+            conn.close()
+            return jsonify({'warning': 'Safety plan not required for this risk level'}), 200
+        
+        # Store safety plan
+        safety_plan_json = json.dumps({
+            'warning_signs': data.get('warning_signs', []),
+            'internal_coping': data.get('internal_coping', []),
+            'distraction_people': data.get('distraction_people', []),
+            'people_for_help': data.get('people_for_help', []),
+            'professionals': data.get('professionals', []),
+            'means_safety': data.get('means_safety', [])
+        })
+        
+        # Check if safety plan exists
+        cur.execute("""
+            SELECT id FROM enhanced_safety_plans WHERE username = %s
+        """, (username,))
+        
+        if cur.fetchone():
+            # Update
+            cur.execute("""
+                UPDATE enhanced_safety_plans
+                SET warning_signs = %s,
+                    internal_coping = %s,
+                    distraction_people_places = %s,
+                    people_for_help = %s,
+                    professionals_services = %s,
+                    environment_safety = %s,
+                    last_reviewed = NOW(),
+                    updated_at = NOW()
+                WHERE username = %s
+            """, (
+                json.dumps(data.get('warning_signs', [])),
+                json.dumps(data.get('internal_coping', [])),
+                json.dumps(data.get('distraction_people', [])),
+                json.dumps(data.get('people_for_help', [])),
+                json.dumps(data.get('professionals', [])),
+                json.dumps(data.get('means_safety', [])),
+                username
+            ))
+        else:
+            # Create
+            cur.execute("""
+                INSERT INTO enhanced_safety_plans (
+                    username, warning_signs, internal_coping,
+                    distraction_people_places, people_for_help,
+                    professionals_services, environment_safety,
+                    last_reviewed
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
+            """, (
+                username,
+                json.dumps(data.get('warning_signs', [])),
+                json.dumps(data.get('internal_coping', [])),
+                json.dumps(data.get('distraction_people', [])),
+                json.dumps(data.get('people_for_help', [])),
+                json.dumps(data.get('professionals', [])),
+                json.dumps(data.get('means_safety', []))
+            ))
+        
+        # Mark assessment as having safety plan
+        cur.execute("""
+            UPDATE c_ssrs_assessments
+            SET safety_plan_completed = TRUE
+            WHERE id = %s
+        """, (assessment_id,))
+        
+        conn.commit()
+        
+        # Log safety plan
+        log_event(username, 'c_ssrs', 'safety_plan_created',
+                 f"Assessment {assessment_id}")
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Safety plan saved',
+            'assessment_id': assessment_id
+        }), 201
+    
+    except Exception as e:
+        return handle_exception(e, 'submit_safety_plan')
 
 
 # Print app summary
