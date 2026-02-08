@@ -81,17 +81,17 @@ class TrainingDataManager:
             cur.execute(
                 '''INSERT INTO data_consent 
                    (user_hash, consent_given, consent_date, consent_withdrawn, withdrawal_date)
-                   VALUES (%s, 1, %s, 0, NULL)
+                   VALUES (%s, %s, %s, %s, NULL)
                    ON CONFLICT (user_hash) DO UPDATE
-                   SET consent_given=1, consent_date=%s''',
-                (user_hash, datetime.now(), datetime.now())
+                   SET consent_given=%s, consent_date=%s''',
+                (user_hash, 1, datetime.now(), 0, 1, datetime.now())
             )
             action = 'consent_given'
         else:
             cur.execute(
                 '''UPDATE data_consent 
                    SET consent_withdrawn=1, withdrawal_date=%s
-                   WHERE user_hash=%s%s''',
+                   WHERE user_hash=%s''',
                 (datetime.now(), user_hash)
             )
             action = 'consent_withdrawn'
@@ -117,7 +117,7 @@ class TrainingDataManager:
         
         result = cur.execute(
             '''SELECT consent_given, consent_withdrawn 
-               FROM data_consent WHERE user_hash=%s%s''',
+               FROM data_consent WHERE user_hash=%s''',
             (user_hash,)
         ).fetchone()
         
@@ -143,7 +143,7 @@ class TrainingDataManager:
         chats = prod_cur.execute(
             '''SELECT sender, message, timestamp 
                FROM chat_history 
-               WHERE session_id=%s?
+               WHERE session_id=%s
                ORDER BY timestamp ASC''',
             (f"{username}_session",)
         ).fetchall()
@@ -151,7 +151,7 @@ class TrainingDataManager:
         # Get mood context
         mood = prod_cur.execute(
             '''SELECT mood_val FROM mood_logs 
-               WHERE username=%s%s 
+               WHERE username=%s 
                ORDER BY entrestamp DESC LIMIT 1''',
             (username,)
         ).fetchone()
@@ -159,7 +159,7 @@ class TrainingDataManager:
         # Get assessment severity
         assessment = prod_cur.execute(
             '''SELECT severity FROM clinical_scales 
-               WHERE username=%s%s 
+               WHERE username=%s 
                ORDER BY entry_timestamp DESC LIMIT 1''',
             (username,)
         ).fetchone()
@@ -213,14 +213,14 @@ class TrainingDataManager:
         # Get CBT patterns
         cbt_records = prod_cur.execute(
             '''SELECT situation, thought, evidence, entry_timestamp
-               FROM cbt_records WHERE username=%s%s''',
+               FROM cbt_records WHERE username=%s''',
             (username,)
         ).fetchall()
         
         # Get gratitude patterns
         gratitude = prod_cur.execute(
             '''SELECT entry, entry_timestamp
-               FROM gratitude_logs WHERE username=%s%s''',
+               FROM gratitude_logs WHERE username=%s''',
             (username,)
         ).fetchall()
         
@@ -278,7 +278,7 @@ class TrainingDataManager:
         assessments = prod_cur.execute(
             '''SELECT scale_name, score, entry_timestamp
                FROM clinical_scales 
-               WHERE username=%s%s
+               WHERE username=%s
                ORDER BY entry_timestamp ASC''',
             (username,)
         ).fetchall()
@@ -340,9 +340,9 @@ class TrainingDataManager:
         cur = conn.cursor()
         
         # Delete all training data
-        cur.execute('DELETE FROM training_chats WHERE user_hash=%s%s', (user_hash,))
-        cur.execute('DELETE FROM training_patterns WHERE user_hash=%s%s', (user_hash,))
-        cur.execute('DELETE FROM training_outcomes WHERE user_hash=%s%s', (user_hash,))
+        cur.execute('DELETE FROM training_chats WHERE user_hash=%s', (user_hash,))
+        cur.execute('DELETE FROM training_patterns WHERE user_hash=%s', (user_hash,))
+        cur.execute('DELETE FROM training_outcomes WHERE user_hash=%s', (user_hash,))
         
         # Audit
         cur.execute(
@@ -364,7 +364,8 @@ class TrainingDataManager:
         # Get all consented users
         consented = cur.execute(
             '''SELECT user_hash FROM data_consent 
-               WHERE consent_given=%s1 AND consent_withdrawn=0'''
+               WHERE consent_given=%s AND consent_withdrawn=%s''',
+            (1, 0)
         ).fetchall()
         
         conn.close()
@@ -381,7 +382,8 @@ class TrainingDataManager:
         
         stats = {
             'consented_users': cur.execute(
-                'SELECT COUNT(*) FROM data_consent WHERE consent_given=%s1 AND consent_withdrawn=0'
+                'SELECT COUNT(*) FROM data_consent WHERE consent_given=%s AND consent_withdrawn=%s',
+                (1, 0)
             ).fetchone()[0],
             'total_chat_messages': cur.execute(
                 'SELECT COUNT(*) FROM training_chats'
