@@ -74,6 +74,9 @@ def ensure_pet_table():
 def get_pet_db_connection():
     """Get pet database connection to PostgreSQL
     
+    SECURITY: All credentials MUST come from environment variables.
+    No hardcoded fallbacks are allowed.
+    
     Supports both:
     1. DATABASE_URL (Railway): postgresql://user:pass@host:port/db
     2. Individual env vars: DB_HOST, DB_PORT, DB_NAME_PET, DB_USER, DB_PASSWORD
@@ -84,13 +87,26 @@ def get_pet_db_connection():
         if database_url:
             conn = psycopg2.connect(database_url)
         else:
-            # Fall back to individual environment variables
+            # Require all individual vars to be set - FAIL CLOSED
+            host = os.environ.get('DB_HOST')
+            port = os.environ.get('DB_PORT', '5432')
+            database = os.environ.get('DB_NAME_PET')
+            user = os.environ.get('DB_USER')
+            password = os.environ.get('DB_PASSWORD')
+            
+            if not all([host, database, user, password]):
+                raise RuntimeError(
+                    "CRITICAL: Database credentials incomplete. "
+                    "Required env vars: DB_HOST, DB_NAME_PET, DB_USER, DB_PASSWORD. "
+                    "Or provide DATABASE_URL for Railway."
+                )
+            
             conn = psycopg2.connect(
-                host=os.environ.get('DB_HOST', 'localhost'),
-                port=os.environ.get('DB_PORT', '5432'),
-                database=os.environ.get('DB_NAME_PET', 'healing_space_pet_test'),
-                user=os.environ.get('DB_USER', 'healing_space'),
-                password=os.environ.get('DB_PASSWORD', 'healing_space_dev_pass')
+                host=host,
+                port=port,
+                database=database,
+                user=user,
+                password=password
             )
         return conn
     except psycopg2.Error as e:
@@ -145,18 +161,32 @@ except Exception:
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
 # Configure Flask session support for secure authentication (Phase 1A)
-# CRITICAL: SECRET_KEY must be persistent across app restarts
-# If not set in environment, log warning and use a deterministic fallback
+# CRITICAL: SECRET_KEY must be strong and set in environment
 SECRET_KEY = os.getenv('SECRET_KEY')
+
 if not SECRET_KEY:
-    print("⚠️  WARNING: SECRET_KEY not set in environment. Sessions will NOT persist across restarts.")
-    print("           Set SECRET_KEY in Railway environment variables for production.")
-    # Use machine-based deterministic key (better than random for stability)
-    # This ensures consistent key during single session but warns on restart
-    import socket
-    import hashlib
-    hostname = socket.gethostname()
-    SECRET_KEY = hashlib.sha256(hostname.encode()).hexdigest()[:32]
+    if not DEBUG:
+        # Production MUST have explicit SECRET_KEY
+        raise RuntimeError(
+            "CRITICAL: SECRET_KEY environment variable is required in production.\n"
+            "Generate with: python3 -c \"import secrets; print(secrets.token_hex(32))\"\n"
+            "Set as environment variable and restart the app."
+        )
+    else:
+        # Development: warn but allow ephemeral key
+        print("=" * 70)
+        print("WARNING: SECRET_KEY not set in DEBUG mode")
+        print("Using ephemeral key - sessions will NOT persist across restarts")
+        print("To fix: export SECRET_KEY=$(python3 -c 'import secrets; print(secrets.token_hex(32))')")
+        print("=" * 70)
+        SECRET_KEY = secrets.token_hex(32)
+
+# Validate key is strong enough (32+ bytes = 64+ hex chars)
+if len(SECRET_KEY) < 32:
+    raise ValueError(
+        f"SECRET_KEY too short ({len(SECRET_KEY)} < 32 characters). "
+        f"Generate with: python3 -c \"import secrets; print(secrets.token_hex(32))\""
+    )
 
 app.config['SECRET_KEY'] = SECRET_KEY
 app.config['SESSION_COOKIE_SECURE'] = not os.getenv('DEBUG', '').lower() in ('1', 'true', 'yes')  # HTTPS in production
@@ -2037,6 +2067,9 @@ def check_rate_limit(limit_type: str = 'default'):
 def get_db_connection(timeout=30.0):
     """Create a connection to PostgreSQL database
     
+    SECURITY: All credentials MUST come from environment variables.
+    No hardcoded fallbacks are allowed.
+    
     Supports both:
     1. DATABASE_URL (Railway): postgresql://user:pass@host:port/db
     2. Individual env vars: DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
@@ -2047,13 +2080,26 @@ def get_db_connection(timeout=30.0):
         if database_url:
             conn = psycopg2.connect(database_url)
         else:
-            # Fall back to individual environment variables
+            # Require all individual vars to be set - FAIL CLOSED
+            host = os.environ.get('DB_HOST')
+            port = os.environ.get('DB_PORT', '5432')
+            database = os.environ.get('DB_NAME')
+            user = os.environ.get('DB_USER')
+            password = os.environ.get('DB_PASSWORD')
+            
+            if not all([host, database, user, password]):
+                raise RuntimeError(
+                    "CRITICAL: Database credentials incomplete. "
+                    "Required env vars: DB_HOST, DB_NAME, DB_USER, DB_PASSWORD. "
+                    "Or provide DATABASE_URL for Railway."
+                )
+            
             conn = psycopg2.connect(
-                host=os.environ.get('DB_HOST', 'localhost'),
-                port=os.environ.get('DB_PORT', '5432'),
-                database=os.environ.get('DB_NAME', 'healing_space_test'),
-                user=os.environ.get('DB_USER', 'healing_space'),
-                password=os.environ.get('DB_PASSWORD', 'healing_space_dev_pass')
+                host=host,
+                port=port,
+                database=database,
+                user=user,
+                password=password
             )
         return conn
     except psycopg2.Error as e:
@@ -3078,6 +3124,56 @@ def decrypt_text(encrypted: str) -> str:
         # If decryption fails, might be plaintext
         return encrypted
 
+
+def validate_database_credentials():
+    """Validate required database credentials are present (TIER 0.2)
+    
+    SECURITY: Fail closed - app won't start without proper credentials
+    """
+    database_url = os.environ.get('DATABASE_URL')
+    
+    if not database_url:
+        # Individual credentials required
+        required = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD']
+        missing = [v for v in required if not os.environ.get(v)]
+        
+        if missing:
+            raise RuntimeError(
+                f"CRITICAL: Missing database credentials: {missing}\n"
+                f"Set these environment variables before starting the app:\n"
+                f"  - DB_HOST: Database hostname\n"
+                f"  - DB_NAME: Database name\n"
+                f"  - DB_USER: Database user\n"
+                f"  - DB_PASSWORD: Database password\n"
+                f"Or set DATABASE_URL for Railway deployment."
+            )
+
+
+def validate_secret_key():
+    """Validate SECRET_KEY is cryptographically strong (TIER 0.3)
+    
+    SECURITY: Ensures session cookies are properly encrypted
+    """
+    key = os.getenv('SECRET_KEY')
+    
+    if not key:
+        raise RuntimeError("SECRET_KEY is required but not set")
+    
+    # Check length
+    if len(key) < 32:
+        raise ValueError(f"SECRET_KEY too short: {len(key)} < 32 chars")
+    
+    # Check entropy (should be hex, not predictable)
+    try:
+        int(key, 16)  # Valid hex?
+    except ValueError:
+        print("WARNING: SECRET_KEY is not hex format. Is it random enough?")
+    
+    # Log success
+    log_event('system', 'startup', 'secret_key_validated', 
+             f'Key length: {len(key)} chars')
+
+
 def init_db():
     """Initialize database - create critical tables if they don't exist"""
     try:
@@ -3679,15 +3775,15 @@ def init_db():
 
 
 def get_authenticated_username():
-    """Get authenticated username from Flask session (SECURE - Phase 1A).
+    """Get authenticated username from Flask session ONLY (SECURE - Phase 1A).
     
-    PRIMARY: Uses Flask session (secure, server-side, httponly)
-    FALLBACK: X-Username header/query param for dev/test only (DEBUG mode)
+    SECURITY: Session is the ONLY valid authentication source.
+    Never accept identity claims from request body/headers.
     
     Returns: username if authenticated, None otherwise
     """
     try:
-        # PRIMARY: Use Flask session (secure, server-side)
+        # Use Flask session (secure, server-side, httponly)
         if 'username' in session and 'role' in session:
             username = session.get('username')
             role = session.get('role')
@@ -3708,13 +3804,11 @@ def get_authenticated_username():
                 session.clear()
                 return None
         
-        # FALLBACK: For development/testing with X-Username header (INSECURE)
-        # This should NEVER be used in production - prefer session
-        if DEBUG:
-            fallback = request.headers.get('X-Username') or request.args.get('username')
-            if fallback:
-                print(f"⚠️  WARNING: Using insecure X-Username header for {fallback}. Only use in DEBUG mode.")
-                return fallback
+        # Log any attempts to use header auth (suspicious activity)
+        if request.headers.get('X-Username') and not session.get('username'):
+            attempted_user = request.headers.get('X-Username')
+            log_event('system', 'security', 'auth_bypass_attempt',
+                     f'X-Username header used without session: {attempted_user}')
         
         return None
     except Exception as e:
@@ -16152,6 +16246,34 @@ def submit_safety_plan(assessment_id):
         return handle_exception(e, 'submit_safety_plan')
 
 
+# ========== TIER 0 SECURITY STARTUP VALIDATIONS ==========
+
+def startup_security_checks():
+    """Validate all critical security configurations on startup"""
+    try:
+        # TIER 0.2: Validate database credentials
+        validate_database_credentials()
+        
+        # TIER 0.3: Validate SECRET_KEY
+        validate_secret_key()
+        
+        print("✅ All security validations passed on startup")
+        log_event('system', 'startup', 'security_checks_passed', 'Database and session encryption validated')
+        
+    except Exception as e:
+        print(f"🚨 CRITICAL STARTUP ERROR: {e}")
+        print("TIER 0: Security validation failed - app will not start")
+        raise
+
+
+# Run startup checks before first request
+@app.before_first_request
+def before_first_request():
+    """Initialize database and run security checks on first request"""
+    startup_security_checks()
+    init_db()
+
+
 # Print app summary
 print(f"📊 API Routes: {len(app.url_map._rules)} routes registered", flush=True)
 print("=" * 80, flush=True)
@@ -16160,4 +16282,7 @@ sys.stdout.flush()
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     print(f"🌐 Starting on http://0.0.0.0:{port}")
+    # Run startup checks
+    startup_security_checks()
+    init_db()
     app.run(host='0.0.0.0', port=port, debug=DEBUG)
