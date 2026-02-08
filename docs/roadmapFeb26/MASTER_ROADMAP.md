@@ -95,11 +95,27 @@ When starting TIER 1 implementation, please:
 - **Impact**: Eliminates entire CSRF attack surface (52 previously unprotected endpoints now secured)
 - **Verification**: ✅ Syntax valid, 68 CSRF decorators applied, commit: 736168b
 
-### 1.3 Rate Limiting on Critical Endpoints
-- **File**: api.py:168-174
-- **Missing on**: Login (brute force), registration (spam), password reset (enumeration), clinical assessments
-- **Fix**: Add per-endpoint rate limits; switch from fixed-window to sliding-window; add user-based limiting
-- **Effort**: 4 hours
+### 1.3 Rate Limiting on Critical Endpoints ✅ COMPLETE
+- **File**: api.py:1995-2006, 4530, 5115, 5284, 5353, 9235, 9317
+- **Status**: ✅ COMPLETE (Feb 8, 2026)
+- **Changes Made**:
+  - Enhanced RateLimiter class with 6 new rate limit configurations
+  - Applied @check_rate_limit decorator to 7 critical endpoints (was 4)
+  - Total rate limiting decorators: 11 (4 original + 7 new)
+  - Added CSRF protection to clinical assessments (PHQ-9, GAD-7)
+  - Sliding-window strategy: Already in place, optimized
+  - Dual-level rate limiting: By IP address AND username
+- **Protected Endpoints**:
+  - Auth: login (5/min), register (3/5min), send-verification (3/5min), verify-code (10/min), forgot-password (3/5min), confirm-reset (5/5min), clinician-register (2/hr), developer-register (1/hr)
+  - Clinical: phq9 (2/14days), gad7 (2/14days)
+  - Chat: ai_chat (30/min)
+- **Impact**: 
+  - Prevents brute force attacks on login, password reset
+  - Prevents user enumeration on forgot-password
+  - Prevents registration spam
+  - Enforces fortnightly clinical assessment limits
+  - Dual-level protection against distributed attacks
+- **Verification**: ✅ Syntax valid, 11 decorators applied, commit: 0953f14
 
 ### 1.4 Input Validation Consistency
 - **File**: api.py (InputValidator class exists at line 181 but rarely used)
