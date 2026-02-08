@@ -3361,6 +3361,25 @@ def init_db():
                 print(f"Migration note: preferred_name column may already exist or migration skipped: {e}")
                 conn.rollback()
         
+        # Ensure activity_tracking_consent column exists (TIER 0.6 - GDPR)
+        cursor.execute("""
+            SELECT EXISTS (
+                SELECT 1 FROM information_schema.columns 
+                WHERE table_name = 'users' AND column_name = 'activity_tracking_consent'
+            )
+        """)
+        if not cursor.fetchone()[0]:
+            try:
+                print("Migrating: Adding activity_tracking_consent column to users table...")
+                cursor.execute("""
+                    ALTER TABLE users ADD COLUMN activity_tracking_consent INTEGER DEFAULT 0
+                """)
+                conn.commit()
+                print("✓ Migration: activity_tracking_consent column added (GDPR compliance - TIER 0.6)")
+            except Exception as e:
+                print(f"Migration note: activity_tracking_consent column may already exist: {e}")
+                conn.rollback()
+        
         # Ensure wellness_logs table exists (may be missing on older databases)
         try:
             cursor.execute("""
@@ -15226,25 +15245,39 @@ def fetch_user_memory(username):
 
 @app.route('/api/activity/log', methods=['POST'])
 def log_activity_endpoint():
-    """Receive batch of user activities from frontend and store them."""
+    """Receive batch of user activities from frontend and store them (GDPR consent required)."""
     try:
         authenticated_user = get_authenticated_username()
         if not authenticated_user:
             return jsonify({'error': 'Authentication required'}), 401
 
+        # TIER 0.6: Check activity tracking consent before logging
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+        
+        cur.execute(
+            "SELECT activity_tracking_consent FROM users WHERE username=%s",
+            (authenticated_user,)
+        )
+        result = cur.fetchone()
+        
+        if not result or result[0] != 1:
+            # User has NOT given consent - silently discard (don't break frontend)
+            conn.close()
+            return jsonify({'error': 'Activity tracking consent not provided'}), 403
+
         data = request.get_json()
         if not data:
+            conn.close()
             return jsonify({'error': 'No data provided'}), 400
 
         activities = data.get('activities', [])
         if not activities or not isinstance(activities, list):
+            conn.close()
             return jsonify({'error': 'Activities must be a non-empty list'}), 400
 
         # Cap batch size to prevent abuse
         activities = activities[:50]
-
-        conn = get_db_connection()
-        cur = get_wrapped_cursor(conn)
 
         logged_count = 0
         for activity in activities:
@@ -15274,6 +15307,82 @@ def log_activity_endpoint():
     except Exception as e:
         print(f"Activity logging error: {e}")
         return jsonify({'error': 'Failed to log activities'}), 500
+
+
+@app.route('/api/activity/consent', methods=['GET'])
+def get_activity_consent():
+    """Check if user has given consent for activity tracking (TIER 0.6 - GDPR)."""
+    try:
+        authenticated_user = get_authenticated_username()
+        if not authenticated_user:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+        
+        cur.execute(
+            "SELECT activity_tracking_consent FROM users WHERE username=%s",
+            (authenticated_user,)
+        )
+        result = cur.fetchone()
+        conn.close()
+        
+        if not result:
+            return jsonify({'error': 'User not found'}), 404
+        
+        consent_status = result[0]
+        return jsonify({
+            'username': authenticated_user,
+            'activity_tracking_consent': consent_status == 1,
+            'consent_given': consent_status == 1
+        }), 200
+    except Exception as e:
+        print(f"Error checking activity consent: {e}")
+        return jsonify({'error': 'Failed to check consent status'}), 500
+
+
+@app.route('/api/activity/consent', methods=['POST'])
+def set_activity_consent():
+    """Update user consent for activity tracking (TIER 0.6 - GDPR)."""
+    try:
+        authenticated_user = get_authenticated_username()
+        if not authenticated_user:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        data = request.json
+        if not data:
+            return jsonify({'error': 'Request body required'}), 400
+        
+        consent = data.get('consent')
+        if consent is None:
+            return jsonify({'error': 'consent field required (boolean)'}), 400
+        
+        # Convert to 0 or 1
+        consent_value = 1 if consent else 0
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+        
+        cur.execute(
+            "UPDATE users SET activity_tracking_consent=%s WHERE username=%s",
+            (consent_value, authenticated_user)
+        )
+        conn.commit()
+        
+        # Log this consent change
+        log_event(authenticated_user, 'gdpr', 'activity_tracking_consent_updated',
+                 f"Activity tracking consent set to: {consent}")
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'activity_tracking_consent': consent_value == 1,
+            'message': f'Activity tracking consent {"granted" if consent else "revoked"}'
+        }), 200
+    except Exception as e:
+        print(f"Error updating activity consent: {e}")
+        return jsonify({'error': 'Failed to update consent status'}), 500
 
 
 @app.route('/api/ai/memory/update', methods=['POST'])

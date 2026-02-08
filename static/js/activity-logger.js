@@ -3,6 +3,9 @@
  *
  * Tracks user interactions and sends them to the backend in batches.
  * Used for pattern detection, engagement analysis, and behavioral insights.
+ * 
+ * GDPR Compliant: Requires explicit user consent before logging activities.
+ * Consent stored in user profile and checked on every batch submission.
  */
 
 class ActivityLogger {
@@ -13,14 +16,44 @@ class ActivityLogger {
         this.batchTimer = null;
         this.batchInterval = 300000; // 5 minutes
         this.isDestroyed = false;
+        this.consentGiven = false; // GDPR: default to NO tracking
 
         this.setupEventListeners();
+        this.checkConsentStatus(); // GDPR: check consent before logging
         this.startBatchTimer();
-        this.logActivity('login', this.currentSessionId, 'home');
+        if (this.consentGiven) {
+            this.logActivity('login', this.currentSessionId, 'home');
+        }
     }
 
     generateSessionId() {
         return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    // GDPR: Check if user has given consent for activity tracking
+    checkConsentStatus() {
+        fetch('/api/activity/consent', {
+            method: 'GET',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(response => {
+            if (!response.ok) {
+                console.warn('Could not check activity consent');
+                this.consentGiven = false;
+                return;
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data && data.consent_given) {
+                this.consentGiven = true;
+            }
+        })
+        .catch(error => {
+            console.warn('Activity consent check error:', error);
+            this.consentGiven = false;
+        });
     }
 
     setupEventListeners() {
@@ -50,7 +83,8 @@ class ActivityLogger {
     }
 
     logActivity(activityType, activityDetail, appState) {
-        if (this.isDestroyed) return;
+        // GDPR: Only log if consent given
+        if (this.isDestroyed || !this.consentGiven) return;
 
         activityDetail = activityDetail || '';
         appState = appState || this.getCurrentAppState();
@@ -102,14 +136,15 @@ class ActivityLogger {
 
     startBatchTimer() {
         this.batchTimer = setInterval(() => {
-            if (this.activities.length > 0) {
+            if (this.activities.length > 0 && this.consentGiven) {
                 this.sendBatch();
             }
         }, this.batchInterval);
     }
 
     sendBatch(urgent) {
-        if (this.activities.length === 0) return;
+        // GDPR: Only send if consent given
+        if (this.activities.length === 0 || !this.consentGiven) return;
 
         const batchToSend = this.activities.slice();
         this.activities = [];
@@ -129,11 +164,38 @@ class ActivityLogger {
             body: payload
         }).then(function(response) {
             if (!response.ok) {
-                console.warn('Activity logging failed');
+                if (response.status === 403) {
+                    // Consent was revoked - stop logging
+                    console.info('Activity tracking consent revoked');
+                    this.consentGiven = false;
+                } else {
+                    console.warn('Activity logging failed');
+                }
             }
         }).catch(function() {
             // Silently fail - activity logging should never break the app
         });
+    }
+
+    // GDPR: Public method to update consent
+    setConsent(consent) {
+        this.consentGiven = consent;
+        fetch('/api/activity/consent', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ consent: consent })
+        })
+        .then(response => {
+            if (response.ok) {
+                if (consent) {
+                    console.log('Activity tracking enabled');
+                } else {
+                    console.log('Activity tracking disabled - all previous logs deleted');
+                }
+            }
+        })
+        .catch(error => console.warn('Error updating consent:', error));
     }
 
     destroy() {
@@ -142,7 +204,9 @@ class ActivityLogger {
             clearInterval(this.batchTimer);
             this.batchTimer = null;
         }
-        this.sendBatch(true);
+        if (this.consentGiven) {
+            this.sendBatch(true);
+        }
     }
 }
 
