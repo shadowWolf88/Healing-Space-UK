@@ -1994,12 +1994,18 @@ class RateLimiter:
         self.lock = threading.Lock()
         # Rate limit configurations: (max_requests, window_seconds)
         self.limits = {
-            'login': (5, 60),           # 5 login attempts per minute
-            'verify_code': (10, 60),    # 10 code verification attempts per minute (Phase 1D)
-            'register': (3, 300),       # 3 registrations per 5 minutes
-            'forgot_password': (3, 300), # 3 password resets per 5 minutes
-            'ai_chat': (30, 60),        # 30 AI chat messages per minute
-            'default': (60, 60),        # 60 requests per minute default
+            'login': (5, 60),                    # 5 login attempts per minute
+            'verify_code': (10, 60),             # 10 code verification attempts per minute (Phase 1D)
+            'register': (3, 300),                # 3 registrations per 5 minutes
+            'send_verification': (3, 300),       # 3 verification sends per 5 minutes (prevent spam)
+            'confirm_reset': (5, 300),           # 5 password reset confirms per 5 minutes
+            'clinician_register': (2, 3600),     # 2 clinician registrations per hour (manual review)
+            'developer_register': (1, 3600),     # 1 developer registration per hour (manual review)
+            'forgot_password': (3, 300),         # 3 password resets per 5 minutes (enumeration prevention)
+            'phq9': (2, 1209600),                # 2 PHQ-9 submissions per 14 days (fortnightly)
+            'gad7': (2, 1209600),                # 2 GAD-7 submissions per 14 days (fortnightly)
+            'ai_chat': (30, 60),                 # 30 AI chat messages per minute
+            'default': (60, 60),                 # 60 requests per minute default
         }
 
     def is_allowed(self, key: str, limit_type: str = 'default') -> bool:
@@ -4521,6 +4527,7 @@ def admin_wipe_database():
         return handle_exception(e, request.endpoint or 'unknown')
 
 @CSRFProtection.require_csrf
+@check_rate_limit('send_verification')
 @app.route('/api/auth/send-verification', methods=['POST'])
 def send_verification():
     """Send 2FA verification code during signup"""
@@ -5105,6 +5112,7 @@ def send_reset_email(to_email, username, reset_token):
 
 
 @CSRFProtection.require_csrf
+@check_rate_limit('confirm_reset')
 @app.route('/api/auth/confirm-reset', methods=['POST'])
 def confirm_password_reset():
     """Complete password reset with token"""
@@ -5273,6 +5281,7 @@ def send_verification_code(identifier, code, method='email'):
         raise Exception(error_msg)
 
 @CSRFProtection.require_csrf
+@check_rate_limit('clinician_register')
 @app.route('/api/auth/clinician/register', methods=['POST'])
 def clinician_register():
     """Register a new clinician account"""
@@ -5341,6 +5350,7 @@ def clinician_register():
         return handle_exception(e, request.endpoint or 'unknown')
 
 @CSRFProtection.require_csrf
+@check_rate_limit('developer_register')
 @app.route('/api/auth/developer/register', methods=['POST'])
 def developer_register():
     """Register single developer account (one-time setup)"""
@@ -9221,6 +9231,8 @@ def get_cbt_records():
         return handle_exception(e, request.endpoint or 'unknown')
 
 # ===== CLINICAL SCALES ENDPOINTS =====
+@CSRFProtection.require_csrf
+@check_rate_limit('phq9')
 @app.route('/api/clinical/phq9', methods=['POST'])
 def submit_phq9():
     """Submit PHQ-9 depression assessment (once per fortnight)"""
@@ -9301,6 +9313,8 @@ def submit_phq9():
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+@CSRFProtection.require_csrf
+@check_rate_limit('gad7')
 @app.route('/api/clinical/gad7', methods=['POST'])
 def submit_gad7():
     """Submit GAD-7 anxiety assessment (once per fortnight)"""
