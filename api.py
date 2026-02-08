@@ -402,12 +402,7 @@ class CSRFProtection:
             # Get CSRF token from header
             csrf_token = request.headers.get('X-CSRF-Token')
             
-            # In DEBUG mode, allow missing CSRF for testing (with warning)
-            if DEBUG and not csrf_token:
-                print(f"WARNING: Missing CSRF token in DEBUG mode (user: {username})")
-                return f(*args, **kwargs)
-            
-            # Validate CSRF token
+            # Validate CSRF token (required in all modes)
             is_valid, message = CSRFProtection.validate_csrf_token(username, csrf_token)
             if not is_valid:
                 log_event(username, 'security', 'csrf_validation_failed', message)
@@ -430,6 +425,7 @@ def get_last_insert_id(cursor):
     except Exception:
         return None
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/goals', methods=['POST'])
 def create_goal():
     """Create a new goal entry"""
@@ -494,6 +490,7 @@ def get_goal(entry_id):
     except Exception as e:
         return handle_exception(e, 'get_goal')
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/goals/<int:entry_id>', methods=['PUT'])
 def update_goal(entry_id):
     """Update a goal entry"""
@@ -520,6 +517,7 @@ def update_goal(entry_id):
     except Exception as e:
         return handle_exception(e, 'update_goal')
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/goals/<int:entry_id>', methods=['DELETE'])
 def delete_goal(entry_id):
     """Delete a goal entry"""
@@ -542,6 +540,7 @@ def delete_goal(entry_id):
         return handle_exception(e, 'delete_goal')
 
 # Milestones CRUD
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/goals/<int:goal_id>/milestone', methods=['POST'])
 def create_goal_milestone(goal_id):
     try:
@@ -580,6 +579,7 @@ def list_goal_milestones(goal_id):
         return handle_exception(e, 'list_goal_milestones')
 
 # Check-ins CRUD
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/goals/<int:goal_id>/checkin', methods=['POST'])
 def create_goal_checkin(goal_id):
     try:
@@ -635,6 +635,7 @@ def summarize_goals(username, limit=3):
         return None
 # ================== CBT: VALUES CLARIFICATION ENDPOINTS ==================
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/values', methods=['POST'])
 def create_value():
     """Create a new values clarification entry"""
@@ -699,6 +700,7 @@ def get_value(entry_id):
     except Exception as e:
         return handle_exception(e, 'get_value')
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/values/<int:entry_id>', methods=['PUT'])
 def update_value(entry_id):
     """Update a values clarification entry"""
@@ -725,6 +727,7 @@ def update_value(entry_id):
     except Exception as e:
         return handle_exception(e, 'update_value')
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/values/<int:entry_id>', methods=['DELETE'])
 def delete_value(entry_id):
     """Delete a values clarification entry"""
@@ -764,6 +767,7 @@ def summarize_values_clarification(username, limit=3):
         return None
 # ================== CBT: SELF-COMPASSION JOURNAL ENDPOINTS ==================
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/self-compassion', methods=['POST'])
 def create_self_compassion():
     """Create a new self-compassion journal entry"""
@@ -824,6 +828,7 @@ def get_self_compassion(entry_id):
     except Exception as e:
         return handle_exception(e, 'get_self_compassion')
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/self-compassion/<int:entry_id>', methods=['PUT'])
 def update_self_compassion(entry_id):
     """Update a self-compassion journal entry"""
@@ -850,6 +855,7 @@ def update_self_compassion(entry_id):
     except Exception as e:
         return handle_exception(e, 'update_self_compassion')
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/self-compassion/<int:entry_id>', methods=['DELETE'])
 def delete_self_compassion(entry_id):
     """Delete a self-compassion journal entry"""
@@ -889,6 +895,7 @@ def summarize_self_compassion(username, limit=3):
         return None
 # ================== CBT: COPING CARDS ENDPOINTS ==================
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/coping-card', methods=['POST'])
 def create_coping_card():
     """Create a new coping card entry"""
@@ -953,6 +960,7 @@ def get_coping_card(entry_id):
     except Exception as e:
         return handle_exception(e, 'get_coping_card')
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/coping-card/<int:entry_id>', methods=['PUT'])
 def update_coping_card(entry_id):
     """Update a coping card entry"""
@@ -979,6 +987,7 @@ def update_coping_card(entry_id):
     except Exception as e:
         return handle_exception(e, 'update_coping_card')
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/coping-card/<int:entry_id>', methods=['DELETE'])
 def delete_coping_card(entry_id):
     """Delete a coping card entry"""
@@ -1018,6 +1027,7 @@ def summarize_coping_cards(username, limit=3):
         return None
 # ================== CBT: PROBLEM-SOLVING WORKSHEET ENDPOINTS ==================
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/problem-solving', methods=['POST'])
 def create_problem_solving():
     """Create a new problem-solving worksheet entry"""
@@ -1082,6 +1092,7 @@ def get_problem_solving(entry_id):
     except Exception as e:
         return handle_exception(e, 'get_problem_solving')
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/problem-solving/<int:entry_id>', methods=['PUT'])
 def update_problem_solving(entry_id):
     """Update a problem-solving worksheet entry"""
@@ -1108,6 +1119,7 @@ def update_problem_solving(entry_id):
     except Exception as e:
         return handle_exception(e, 'update_problem_solving')
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/problem-solving/<int:entry_id>', methods=['DELETE'])
 def delete_problem_solving(entry_id):
     """Delete a problem-solving worksheet entry"""
@@ -1147,6 +1159,7 @@ def summarize_problem_solving(username, limit=3):
         return None
 # ================== CBT: EXPOSURE HIERARCHY ENDPOINTS ==================
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/exposure', methods=['POST'])
 def create_exposure_hierarchy():
     """Create a new exposure hierarchy entry"""
@@ -1209,6 +1222,7 @@ def get_exposure_hierarchy(entry_id):
     except Exception as e:
         return handle_exception(e, 'get_exposure_hierarchy')
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/exposure/<int:entry_id>', methods=['PUT'])
 def update_exposure_hierarchy(entry_id):
     """Update an exposure hierarchy entry"""
@@ -1235,6 +1249,7 @@ def update_exposure_hierarchy(entry_id):
     except Exception as e:
         return handle_exception(e, 'update_exposure_hierarchy')
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/exposure/<int:entry_id>', methods=['DELETE'])
 def delete_exposure_hierarchy(entry_id):
     """Delete an exposure hierarchy entry"""
@@ -1257,6 +1272,7 @@ def delete_exposure_hierarchy(entry_id):
         return handle_exception(e, 'delete_exposure_hierarchy')
 
 # Exposure Attempts CRUD
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/exposure/<int:exposure_id>/attempt', methods=['POST'])
 def create_exposure_attempt(exposure_id):
     """Create a new exposure attempt for a hierarchy item"""
@@ -1316,6 +1332,7 @@ def summarize_exposure_hierarchy(username, limit=3):
         return None
 # ================== CBT: CORE BELIEF WORKSHEET ENDPOINTS ==================
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/core-belief', methods=['POST'])
 def create_core_belief():
     """Create a new core belief worksheet entry"""
@@ -1381,6 +1398,7 @@ def get_core_belief(entry_id):
     except Exception as e:
         return handle_exception(e, 'get_core_belief')
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/core-belief/<int:entry_id>', methods=['PUT'])
 def update_core_belief(entry_id):
     """Update a core belief worksheet entry"""
@@ -1408,6 +1426,7 @@ def update_core_belief(entry_id):
     except Exception as e:
         return handle_exception(e, 'update_core_belief')
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/core-belief/<int:entry_id>', methods=['DELETE'])
 def delete_core_belief(entry_id):
     """Delete a core belief worksheet entry"""
@@ -1447,6 +1466,7 @@ def summarize_core_beliefs(username, limit=3):
         return None
 # ================== CBT: SLEEP DIARY ENDPOINTS ==================
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/sleep', methods=['POST'])
 def create_sleep_diary():
     """Create a new sleep diary entry"""
@@ -1515,6 +1535,7 @@ def get_sleep_diary(entry_id):
     except Exception as e:
         return handle_exception(e, 'get_sleep_diary')
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/sleep/<int:entry_id>', methods=['PUT'])
 def update_sleep_diary(entry_id):
     """Update a sleep diary entry"""
@@ -1542,6 +1563,7 @@ def update_sleep_diary(entry_id):
     except Exception as e:
         return handle_exception(e, 'update_sleep_diary')
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/sleep/<int:entry_id>', methods=['DELETE'])
 def delete_sleep_diary(entry_id):
     """Delete a sleep diary entry"""
@@ -1581,6 +1603,7 @@ def summarize_sleep_diary(username, limit=3):
         return None
 # ================== CBT: RELAXATION TECHNIQUES ENDPOINTS ==================
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/relaxation', methods=['POST'])
 def create_relaxation_technique():
     """Create a new relaxation technique entry"""
@@ -1643,6 +1666,7 @@ def get_relaxation_technique(entry_id):
     except Exception as e:
         return handle_exception(e, 'get_relaxation_technique')
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/relaxation/<int:entry_id>', methods=['PUT'])
 def update_relaxation_technique(entry_id):
     """Update a relaxation technique entry"""
@@ -1670,6 +1694,7 @@ def update_relaxation_technique(entry_id):
     except Exception as e:
         return handle_exception(e, 'update_relaxation_technique')
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/relaxation/<int:entry_id>', methods=['DELETE'])
 def delete_relaxation_technique(entry_id):
     """Delete a relaxation technique entry"""
@@ -1932,10 +1957,6 @@ def csrf_protect():
 
     # Skip CSRF check for exempt endpoints
     if request.endpoint in CSRF_EXEMPT_ENDPOINTS:
-        return
-
-    # Skip CSRF in development mode if explicitly disabled
-    if DEBUG and os.environ.get('DISABLE_CSRF', '').lower() in ('1', 'true', 'yes'):
         return
 
     # Check for CSRF token in header (preferred for APIs)
@@ -4130,6 +4151,7 @@ def get_authenticated_username():
         print(f"❌ Auth error: {e}")
         return None
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/breathing', methods=['POST'])
 def create_breathing_exercise():
     """Create a new breathing exercise entry"""
@@ -4193,6 +4215,7 @@ def get_breathing_exercise(entry_id):
     except Exception as e:
         return handle_exception(e, 'get_breathing_exercise')
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/breathing/<int:entry_id>', methods=['PUT'])
 def update_breathing_exercise(entry_id):
     """Update a breathing exercise entry"""
@@ -4220,6 +4243,7 @@ def update_breathing_exercise(entry_id):
     except Exception as e:
         return handle_exception(e, 'update_breathing_exercise')
 
+@CSRFProtection.require_csrf
 @app.route('/api/cbt/breathing/<int:entry_id>', methods=['DELETE'])
 def delete_breathing_exercise(entry_id):
     """Delete a breathing exercise entry"""
@@ -4429,6 +4453,7 @@ def health_check():
     except Exception as e:
         return jsonify({'status': 'error', 'error': str(e)}), 500
 
+@CSRFProtection.require_csrf
 @app.route('/api/admin/wipe-database', methods=['POST'])
 def admin_wipe_database():
     """ADMIN ONLY: Wipe all user data from database - requires secret key"""
@@ -4495,6 +4520,7 @@ def admin_wipe_database():
         print(f"❌ ADMIN: Database wipe error: {e}")
         return handle_exception(e, request.endpoint or 'unknown')
 
+@CSRFProtection.require_csrf
 @app.route('/api/auth/send-verification', methods=['POST'])
 def send_verification():
     """Send 2FA verification code during signup"""
@@ -4544,6 +4570,7 @@ def send_verification():
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+@CSRFProtection.require_csrf
 @app.route('/api/auth/verify-code', methods=['POST'])
 @check_rate_limit('verify_code')  # Phase 1D: Add rate limiting to prevent brute-force
 def verify_code():
@@ -4589,6 +4616,7 @@ def verify_code():
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+@CSRFProtection.require_csrf
 @app.route('/api/auth/register', methods=['POST'])
 @check_rate_limit('register')
 def register():
@@ -4736,6 +4764,7 @@ def register():
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+@CSRFProtection.require_csrf
 @app.route('/api/auth/login', methods=['POST'])
 @check_rate_limit('login')
 def login():
@@ -4850,6 +4879,7 @@ def login():
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+@CSRFProtection.require_csrf
 @app.route('/api/auth/logout', methods=['POST'])
 def logout():
     """Logout user and clear session"""
@@ -4900,6 +4930,7 @@ def verify_clinician_patient_relationship(clinician_username, patient_username):
         print(f"❌ FK validation error: {e}")
         return False, None
 
+@CSRFProtection.require_csrf
 @app.route('/api/validate-session', methods=['POST'])
 def validate_session():
     """Validate stored session data"""
@@ -4939,6 +4970,7 @@ def validate_session():
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+@CSRFProtection.require_csrf
 @app.route('/api/auth/forgot-password', methods=['POST'])
 @check_rate_limit('forgot_password')
 def forgot_password():
@@ -5072,6 +5104,7 @@ def send_reset_email(to_email, username, reset_token):
         return False
 
 
+@CSRFProtection.require_csrf
 @app.route('/api/auth/confirm-reset', methods=['POST'])
 def confirm_password_reset():
     """Complete password reset with token"""
@@ -5239,6 +5272,7 @@ def send_verification_code(identifier, code, method='email'):
         print(error_msg)
         raise Exception(error_msg)
 
+@CSRFProtection.require_csrf
 @app.route('/api/auth/clinician/register', methods=['POST'])
 def clinician_register():
     """Register a new clinician account"""
@@ -5306,6 +5340,7 @@ def clinician_register():
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+@CSRFProtection.require_csrf
 @app.route('/api/auth/developer/register', methods=['POST'])
 def developer_register():
     """Register single developer account (one-time setup)"""
@@ -5350,6 +5385,7 @@ def developer_register():
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+@CSRFProtection.require_csrf
 @app.route('/api/auth/disclaimer/accept', methods=['POST'])
 def accept_disclaimer():
     """Mark disclaimer as accepted for user"""
@@ -5372,6 +5408,7 @@ def accept_disclaimer():
 
 # ========== DEVELOPER DASHBOARD ENDPOINTS ==========
 
+@CSRFProtection.require_csrf
 @app.route('/api/developer/terminal/execute', methods=['POST'])
 def execute_terminal():
     """Execute terminal command with restricted whitelist"""
@@ -5467,6 +5504,7 @@ def execute_terminal():
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+@CSRFProtection.require_csrf
 @app.route('/api/developer/ai/chat', methods=['POST'])
 def developer_ai_chat():
     """Developer AI assistant"""
@@ -5545,6 +5583,7 @@ You have full knowledge of the codebase and can provide specific advice. Be conc
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+@CSRFProtection.require_csrf
 @app.route('/api/developer/messages/send', methods=['POST'])
 def send_dev_message():
     """Send message from developer/clinician/user to another user (uses new messages table - Phase 3)"""
@@ -5712,6 +5751,7 @@ def list_dev_messages():
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+@CSRFProtection.require_csrf
 @app.route('/api/developer/messages/reply', methods=['POST'])
 def reply_dev_message():
     """Reply to a developer message"""
@@ -5843,6 +5883,7 @@ def list_all_users():
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+@CSRFProtection.require_csrf
 @app.route('/api/developer/users/delete', methods=['POST'])
 def delete_user():
     """Delete a user account (GDPR-compliant deletion)"""
@@ -5983,6 +6024,7 @@ def get_notifications():
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+@CSRFProtection.require_csrf
 @app.route('/api/notifications/<int:notification_id>/read', methods=['POST'])
 def mark_notification_read(notification_id):
     """Mark notification as read"""
@@ -5997,6 +6039,7 @@ def mark_notification_read(notification_id):
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+@CSRFProtection.require_csrf
 @app.route('/api/notifications/<int:notification_id>', methods=['DELETE'])
 def delete_notification(notification_id):
     """Delete a single notification"""
@@ -6011,6 +6054,7 @@ def delete_notification(notification_id):
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+@CSRFProtection.require_csrf
 @app.route('/api/notifications/clear-read', methods=['POST'])
 def clear_read_notifications():
     """Clear all read notifications for a user"""
@@ -6061,6 +6105,7 @@ def get_pending_approvals():
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+@CSRFProtection.require_csrf
 @app.route('/api/approvals/<int:approval_id>/approve', methods=['POST'])
 def approve_patient(approval_id):
     """Approve patient request"""
@@ -6117,6 +6162,7 @@ def approve_patient(approval_id):
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+@CSRFProtection.require_csrf
 @app.route('/api/approvals/<int:approval_id>/reject', methods=['POST'])
 def reject_patient(approval_id):
     """Reject patient request"""
@@ -6417,6 +6463,7 @@ def reward_pet(action, activity_type=None):
         print(f"Pet reward error: {e}")
         return False
 
+@CSRFProtection.require_csrf
 @app.route('/api/therapy/chat', methods=['POST'])
 @check_rate_limit('ai_chat')
 def therapy_chat():
@@ -6804,6 +6851,7 @@ def get_chat_history():
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+@CSRFProtection.require_csrf
 @app.route('/api/therapy/export', methods=['POST'])
 def export_chat_history():
     """Export chat history with date range filter"""
@@ -6947,6 +6995,7 @@ def get_chat_sessions():
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+@CSRFProtection.require_csrf
 @app.route('/api/therapy/sessions', methods=['POST'])
 def create_chat_session():
     """Create a new chat session"""
@@ -6988,6 +7037,7 @@ def create_chat_session():
         print(f"Create chat session error: {e}")
         return jsonify({'error': 'Failed to create chat session. Please try again.'}), 500
 
+@CSRFProtection.require_csrf
 @app.route('/api/therapy/sessions/<int:session_id>', methods=['PUT'])
 def update_chat_session(session_id):
     """Update chat session (rename or switch active)"""
@@ -7033,6 +7083,7 @@ def update_chat_session(session_id):
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+@CSRFProtection.require_csrf
 @app.route('/api/therapy/sessions/<int:session_id>', methods=['DELETE'])
 def delete_chat_session(session_id):
     """Delete a chat session and its messages"""
