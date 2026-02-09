@@ -28,8 +28,7 @@ ENV/
 # Temp debug files
 tmp_*.db
 
-# Test files
-tests/
+# Test cache files
 pytest_cache/
 .pytest_cache/
 
