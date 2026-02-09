@@ -21,9 +21,52 @@ import re
 from datetime import datetime
 import os
 import psycopg2
+import secrets
 
 # Training database path - DEPRECATED (using PostgreSQL now)
 # TRAINING_DB_PATH = "ai_training_data.db"
+
+# ===== TIER 1.10: Anonymization Salt Hardening =====
+def get_anonymization_salt():
+    """TIER 1.10: Get or generate anonymization salt from environment
+    
+    Security: Salt must come from environment variable, never hardcoded.
+    Prevents reversal of anonymization if source code is compromised.
+    
+    Returns:
+        str: 64-character hex string (32 bytes random)
+    
+    Raises:
+        RuntimeError: In production if ANONYMIZATION_SALT not explicitly set
+    """
+    DEBUG = os.getenv('DEBUG', '').lower() in ('1', 'true', 'yes')
+    salt = os.getenv('ANONYMIZATION_SALT')
+    
+    if not salt:
+        if DEBUG:
+            # Development mode: auto-generate
+            salt = secrets.token_hex(32)  # 64 hex chars = 32 bytes
+            print(f"⚠️  ANONYMIZATION_SALT not set. Generated random salt for development.")
+            print(f"To use in production, set: export ANONYMIZATION_SALT={salt}")
+            return salt
+        else:
+            # Production mode: fail-closed
+            raise RuntimeError(
+                "CRITICAL: ANONYMIZATION_SALT must be set in production.\n"
+                "Security: Anonymization salt must be cryptographically random.\n"
+                "Generate: python3 -c \"import secrets; print(secrets.token_hex(32))\"\n"
+                "Set as environment variable or in Railway dashboard, then restart.\n"
+                "This salt is permanent - rotating it invalidates all anonymized records."
+            )
+    
+    # Validate salt format (should be 32+ bytes of random data)
+    if len(salt) < 32:
+        raise ValueError(
+            f"ANONYMIZATION_SALT too short ({len(salt)} < 32 characters).\n"
+            "Generate: python3 -c \"import secrets; print(secrets.token_hex(32))\""
+        )
+    
+    return salt
 
 
 class TrainingDataManager:
@@ -39,8 +82,8 @@ class TrainingDataManager:
     
     def anonymize_username(self, username):
         """Create irreversible hash of username for anonymization"""
-        # Use SHA256 + salt for irreversible anonymization
-        salt = os.environ.get('ANONYMIZATION_SALT', 'default_salt_change_in_production')
+        # TIER 1.10: Use environment-based salt (not hardcoded)
+        salt = get_anonymization_salt()
         return hashlib.sha256(f"{username}{salt}".encode()).hexdigest()[:16]
     
     def strip_pii(self, text):
