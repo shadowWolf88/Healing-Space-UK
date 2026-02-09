@@ -2324,15 +2324,24 @@ def get_db_connection(timeout=30.0):
     
     NOTE: Connection is automatically stored in Flask's g object and returned
     to the pool after the request completes (via teardown_db_pool).
+    Works both inside and outside request contexts.
     """
-    # Check if connection already retrieved for this request
-    if hasattr(g, '_db_conn_pool') and g._db_conn_pool:
-        return g._db_conn_pool
-    
     pool_instance = _get_db_pool()
     conn = pool_instance.getconn()
-    # Store in g so teardown_db_pool can return it to pool
-    g._db_conn_pool = conn
+    
+    # Try to store in g for cleanup if inside request context
+    try:
+        if hasattr(g, '_db_conn_pool') and g._db_conn_pool:
+            # Return existing connection for this request
+            pool_instance.putconn(conn)
+            return g._db_conn_pool
+        # Store new connection for cleanup at end of request
+        g._db_conn_pool = conn
+    except RuntimeError:
+        # Outside request context (testing, init_db, etc) - just return conn
+        # Caller must explicitly close() to return to pool
+        pass
+    
     return conn
 
 
