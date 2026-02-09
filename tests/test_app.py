@@ -18,7 +18,6 @@ except Exception:
 import pytest
 
 # Web-only platform: removed legacy desktop imports
-from fhir_export import export_patient_fhir
 import secure_transfer
 
 
