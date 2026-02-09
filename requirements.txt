@@ -12,3 +12,4 @@ flask-cors
 flask-limiter
 gunicorn
 psycopg2-binary
+pytest

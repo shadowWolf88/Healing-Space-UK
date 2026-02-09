@@ -4162,6 +4162,65 @@ def init_db():
             print(f"Risk keyword seeding note: {e}")
             conn.rollback()
 
+        # Ensure developer dashboard tables exist
+        for dev_table_name, dev_table_sql in [
+            ('dev_terminal_logs', """
+                CREATE TABLE IF NOT EXISTS dev_terminal_logs (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT,
+                    command TEXT,
+                    output TEXT,
+                    exit_code INTEGER,
+                    duration_ms INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """),
+            ('dev_messages', """
+                CREATE TABLE IF NOT EXISTS dev_messages (
+                    id SERIAL PRIMARY KEY,
+                    from_username TEXT,
+                    to_username TEXT,
+                    message TEXT,
+                    message_type TEXT DEFAULT 'message',
+                    read INTEGER DEFAULT 0,
+                    parent_message_id INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """),
+            ('dev_ai_chats', """
+                CREATE TABLE IF NOT EXISTS dev_ai_chats (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT,
+                    session_id TEXT,
+                    role TEXT,
+                    message TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """),
+            ('developer_test_runs', """
+                CREATE TABLE IF NOT EXISTS developer_test_runs (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT,
+                    test_output TEXT,
+                    exit_code INTEGER,
+                    passed_count INTEGER DEFAULT 0,
+                    failed_count INTEGER DEFAULT 0,
+                    error_count INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """),
+        ]:
+            try:
+                cursor.execute(f"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = '{dev_table_name}')")
+                if not cursor.fetchone()[0]:
+                    print(f"Migrating: Creating {dev_table_name} table...")
+                    cursor.execute(dev_table_sql)
+                    conn.commit()
+                    print(f"✓ Migration: {dev_table_name} table created")
+            except Exception as e:
+                print(f"Migration note ({dev_table_name}): {e}")
+                conn.rollback()
+
         # Verify the database is accessible
         cursor.execute("SELECT 1")
         conn.commit()
