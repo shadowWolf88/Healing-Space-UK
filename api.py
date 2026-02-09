@@ -306,11 +306,11 @@ limiter = Limiter(
 @app.teardown_appcontext
 def teardown_db_pool(exc=None):
     """Return any pooled connection to the pool (TIER 1.9)"""
-    if hasattr(g, '_db_conn_pool'):
-        pool_instance = _get_db_pool()
+    db = g.pop('_db_conn_pool', None)
+    if db is not None:
         try:
-            pool_instance.putconn(g._db_conn_pool)
-            app_logger.debug("Connection returned to pool")
+            pool_instance = _get_db_pool()
+            pool_instance.putconn(db)
         except Exception as e:
             app_logger.error(f"Failed to return connection to pool: {e}")
 
@@ -2321,9 +2321,18 @@ def get_db_connection(timeout=30.0):
     
     SECURITY: All credentials from environment variables.
     Supports DATABASE_URL (Railway) or individual env vars.
+    
+    NOTE: Connection is automatically stored in Flask's g object and returned
+    to the pool after the request completes (via teardown_db_pool).
     """
+    # Check if connection already retrieved for this request
+    if hasattr(g, '_db_conn_pool') and g._db_conn_pool:
+        return g._db_conn_pool
+    
     pool_instance = _get_db_pool()
     conn = pool_instance.getconn()
+    # Store in g so teardown_db_pool can return it to pool
+    g._db_conn_pool = conn
     return conn
 
 
