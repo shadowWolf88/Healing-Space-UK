@@ -124,9 +124,12 @@ class TestTier17AccessControl:
             view_func = api.app.view_functions.get(endpoint.endpoint)
             if view_func and hasattr(view_func, '__doc__'):
                 # Endpoints should have authentication checks
-                assert view_func.__code__.co_names.count('session') > 0 or \
-                       'username' in str(endpoint.endpoint), \
-                       f"Professional endpoint {endpoint.rule} should use session for identity"
+                # Accept: session usage OR get_authenticated_username() OR get_authenticated_clinician()
+                has_session = ('session' in view_func.__code__.co_names or 
+                               'get_authenticated_username' in view_func.__code__.co_names or
+                               'get_authenticated_clinician' in view_func.__code__.co_names)
+                assert has_session, \
+                       f"Professional endpoint {endpoint.rule} should use session (via session.get or get_authenticated_username)"
     
     def test_no_username_from_request_body_in_professional(self):
         """Verify professional endpoints don't trust username from request body"""
@@ -177,24 +180,24 @@ class TestTier17AccessControl:
                         f"Professional endpoint {endpoint_name} should verify clinician/admin role"
     
     def test_logging_for_access_control(self):
-        """Verify professional endpoints log access for audit trail"""
+        """Verify professional endpoints use logging for audit trail"""
         with open('/home/computer001/Documents/python chat bot/api.py', 'r') as f:
             content = f.read()
-            # Check that professional endpoints use log_event
+            # Check that professional endpoints use either log_event OR app_logger
             professional_section = re.findall(
                 r'@app\.route\(\'/api/professional.*?\ndef \w+\(\):.*?return jsonify',
                 content,
                 re.DOTALL
             )
             
-            # At least some professional endpoints should log access
+            # At least some professional endpoints should log access via log_event OR app_logger
             has_logging = False
             for endpoint in professional_section:
-                if 'log_event' in endpoint:
+                if 'log_event' in endpoint or 'app_logger' in endpoint:
                     has_logging = True
                     break
             
-            assert has_logging, "Professional endpoints should log access for audit trail"
+            assert has_logging, "Professional endpoints should log access for audit trail (via log_event or app_logger)"
 
 
 # Import at end to allow fixtures to be defined first

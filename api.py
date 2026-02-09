@@ -11322,14 +11322,20 @@ def delete_clinician_note(note_id):
 def export_patient_summary():
     """Generate HTML summary for patient with custom date range (for PDF conversion)"""
     try:
-        data = request.json
-        clinician_username = data.get('clinician_username')
+        # TIER 1.7 FIX: Get clinician identity from session, NOT from request body
+        clinician_username = session.get('username')
+        if not clinician_username:
+            app_logger.warning("Export summary attempt without authentication")
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        data = request.json or {}
         patient_username = data.get('patient_username')
         start_date = data.get('start_date')  # Optional YYYY-MM-DD
         end_date = data.get('end_date')  # Optional YYYY-MM-DD
 
-        if not clinician_username or not patient_username:
-            return jsonify({'error': 'Clinician and patient usernames required'}), 400
+        if not patient_username:
+            app_logger.warning(f"Export summary from {clinician_username} missing patient username")
+            return jsonify({'error': 'Patient username required'}), 400
 
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
@@ -11342,6 +11348,7 @@ def export_patient_summary():
 
         if not approval:
             conn.close()
+            app_logger.warning(f"Access denied: clinician {clinician_username} attempted export for unauthorized patient {patient_username}")
             return jsonify({'error': 'Unauthorized: You do not have access to this patient'}), 403
 
         # Get patient profile
