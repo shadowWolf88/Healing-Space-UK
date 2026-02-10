@@ -15,6 +15,7 @@ Usage:
 import os
 import sys
 import json
+import sqlite3
 import pytest
 from unittest.mock import MagicMock, patch, PropertyMock
 from datetime import datetime, timezone, timedelta
@@ -244,6 +245,125 @@ def mock_db():
             patch.stopall()
         except Exception:
             pass
+
+
+# ==================== TEST USER FIXTURES ====================
+
+@pytest.fixture
+def test_patient():
+    """Return test patient user info dict."""
+    return {
+        'username': 'test_patient',
+        'role': 'user',
+        'full_name': 'Test Patient',
+        'email': 'patient@test.com'
+    }
+
+
+@pytest.fixture
+def test_clinician():
+    """Return test clinician user info dict."""
+    return {
+        'username': 'test_clinician',
+        'role': 'clinician',
+        'full_name': 'Dr. Test Clinician',
+        'email': 'clinician@test.com'
+    }
+
+
+@pytest.fixture
+def test_developer():
+    """Return test developer user info dict."""
+    return {
+        'username': 'test_developer',
+        'role': 'developer',
+        'full_name': 'Dev User',
+        'email': 'dev@test.com'
+    }
+
+
+@pytest.fixture
+def authenticated_patient(auth_patient):
+    """Alias for auth_patient for backward compatibility."""
+    return auth_patient
+
+
+# ==================== DATABASE FIXTURES ====================
+
+@pytest.fixture
+def tmp_db(tmp_path):
+    """Create a temporary SQLite database for testing.
+    
+    Note: Modern tests should use PostgreSQL via conftest setup,
+    but this fixture supports legacy tests that expect SQLite.
+    """
+    db_file = tmp_path / "test.db"
+    conn = sqlite3.connect(str(db_file))
+    conn.execute("PRAGMA foreign_keys = ON")
+    
+    # Create minimal schema for legacy tests
+    cursor = conn.cursor()
+    cursor.executescript("""
+        CREATE TABLE IF NOT EXISTS users (
+            username TEXT PRIMARY KEY,
+            password TEXT,
+            pin TEXT,
+            created_at TIMESTAMP,
+            full_name TEXT,
+            dob TEXT,
+            conditions TEXT,
+            role TEXT,
+            clinician_id TEXT,
+            is_active INTEGER,
+            email TEXT,
+            phone TEXT,
+            avatar_url TEXT,
+            bio TEXT,
+            country TEXT,
+            city TEXT,
+            postcode TEXT,
+            emergency_contact TEXT,
+            emergency_contact_phone TEXT
+        );
+        CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            sender TEXT,
+            recipient TEXT,
+            subject TEXT,
+            content TEXT,
+            is_read INTEGER,
+            clinician_note TEXT,
+            created_at TIMESTAMP,
+            updated_at TIMESTAMP,
+            deleted_by_sender INTEGER,
+            deleted_by_recipient INTEGER,
+            marked_at TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS appointments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            clinician_username TEXT,
+            patient_username TEXT,
+            appointment_date TIMESTAMP,
+            appointment_type TEXT,
+            notes TEXT,
+            patient_response INTEGER,
+            patient_response_time TIMESTAMP,
+            attended INTEGER,
+            created_at TIMESTAMP,
+            reminder_sent INTEGER,
+            reminder_sent_time TIMESTAMP,
+            duration_minutes INTEGER,
+            status TEXT,
+            video_link TEXT,
+            location TEXT,
+            outcome TEXT
+        );
+    """)
+    conn.commit()
+    
+    yield str(db_file)
+    
+    conn.close()
 
 
 # ==================== TEST DATA FACTORIES ====================

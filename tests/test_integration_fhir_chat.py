@@ -13,8 +13,10 @@ if ROOT not in sys.path:
 import api
 
 
-def test_fhir_export_and_chat(client, tmp_db, test_patient):
+def test_fhir_export_and_chat(auth_patient, tmp_db):
     """Test that FHIR export and chat endpoints can be called without crashing."""
+    
+    client, patient = auth_patient
     
     # Setup: Create mood logs for the test patient
     conn = sqlite3.connect(tmp_db)
@@ -23,7 +25,7 @@ def test_fhir_export_and_chat(client, tmp_db, test_patient):
     cur.execute(
         "INSERT INTO mood_logs (username, mood_val, sleep_val, meds, notes, entrestamp) "
         "VALUES (?,?,?,?,?,?)",
-        (test_patient['username'], 3, 7.5, 'none', 'feeling ok', datetime.now().isoformat())
+        (patient['username'], 3, 7.5, 'none', 'feeling ok', datetime.now().isoformat())
     )
     conn.commit()
     conn.close()
