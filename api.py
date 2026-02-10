@@ -15055,6 +15055,42 @@ def delete_message(message_id):
 
 # ================== DEVELOPER DASHBOARD: TEST INTEGRATION ENDPOINTS ==================
 
+@CSRFProtection.require_csrf
+@app.route('/api/developer/tests/save', methods=['POST'])
+def save_test_results():
+    """Manually save test results from QA tab for AI analysis"""
+    try:
+        username = get_authenticated_username()
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+        user_role = cur.execute("SELECT role FROM users WHERE username=%s", (username,)).fetchone()
+
+        if not user_role or user_role[0] != 'developer':
+            conn.close()
+            return jsonify({'error': 'Developer role required'}), 403
+
+        data = request.json
+        test_output = data.get('test_output', '')
+        passed_count = data.get('passed_count', 0)
+        failed_count = data.get('failed_count', 0)
+        error_count = data.get('error_count', 0)
+        exit_code = data.get('exit_code', 0)
+
+        cur.execute("""
+            INSERT INTO developer_test_runs (username, test_output, exit_code, passed_count, failed_count, error_count)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (username, test_output[:50000], exit_code, passed_count, failed_count, error_count))
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True, 'message': 'Test results saved'}), 200
+
+    except Exception as e:
+        return handle_exception(e, 'save_test_results')
+
 @app.route('/api/developer/tests/run', methods=['POST'])
 def run_tests():
     """Execute pytest test suite and return results"""

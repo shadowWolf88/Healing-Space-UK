@@ -6437,11 +6437,11 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                                 <div class="stat-value" style="color: #27ae60;" id="qaPassed">-</div>
                                 <div class="stat-label">Passed</div>
                             </div>
-                            <div class="stat-card">
+                            <div class="stat-card" onclick="filterQAOutput('FAILED')" style="cursor: pointer;" title="Click to filter failed tests">
                                 <div class="stat-value" style="color: #e74c3c;" id="qaFailed">-</div>
                                 <div class="stat-label">Failed</div>
                             </div>
-                            <div class="stat-card">
+                            <div class="stat-card" onclick="filterQAOutput('SKIPPED')" style="cursor: pointer;" title="Click to filter skipped tests">
                                 <div class="stat-value" style="color: #f39c12;" id="qaSkipped">-</div>
                                 <div class="stat-label">Skipped</div>
                             </div>
@@ -6467,6 +6467,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                                 <strong>Test Output</strong>
                                 <div style="display: flex; gap: 6px;">
+                                    <button class="btn" onclick="saveQAResults()" style="padding: 4px 10px; font-size: 12px;" id="qaSaveBtn">Save for AI</button>
                                     <button class="btn btn-secondary" onclick="copyQAOutput()" style="padding: 4px 10px; font-size: 12px;">Copy</button>
                                     <button class="btn btn-secondary" onclick="clearQAOutput()" style="padding: 4px 10px; font-size: 12px;">Clear</button>
                                 </div>
@@ -14693,15 +14694,82 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             btns.forEach(id => { const b = document.getElementById(id); if (b) b.disabled = false; });
         }
 
+        // Store raw test output for filtering
+        let lastRawTestOutput = '';
+
         function colorizeTestOutput(raw) {
+            lastRawTestOutput = raw;
             return raw
                 .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
                 .replace(/(PASSED)/g, '<span style="color: #27ae60;">$1</span>')
-                .replace(/(FAILED)/g, '<span style="color: #e74c3c;">$1</span>')
+                .replace(/(FAILED)/g, '<span style="color: #e74c3c; font-weight: bold;">$1</span>')
                 .replace(/(SKIPPED)/g, '<span style="color: #f39c12;">$1</span>')
-                .replace(/(ERROR)/g, '<span style="color: #e74c3c;">$1</span>')
+                .replace(/(ERROR)/g, '<span style="color: #e74c3c; font-weight: bold;">$1</span>')
                 .replace(/(={3,}.*={3,})/g, '<span style="color: #3498db;">$1</span>')
                 .replace(/(_{3,}.*_{3,})/g, '<span style="color: #3498db;">$1</span>');
+        }
+
+        function filterQAOutput(type) {
+            if (!lastRawTestOutput) {
+                if (typeof showToast === 'function') showToast('No test results to filter', 'warning');
+                return;
+            }
+
+            const lines = lastRawTestOutput.split('\n');
+            let filtered = [];
+
+            if (type === 'FAILED') {
+                // Get all FAILED test lines and the error details sections
+                let inFailureSection = false;
+                for (const line of lines) {
+                    if (line.includes('FAILED')) {
+                        filtered.push(line);
+                    }
+                    // Capture the FAILURES section with tracebacks
+                    if (line.match(/^={3,}\s*FAILURES\s*={3,}/) || line.match(/^={3,}\s*ERRORS\s*={3,}/)) {
+                        inFailureSection = true;
+                    }
+                    if (inFailureSection) {
+                        filtered.push(line);
+                    }
+                    if (inFailureSection && line.match(/^={3,}\s*short test summary/i)) {
+                        inFailureSection = false;
+                    }
+                }
+            } else if (type === 'SKIPPED') {
+                for (const line of lines) {
+                    if (line.includes('SKIPPED') || line.includes('skipped')) {
+                        filtered.push(line);
+                    }
+                }
+            }
+
+            if (filtered.length === 0) {
+                if (typeof showToast === 'function') showToast('No ' + type.toLowerCase() + ' tests found', 'info');
+                return;
+            }
+
+            // Add a header and show button to restore full output
+            const header = `Showing ${filtered.length} ${type} lines (click "Show All" to restore full output)\n${'='.repeat(70)}\n`;
+            const output = document.getElementById('qaTestOutput');
+            output.innerHTML = '<span style="color: #3498db; cursor: pointer;" onclick="restoreFullQAOutput()">[ Show All Results ]</span>\n\n' + colorizeFilteredOutput(header + filtered.join('\n'));
+        }
+
+        function colorizeFilteredOutput(text) {
+            return text
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/(PASSED)/g, '<span style="color: #27ae60;">$1</span>')
+                .replace(/(FAILED)/g, '<span style="color: #e74c3c; font-weight: bold;">$1</span>')
+                .replace(/(SKIPPED)/g, '<span style="color: #f39c12;">$1</span>')
+                .replace(/(ERROR)/g, '<span style="color: #e74c3c; font-weight: bold;">$1</span>')
+                .replace(/(={3,}.*={3,})/g, '<span style="color: #3498db;">$1</span>')
+                .replace(/(_{3,}.*_{3,})/g, '<span style="color: #3498db;">$1</span>');
+        }
+
+        function restoreFullQAOutput() {
+            if (lastRawTestOutput) {
+                document.getElementById('qaTestOutput').innerHTML = colorizeTestOutput(lastRawTestOutput);
+            }
         }
 
         function parseTestResults(raw) {
@@ -14751,6 +14819,48 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     showToast('Test output copied to clipboard', 'success');
                 }
             });
+        }
+
+        async function saveQAResults() {
+            const output = document.getElementById('qaTestOutput').innerText;
+            if (!output || output.includes('Ready to run tests')) {
+                if (typeof showToast === 'function') showToast('No test results to save', 'warning');
+                return;
+            }
+
+            const passed = parseInt(document.getElementById('qaPassed').textContent) || 0;
+            const failed = parseInt(document.getElementById('qaFailed').textContent) || 0;
+            const errors = (output.match(/ERROR/g) || []).length;
+            const btn = document.getElementById('qaSaveBtn');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
+            try {
+                const resp = await fetch('/api/developer/tests/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        username: currentUser,
+                        test_output: output,
+                        passed_count: passed,
+                        failed_count: failed,
+                        error_count: errors,
+                        exit_code: failed > 0 ? 1 : 0
+                    })
+                });
+                const data = await resp.json();
+                if (resp.ok) {
+                    if (typeof showToast === 'function') showToast('Test results saved! Use AI Assistant to analyze.', 'success');
+                } else {
+                    if (typeof showToast === 'function') showToast('Save failed: ' + (data.error || 'Unknown error'), 'error');
+                }
+            } catch (err) {
+                if (typeof showToast === 'function') showToast('Save failed: ' + err.message, 'error');
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Save for AI';
         }
 
         function clearQAOutput() {
