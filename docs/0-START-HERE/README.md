@@ -2,7 +2,7 @@
 
 **Welcome!** This is the complete documentation for Healing Space UK - a mental health companion web application combining evidence-based therapy with AI support.
 
-> **Version**: 2.0 (PostgreSQL) | **Status**: ✅ Production-Ready (Feb 8, 2026) | **Live**: [healing-space.org.uk](https://healing-space.org.uk)
+> **Version**: 2.0 (PostgreSQL) | **Status**: ✅ TIER 0 Complete | ✅ TIER 1 Complete | **Last Updated**: February 10, 2026
 
 ---
 

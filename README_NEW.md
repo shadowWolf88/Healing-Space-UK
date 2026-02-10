@@ -2,7 +2,32 @@
 
 **A mental health companion combining evidence-based therapy with AI support.**
 
-> **Version**: 2.0 (PostgreSQL) | **Status**: ✅ Production-Ready | **Last Updated**: February 8, 2026
+> **Version**: 2.0 (PostgreSQL) | **Status**: ✅ TIER 0 Complete | ✅ TIER 1 Complete | **Last Updated**: February 10, 2026
+
+---
+
+## ⚠️ IMPORTANT: NHS Trials & Copyright Notice
+
+**This repository is CONFIDENTIAL and NOT OPEN SOURCE.**
+
+### NHS Clinical Trials
+Healing Space UK is currently in **active clinical trials with the NHS**. This application is:
+- 🏥 **For NHS trials only** - Restricted to authorized trial participants and clinicians
+- 🔒 **Not for public use** - Unauthorized access is prohibited
+- 📋 **Research-grade software** - Under active development and clinical evaluation
+- ✅ **APPROVED FOR TRIALS** - Ethics approval obtained, clinical safety case validated
+
+**Unauthorized access or use of this system may violate:**
+- Computer Misuse Act 1990
+- Data Protection Act 2018 / GDPR
+- NHS Confidentiality Code
+- Research Ethics Committee approvals
+
+### Intellectual Property & License
+```
+© 2024-2026 Healing Space UK Contributors
+All rights reserved. No license to use, copy, modify, or distribute.
+```
 
 ---
 
