@@ -15043,15 +15043,19 @@ def run_tests():
         username = get_authenticated_username()
         if not username:
             return jsonify({'error': 'Authentication required'}), 401
-        
+
         conn = get_db_connection()
         cur = get_wrapped_cursor(conn)
         user_role = cur.execute("SELECT role FROM users WHERE username=%s", (username,)).fetchone()
-        
+
         if not user_role or user_role[0] != 'developer':
             conn.close()
             return jsonify({'error': 'Developer role required'}), 403
-        
+
+        # Close connection before running tests - subprocess can take up to 120s
+        # and the connection would go stale
+        conn.close()
+
         # Run pytest - use sys.executable to find the correct Python in any environment
         import subprocess
         import sys as _sys
@@ -15062,24 +15066,26 @@ def run_tests():
             timeout=120,
             cwd=os.getcwd()
         )
-        
+
         # Parse output
         output = result.stdout + result.stderr
         exit_code = result.returncode
-        
+
         # Count passed/failed
         passed = output.count(' PASSED')
         failed = output.count(' FAILED')
         errors = output.count(' ERROR')
-        
-        # Store result
-        cur.execute("""
+
+        # Get a FRESH connection to store results (old one would be stale after subprocess)
+        conn2 = get_db_connection()
+        cur2 = get_wrapped_cursor(conn2)
+        cur2.execute("""
             INSERT INTO developer_test_runs (username, test_output, exit_code, passed_count, failed_count, error_count)
             VALUES (%s, %s, %s, %s, %s, %s)
         """, (username, output[:50000], exit_code, passed, failed, errors))
-        conn.commit()
-        conn.close()
-        
+        conn2.commit()
+        conn2.close()
+
         return jsonify({
             'success': exit_code == 0,
             'output': output,
@@ -15089,7 +15095,7 @@ def run_tests():
             'errors': errors,
             'timestamp': datetime.now().isoformat()
         }), 200
-        
+
     except subprocess.TimeoutExpired:
         return jsonify({'error': 'Test suite timed out (120s limit)'}), 408
     except Exception as e:
