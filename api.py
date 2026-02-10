@@ -307,10 +307,15 @@ limiter = Limiter(
 def teardown_db_pool(exc=None):
     """Return any pooled connection to the pool (TIER 1.9)"""
     db = g.pop('_db_conn_pool', None)
-    if db is not None and not db.closed:
+    if db is not None:
         try:
             pool_instance = _get_db_pool()
-            pool_instance.putconn(db)
+            if db.closed:
+                # Connection was closed by endpoint - return to pool with close=True
+                # so pool can reclaim the slot and create a fresh connection later
+                pool_instance.putconn(db, close=True)
+            else:
+                pool_instance.putconn(db)
         except Exception as e:
             app_logger.error(f"Failed to return connection to pool: {e}")
 
@@ -2337,10 +2342,18 @@ def get_db_connection(timeout=30.0):
     # Try to store in g for cleanup if inside request context
     try:
         existing = getattr(g, '_db_conn_pool', None)
-        if existing is not None and not existing.closed:
-            # Return existing open connection for this request
-            pool_instance.putconn(conn)
-            return existing
+        if existing is not None:
+            if not existing.closed:
+                # Return existing open connection for this request
+                pool_instance.putconn(conn)
+                return existing
+            else:
+                # Previous connection was closed by endpoint - return it to pool
+                # so the pool can reclaim the slot (close=True tells pool slot is dead)
+                try:
+                    pool_instance.putconn(existing, close=True)
+                except Exception:
+                    pass
         # Store new connection for cleanup at end of request
         g._db_conn_pool = conn
     except RuntimeError:
