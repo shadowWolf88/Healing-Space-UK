@@ -6262,13 +6262,15 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                         </div>
 
                         <!-- Input Area -->
-                        <div style="display: flex; gap: 10px; align-items: flex-end;">
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
                             <textarea id="devAIInput" placeholder="Ask a technical question..."
-                                rows="1"
-                                style="flex: 1; padding: 12px; border: 2px solid var(--border-color, #e0e0e0); border-radius: 8px; resize: none; font-family: inherit; background: var(--bg-card); color: var(--text-primary);"
+                                rows="2"
+                                style="width: 100%; padding: 12px; border: 2px solid var(--border-color, #e0e0e0); border-radius: 8px; resize: none; font-family: inherit; background: var(--bg-card); color: var(--text-primary); box-sizing: border-box;"
                                 onkeypress="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendDevAIMessage(); }"></textarea>
-                            <button class="btn" onclick="sendDevAIMessage()" id="devAISendBtn">Send</button>
-                            <button class="btn btn-secondary" onclick="clearDevAIChat()">Clear</button>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn" onclick="sendDevAIMessage()" id="devAISendBtn" style="flex: 1;">Send</button>
+                                <button class="btn btn-secondary" onclick="clearDevAIChat()" style="flex: 1;">Clear</button>
+                            </div>
                         </div>
                     </div>
                 </div>
