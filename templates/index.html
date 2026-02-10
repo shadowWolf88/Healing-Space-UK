@@ -9678,7 +9678,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 if (response.ok && data.clinicians && data.clinicians.length > 0) {
                     select.innerHTML = '<option value="">-- Select your clinician --</option>' +
                         data.clinicians.map(c => 
-                            `<option value="${c.username}">${c.full_name || c.username}${c.area ? ' (' + c.area + ')' : ''}</option>`
+                            `<option value="${escapeHtml(c.username)}">${escapeHtml(c.full_name || c.username)}${c.area ? ' (' + escapeHtml(c.area) + ')' : ''}</option>`
                         ).join('');
                     select.style.display = 'block';
                     if (placeholder) placeholder.style.display = 'none';
@@ -9815,7 +9815,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                                 <div class="notification-item ${n.read ? '' : 'unread'}" style="position: relative;">
                                     <div onclick="${onClick}" style="cursor: pointer;">
                                         <strong>${emoji} ${n.notification_type}</strong>
-                                        <p>${n.message}</p>
+                                        <p>${sanitizeHTML(n.message)}</p>
                                         <small>${new Date(n.created_at).toLocaleString()}</small>
                                     </div>
                                     <button onclick="event.stopPropagation(); deleteNotification(${n.id})"
@@ -9897,7 +9897,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     container.innerHTML = data.pending_approvals.map(approval => `
                         <div class="approval-request">
                             <div>
-                                <strong>${approval.patient_username}</strong>
+                                <strong>${sanitizeHTML(approval.patient_username)}</strong>
                                 <p>Requested: ${new Date(approval.request_date).toLocaleString()}</p>
                             </div>
                             <div style="display: flex; gap: 10px;">
@@ -10409,7 +10409,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             safetyAssessmentState.safetyPlan.people.forEach((person, idx) => {
                 peopleHtml += `
                     <div class="safety-person-chip">
-                        ${person.name}: ${person.phone}
+                        ${sanitizeHTML(person.name)}: ${sanitizeHTML(person.phone)}
                         <button onclick="removeSafetyPerson(${idx})">×</button>
                     </div>
                 `;
@@ -10429,7 +10429,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             safetyAssessmentState.safetyPlan.people.forEach((person, idx) => {
                 peopleHtml += `
                     <div class="safety-person-chip">
-                        ${person.name}: ${person.phone}
+                        ${sanitizeHTML(person.name)}: ${sanitizeHTML(person.phone)}
                         <button onclick="removeSafetyPerson(${idx})">×</button>
                     </div>
                 `;
@@ -10927,7 +10927,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             list.innerHTML = allChatSessions.map(session => `
                 <div class="session-item ${session.is_active ? 'active' : ''}" onclick="switchChatSession(${session.id})">
                     <div class="session-info">
-                        <div class="session-name">${session.name}</div>
+                        <div class="session-name">${sanitizeHTML(session.name)}</div>
                         <div class="session-meta">${session.message_count} messages · ${formatSessionDate(session.last_active)}</div>
                     </div>
                     <div class="session-actions" onclick="event.stopPropagation()">
@@ -11279,7 +11279,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             const listEl = document.getElementById('medList');
             listEl.innerHTML = medications.map((med, idx) => `
                 <div class="med-item">
-                    <span>${med.name} ${med.strength}mg (x${med.quantity})</span>
+                    <span>${sanitizeHTML(med.name)} ${sanitizeHTML(med.strength)}mg (x${med.quantity})</span>
                     <button onclick="removeMed(${idx})">Remove</button>
                 </div>
             `).join('');
@@ -11604,8 +11604,8 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 container.innerHTML = data.items.map(item => `
                     <div style="border: 2px solid #e0e0e0; border-radius: 12px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <div style="font-weight: bold; font-size: 16px;">${item.name}</div>
-                            <div style="font-size: 13px; color: #666;">${item.description}</div>
+                            <div style="font-weight: bold; font-size: 16px;">${sanitizeHTML(item.name)}</div>
+                            <div style="font-size: 13px; color: #666;">${sanitizeHTML(item.description)}</div>
                         </div>
                         <button class="btn" onclick="buyItem('${item.id}')" style="padding: 8px 16px; width: auto; ${currentCoins < item.cost ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
                             🪙 ${item.cost}
@@ -11791,7 +11791,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             const container = document.getElementById('assessmentQuestions');
             container.innerHTML = questions.map((q, idx) => `
                 <div style="margin: 20px 0; padding: 15px; border: 2px solid #e0e0e0; border-radius: 8px;">
-                    <p style="margin-bottom: 10px; font-weight: 600;">${idx + 1}. ${q}</p>
+                    <p style="margin-bottom: 10px; font-weight: 600;">${idx + 1}. ${sanitizeHTML(q)}</p>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                         <label style="flex: 1; min-width: 120px;">
                             <input type="radio" name="q${idx}" value="0" onchange="setScore(${idx}, 0)"> Not at all
@@ -11872,8 +11872,8 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                                 ${log.water_pints ? `<div><strong>Water:</strong> ${log.water_pints} pints</div>` : ''}
                                 ${log.exercise_mins ? `<div><strong>Exercise:</strong> ${log.exercise_mins} mins</div>` : ''}
                                 ${log.outside_mins ? `<div><strong>Outdoors:</strong> ${log.outside_mins} mins</div>` : ''}
-                                ${log.meds ? `<div><strong>Medications:</strong> ${log.meds}</div>` : ''}
-                                ${log.notes ? `<div style="margin-top: 10px;"><strong>Notes:</strong><br>${log.notes}</div>` : ''}
+                                ${log.meds ? `<div><strong>Medications:</strong> ${sanitizeHTML(log.meds)}</div>` : ''}
+                                ${log.notes ? `<div style="margin-top: 10px;"><strong>Notes:</strong><br>${sanitizeWithLineBreaks(log.notes)}</div>` : ''}
                             </div>
                         `).join('') +
                         '</div>';
@@ -11931,7 +11931,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                              onclick="selectChannel('${channel.id}')"
                              id="channel-${channel.id}">
                             <span class="channel-emoji">${channel.emoji}</span>
-                            <span class="channel-name">${channel.name}</span>
+                            <span class="channel-name">${sanitizeHTML(channel.name)}</span>
                             ${channel.unread_count > 0 ? `<span class="unread-badge">${channel.unread_count}</span>` : ''}
                         </div>
                     `).join('');
@@ -12380,7 +12380,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
                                     <div>
                                         <h4 style="margin: 0 0 5px 0; color: var(--accent-color);">📅 ${apt.appointment_type || 'Consultation'}</h4>
-                                        <p style="margin: 0; color: var(--text-secondary); font-size: 14px;">With ${apt.clinician_username}</p>
+                                        <p style="margin: 0; color: var(--text-secondary); font-size: 14px;">With ${sanitizeHTML(apt.clinician_username)}</p>
                                     </div>
                                     <span style="background: ${statusColor}; color: white; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: bold;">
                                         ${statusText}
@@ -12390,7 +12390,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                                 <div class="appointment-details-box">
                                     <p style="margin: 0 0 5px 0;"><strong>📆 Date:</strong> ${dateStr}</p>
                                     <p style="margin: 0 0 5px 0;"><strong>🕐 Time:</strong> ${timeStr}</p>
-                                    ${apt.notes ? `<p style="margin: 10px 0 0 0; padding-top: 10px; border-top: 1px solid var(--border-color);"><strong>Notes:</strong> ${apt.notes}</p>` : ''}
+                                    ${apt.notes ? `<p style="margin: 10px 0 0 0; padding-top: 10px; border-top: 1px solid var(--border-color);"><strong>Notes:</strong> ${sanitizeWithLineBreaks(apt.notes)}</p>` : ''}
                                 </div>
 
                                 ${!apt.patient_acknowledged && !isPast ? `
@@ -12715,8 +12715,8 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     const clinicianDiv = document.getElementById('clinicianInfo');
                     if (data.profile.assigned_clinician) {
                         clinicianDiv.innerHTML = `
-                            <p><strong>Assigned Clinician:</strong> ${data.profile.assigned_clinician}</p>
-                            <p><strong>Email:</strong> ${data.profile.clinician_email || 'Not provided'}</p>
+                            <p><strong>Assigned Clinician:</strong> ${sanitizeHTML(data.profile.assigned_clinician)}</p>
+                            <p><strong>Email:</strong> ${sanitizeHTML(data.profile.clinician_email || 'Not provided')}</p>
                             <p style="margin-top: 10px; color: var(--text-secondary); font-size: 14px;">
                                 Your clinician can view your progress and provide professional support.
                             </p>
@@ -13731,7 +13731,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             select.innerHTML = '<option value="">Select a patient...</option>';
             patientCards.forEach(card => {
                 const username = card.querySelector('strong').textContent;
-                select.innerHTML += `<option value="${username}">${username}</option>`;
+                select.innerHTML += `<option value="${escapeHtml(username)}">${escapeHtml(username)}</option>`;
             });
             
             // Set minimum date to today
@@ -14170,9 +14170,9 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     <div class="patient-card" style="background: white; padding: 15px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <div>
-                                <h4 style="margin: 0 0 5px 0; color: #1f2937;">${patient.full_name || patient.username}</h4>
-                                <p style="margin: 0; font-size: 13px; color: #6b7280;">@${patient.username}</p>
-                                ${patient.email ? `<p style="margin: 3px 0 0 0; font-size: 13px; color: #6b7280;">${patient.email}</p>` : ''}
+                                <h4 style="margin: 0 0 5px 0; color: #1f2937;">${sanitizeHTML(patient.full_name || patient.username)}</h4>
+                                <p style="margin: 0; font-size: 13px; color: #6b7280;">@${sanitizeHTML(patient.username)}</p>
+                                ${patient.email ? `<p style="margin: 3px 0 0 0; font-size: 13px; color: #6b7280;">${sanitizeHTML(patient.email)}</p>` : ''}
                             </div>
                             <div style="text-align: right;">
                                 <span style="display: inline-block; padding: 4px 12px; background: ${riskColor}; color: white; border-radius: 20px; font-size: 12px; font-weight: 600; margin-bottom: 5px;">
@@ -14596,7 +14596,7 @@ ${reportText}
             inputField.remove();
 
             // Add command to output
-            output.innerHTML += `<span style="color: #00ff00;">[${timestamp}]</span> $ ${command}\n`;
+            output.innerHTML += `<span style="color: #00ff00;">[${timestamp}]</span> $ ${sanitizeHTML(command)}\n`;
 
             try {
                 const response = await fetch('/api/developer/terminal/execute', {
@@ -14677,7 +14677,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 const data = await resp.json();
 
                 if (data.error) {
-                    output.innerHTML += `<span style="color: #e74c3c;">Error: ${data.error}</span>`;
+                    output.innerHTML += `<span style="color: #e74c3c;">Error: ${sanitizeHTML(data.error)}</span>`;
                     qaRunning = false;
                     btns.forEach(id => { const b = document.getElementById(id); if (b) b.disabled = false; });
                     return;
@@ -14689,7 +14689,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 document.getElementById('qaLastRun').textContent = 'Last run: ' + new Date().toLocaleTimeString();
 
             } catch (err) {
-                output.innerHTML += `<span style="color: #e74c3c;">Network error: ${err.message}</span>`;
+                output.innerHTML += `<span style="color: #e74c3c;">Network error: ${sanitizeHTML(err.message)}</span>`;
             }
 
             qaRunning = false;
@@ -15099,10 +15099,10 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     return `
                         <div style="background: ${isFromDev ? '#e8f4fd' : '#f8f9fa'}; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid ${isFromDev ? '#2196F3' : '#667eea'};">
                             <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                                <strong>${icon} ${msg.from_username} → ${msg.to_username}</strong>
+                                <strong>${icon} ${sanitizeHTML(msg.from_username)} → ${sanitizeHTML(msg.to_username)}</strong>
                                 <span style="color: #999; font-size: 12px;">${new Date(msg.created_at).toLocaleString()}</span>
                             </div>
-                            <div>${msg.message}</div>
+                            <div>${sanitizeWithLineBreaks(msg.message)}</div>
                             ${!isFromDev ? `<button onclick="replyToMessage(${msg.id})" style="margin-top: 8px; padding: 5px 12px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Reply</button>` : ''}
                         </div>
                     `;
@@ -15349,7 +15349,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
 
             } catch (error) {
                 console.error('Error loading feedback:', error);
-                document.getElementById('feedbackContainer').innerHTML = `<p style="color: #e74c3c; padding: 20px;">❌ Error: ${error.message}</p>`;
+                document.getElementById('feedbackContainer').innerHTML = `<p style="color: #e74c3c; padding: 20px;">❌ Error: ${sanitizeHTML(error.message)}</p>`;
             }
         }
 
@@ -15578,23 +15578,23 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     <div style="border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 10px; background: ${conv.unread_count > 0 ? '#f0f7ff' : 'white'}; border-radius: 8px; cursor: pointer; transition: all 0.2s;"
                          onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'"
                          onmouseout="this.style.boxShadow='none'"
-                         onclick="viewMessageThread('${conv.with_user}', 'inbox')">
+                         onclick="viewMessageThread('${sanitizeHTML(conv.with_user)}', 'inbox')">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <div style="flex: 1;">
-                                <strong style="color: #333; font-size: 15px;">📧 ${conv.with_user}</strong>
+                                <strong style="color: #333; font-size: 15px;">📧 ${sanitizeHTML(conv.with_user)}</strong>
                                 ${conv.unread_count > 0 ? `<span style="background: #e74c3c; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-left: 10px; font-weight: bold;">${conv.unread_count}</span>` : ''}
                             </div>
                             <span style="color: #999; font-size: 12px; white-space: nowrap;">${new Date(conv.last_message_time).toLocaleString()}</span>
                         </div>
                         <div style="color: #666; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 8px;">
-                            ${conv.last_message ? (conv.last_message.length > 100 ? conv.last_message.substring(0, 100) + '...' : conv.last_message) : 'No message text'}
+                            ${conv.last_message ? (conv.last_message.length > 100 ? sanitizeHTML(conv.last_message.substring(0, 100)) + '...' : sanitizeHTML(conv.last_message)) : 'No message text'}
                         </div>
                     </div>
                 `).join('');
 
             } catch (error) {
                 console.error('Error loading inbox:', error);
-                document.getElementById('messagesInboxContainer').innerHTML = `<p style="color: #e74c3c; padding: 20px;">❌ Error: ${error.message}</p>`;
+                document.getElementById('messagesInboxContainer').innerHTML = `<p style="color: #e74c3c; padding: 20px;">❌ Error: ${sanitizeHTML(error.message)}</p>`;
             }
         }
 
@@ -15631,23 +15631,23 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     <div style="border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 10px; background: #f9f9f9; border-radius: 8px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <div>
-                                <strong style="color: #333; font-size: 15px;">📤 To: ${msg.recipient}</strong>
+                                <strong style="color: #333; font-size: 15px;">📤 To: ${sanitizeHTML(msg.recipient)}</strong>
                                 <span style="background: ${msg.is_read ? '#4caf50' : '#999'}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 10px; font-weight: bold;">
                                     ${msg.is_read ? '✓ Read' : 'Unread'}
                                 </span>
                             </div>
                             <span style="color: #999; font-size: 12px; white-space: nowrap;">${new Date(msg.sent_at).toLocaleString()}</span>
                         </div>
-                        ${msg.subject ? `<div style="font-weight: 600; color: #555; margin-bottom: 8px;">Subject: ${msg.subject}</div>` : ''}
+                        ${msg.subject ? `<div style="font-weight: 600; color: #555; margin-bottom: 8px;">Subject: ${sanitizeHTML(msg.subject)}</div>` : ''}
                         <div style="color: #666; font-size: 14px; background: white; padding: 10px; border-radius: 4px;">
-                            ${msg.content.substring(0, 150)}${msg.content.length > 150 ? '...' : ''}
+                            ${sanitizeHTML(msg.content.substring(0, 150))}${msg.content.length > 150 ? '...' : ''}
                         </div>
                     </div>
                 `).join('');
 
             } catch (error) {
                 console.error('Error loading sent messages:', error);
-                document.getElementById('messagesSentContainer').innerHTML = `<p style="color: #e74c3c; padding: 20px;">❌ Error: ${error.message}</p>`;
+                document.getElementById('messagesSentContainer').innerHTML = `<p style="color: #e74c3c; padding: 20px;">❌ Error: ${sanitizeHTML(error.message)}</p>`;
             }
         }
 
@@ -15801,7 +15801,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     <div style="margin-bottom: 15px; text-align: ${msg.sender_username === currentUser ? 'right' : 'left'};">
                         <div style="display: inline-block; max-width: 70%; background: ${msg.sender_username === currentUser ? '#667eea' : '#e0e0e0'}; 
                                     color: ${msg.sender_username === currentUser ? 'white' : '#333'}; padding: 10px 15px; border-radius: 8px; word-wrap: break-word;">
-                            ${msg.content}
+                            ${sanitizeWithLineBreaks(msg.content)}
                         </div>
                         <div style="font-size: 11px; color: #999; margin-top: 4px;">
                             ${new Date(msg.sent_at).toLocaleString()}
