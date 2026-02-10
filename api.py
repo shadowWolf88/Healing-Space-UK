@@ -5884,15 +5884,85 @@ def execute_terminal():
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+def get_dev_ai_context(cur, command):
+    """Fetch contextual data for the developer AI based on command type."""
+    context = ""
+    if command == "analyze_tests":
+        results = cur.execute("""
+            SELECT id, username, test_output, passed_count, failed_count, error_count, exit_code, created_at
+            FROM developer_test_runs ORDER BY created_at DESC LIMIT 3
+        """).fetchall()
+        if results:
+            for r in results:
+                context += f"\n--- Test Run #{r[0]} by {r[1]} at {r[7]} ---\n"
+                context += f"Passed: {r[3]}, Failed: {r[4]}, Errors: {r[5]}, Exit Code: {r[6]}\n"
+                output = (r[2] or "")[:3000]
+                context += f"Output:\n{output}\n"
+        else:
+            context = "No test runs found in the database."
+    elif command == "system_status":
+        try:
+            user_count = cur.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+            patient_count = cur.execute("SELECT COUNT(*) FROM users WHERE role='user'").fetchone()[0]
+            clinician_count = cur.execute("SELECT COUNT(*) FROM users WHERE role='clinician'").fetchone()[0]
+            recent_logins = cur.execute("SELECT COUNT(*) FROM users WHERE last_login > CURRENT_TIMESTAMP - INTERVAL '24 hours'").fetchone()[0]
+            open_alerts = cur.execute("SELECT COUNT(*) FROM alerts WHERE status='open' OR status IS NULL").fetchone()[0]
+            chat_count = cur.execute("SELECT COUNT(*) FROM chat_history WHERE timestamp > CURRENT_TIMESTAMP - INTERVAL '24 hours'").fetchone()[0]
+            context = f"System Status:\n- Total users: {user_count}\n- Patients: {patient_count}\n- Clinicians: {clinician_count}\n- Logins (24h): {recent_logins}\n- Chat messages (24h): {chat_count}\n- Open alerts: {open_alerts}"
+        except Exception as e:
+            context = f"Error fetching system status: {str(e)}"
+    return context
+
+DEV_AI_SYSTEM_PROMPT = """You are a world-class developer assistant for the Healing Space AI Therapy Chatbot platform. You have deep knowledge of this specific codebase and provide expert-level advice.
+
+ARCHITECTURE:
+- Single Flask app (api.py, ~14000+ lines) with PostgreSQL database
+- Single-page frontend (templates/index.html, ~15000+ lines) with inline JS
+- AI powered by Groq API (llama-3.3-70b-versatile model)
+- Auth: Flask session + get_authenticated_username(), roles: user, clinician, developer
+- DB: PostgreSQL with get_db_connection() + get_wrapped_cursor(), always use %s placeholders
+- Rate limiting via @check_rate_limit decorator, CSRF via @CSRFProtection.require_csrf
+- Input validation: InputValidator.validate_message() returns (cleaned, error)
+- Audit: log_event(username, actor, action, details) from audit.py
+
+KEY TABLES:
+- users (username, password_hash, role, created_at, last_login)
+- chat_history (session_id, chat_session_id, username, role, message, timestamp)
+- mood_logs (username, mood, entry_timestamp), wellness_logs (username, timestamp)
+- patient_wins (username, win_type, win_text, created_at)
+- ai_memory_core, ai_activity_log, ai_memory_events, ai_memory_flags
+- patient_approvals (patient_username, clinician_username, status)
+- developer_test_runs (username, test_output, exit_code, passed_count, failed_count, error_count)
+- dev_ai_chats (username, session_id, role, message, created_at)
+
+KEY PATTERNS:
+- TherapistAI class handles therapy chat with memory_context parameter
+- Frontend uses tab system with showTab()/switchDevTab() navigation
+- Dark mode: data-theme attribute, CSS variables (--bg-card, --text-primary, etc.)
+- All fetch() calls to authenticated endpoints should include credentials: 'include'
+- C-SSRS risk assessment integrated into therapy chat with keyword + contextual analysis
+
+When analyzing test results, provide:
+1. Summary of pass/fail/error counts and trends across runs
+2. Specific failing test identification from the output
+3. Likely root causes based on your codebase knowledge
+4. Concrete fix suggestions with code snippets where possible
+
+When data is provided in [SYSTEM DATA] blocks, analyze it thoroughly. Be concise but thorough. Use markdown formatting. Always provide actionable advice."""
+
 @CSRFProtection.require_csrf
 @app.route('/api/developer/ai/chat', methods=['POST'])
 def developer_ai_chat():
-    """Developer AI assistant"""
+    """Developer AI assistant with codebase awareness and test analysis"""
     try:
         data = request.json
         username = data.get('username')
         message = data.get('message')
         session_id = data.get('session_id', 'default')
+        command = data.get('command')
+
+        if not username or not message:
+            return jsonify({'error': 'Username and message required'}), 400
 
         # Verify developer role
         conn = get_db_connection()
@@ -5903,6 +5973,11 @@ def developer_ai_chat():
             conn.close()
             return jsonify({'error': 'Unauthorized'}), 403
 
+        # Fetch context data if a command is provided
+        context_data = ""
+        if command:
+            context_data = get_dev_ai_context(cur, command)
+
         # Get chat history
         history = cur.execute(
             "SELECT role, message FROM dev_ai_chats WHERE username = %s AND session_id = %s ORDER BY created_at DESC LIMIT 10",
@@ -5911,39 +5986,32 @@ def developer_ai_chat():
 
         # Build conversation context
         messages = [
-            {
-                "role": "system",
-                "content": """You are a technical assistant for the python-chat-bot platform developer. You help with:
-- Debugging code issues in Python/Flask/JavaScript
-- Writing and optimizing SQL queries
-- Explaining system architecture and data flows
-- Database schema questions
-- API endpoint usage and troubleshooting
-- Frontend UI development (HTML/CSS/JavaScript)
-- Security best practices
-- User support message drafting
-- Performance optimization
-
-You have full knowledge of the codebase and can provide specific advice. Be concise but thorough."""
-            }
+            {"role": "system", "content": DEV_AI_SYSTEM_PROMPT}
         ]
 
         for h in reversed(history):
             messages.append({"role": h[0], "content": h[1]})
-        messages.append({"role": "user", "content": message})
+
+        # Build user message with optional context injection
+        user_content = message
+        if context_data:
+            user_content = f"[SYSTEM DATA]\n{context_data}\n[END SYSTEM DATA]\n\n{message}"
+
+        messages.append({"role": "user", "content": user_content})
 
         # Call Groq API
-        groq_key = os.getenv('GROQ_API_KEY')
+        groq_key = secrets_manager.get_secret("GROQ_API_KEY") or os.getenv('GROQ_API_KEY')
         response = requests.post(
             'https://api.groq.com/openai/v1/chat/completions',
             headers={'Authorization': f'Bearer {groq_key}', 'Content-Type': 'application/json'},
-            json={'model': 'llama-3.3-70b-versatile', 'messages': messages, 'max_tokens': 1000}
+            json={'model': 'llama-3.3-70b-versatile', 'messages': messages, 'max_tokens': 2000},
+            timeout=30
         )
 
         if response.status_code == 200:
             ai_response = response.json()['choices'][0]['message']['content']
 
-            # Save to database
+            # Save original message to database (not context-injected version)
             cur.execute(
                 "INSERT INTO dev_ai_chats (username, session_id, role, message) VALUES (%s,%s,%s,%s)",
                 (username, session_id, 'user', message)
@@ -5957,8 +6025,10 @@ You have full knowledge of the codebase and can provide specific advice. Be conc
 
             return jsonify({'response': ai_response, 'session_id': session_id}), 200
         else:
+            error_detail = response.text[:200]
+            print(f"Dev AI Groq API error {response.status_code}: {error_detail}")
             conn.close()
-            return jsonify({'error': 'AI API error'}), 500
+            return jsonify({'error': f'AI API error: {response.status_code}'}), 500
 
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')

@@ -6228,24 +6228,46 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 <!-- AI Assistant Subtab -->
                 <div id="devAITab" class="dev-subtab-content" style="display: none;">
                     <div class="card">
-                        <h4>🤖 Developer AI Assistant</h4>
-                        <p style="color: #666; margin-bottom: 15px;">
-                            Technical support for debugging, SQL queries, architecture, and more.
+                        <h4>Developer AI Assistant</h4>
+                        <p style="color: var(--text-secondary, #666); margin-bottom: 15px;">
+                            Codebase-aware technical assistant with test analysis capabilities.
                         </p>
 
-                            <div id="devAIChatContainer" style="background: var(--bg-card); color: var(--text-primary); padding: 20px; border-radius: 8px; height: 500px; overflow-y: auto; margin-bottom: 15px;">
-                            <div style="text-align: center; color: #999; padding: 60px 20px;">
-                                <div style="font-size: 48px;">🤖</div>
-                                <div style="margin-top: 15px; font-size: 18px;">Developer AI Assistant</div>
-                                <div style="margin-top: 10px;">Ask me about code, database, architecture, debugging, or support drafts!</div>
+                        <!-- Quick Action Buttons -->
+                        <div id="devAIQuickActions" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 15px;">
+                            <button class="dev-ai-quick-btn" onclick="sendDevAIQuickAction('analyze_tests', 'Analyze the latest QA test results. Identify failures, patterns, and suggest fixes.')">
+                                Analyze Latest Tests
+                            </button>
+                            <button class="dev-ai-quick-btn" onclick="sendDevAIQuickAction('system_status', 'Review the current system status and highlight anything that needs attention.')">
+                                System Status
+                            </button>
+                            <button class="dev-ai-quick-btn" onclick="sendDevAIQuickAction(null, 'What are the most common patterns and conventions used in this codebase?')">
+                                Codebase Patterns
+                            </button>
+                            <button class="dev-ai-quick-btn" onclick="sendDevAIQuickAction(null, 'Help me write a new API endpoint. What template should I follow?')">
+                                New Endpoint Template
+                            </button>
+                            <button class="dev-ai-quick-btn" onclick="sendDevAIQuickAction(null, 'What security checks should I verify before deploying?')">
+                                Security Checklist
+                            </button>
+                        </div>
+
+                        <!-- Chat Messages Container -->
+                        <div id="devAIChatMessages" class="dev-ai-chat-container">
+                            <div class="dev-ai-welcome">
+                                <div style="font-size: 48px;">&#129302;</div>
+                                <div class="dev-ai-welcome-title">Developer AI Assistant</div>
+                                <div class="dev-ai-welcome-subtitle">Ask about the codebase, debug issues, analyze tests, or get architecture advice.</div>
                             </div>
                         </div>
 
-                        <div style="display: flex; gap: 10px;">
-                            <input type="text" id="devAIInput" placeholder="Ask a technical question..."
-                                style="flex: 1; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px;"
-                                onkeypress="if(event.key==='Enter') sendDevAIMessage()">
-                            <button class="btn" onclick="sendDevAIMessage()">Send</button>
+                        <!-- Input Area -->
+                        <div style="display: flex; gap: 10px; align-items: flex-end;">
+                            <textarea id="devAIInput" placeholder="Ask a technical question..."
+                                rows="1"
+                                style="flex: 1; padding: 12px; border: 2px solid var(--border-color, #e0e0e0); border-radius: 8px; resize: none; font-family: inherit; background: var(--bg-card); color: var(--text-primary);"
+                                onkeypress="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); sendDevAIMessage(); }"></textarea>
+                            <button class="btn" onclick="sendDevAIMessage()" id="devAISendBtn">Send</button>
                             <button class="btn btn-secondary" onclick="clearDevAIChat()">Clear</button>
                         </div>
                     </div>
@@ -14718,78 +14740,121 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
         }
 
         // AI Assistant Functions
-        async function sendDevAIMessage() {
+        function formatDevAIResponse(text) {
+            // Escape HTML first for XSS safety, then apply markdown formatting
+            let html = escapeHtml(text);
+            // Code blocks (triple backtick with optional language)
+            html = html.replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+            // Inline code
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+            // Bold
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            // Headers (###, ##, #)
+            html = html.replace(/^### (.+)$/gm, '<strong style="font-size:1em;">$1</strong>');
+            html = html.replace(/^## (.+)$/gm, '<strong style="font-size:1.1em;">$1</strong>');
+            html = html.replace(/^# (.+)$/gm, '<strong style="font-size:1.2em;">$1</strong>');
+            // Bullet points
+            html = html.replace(/^- (.+)$/gm, '&bull; $1');
+            // Numbered lists
+            html = html.replace(/^(\d+)\. (.+)$/gm, '$1. $2');
+            // Line breaks (but not inside pre blocks)
+            html = html.replace(/\n/g, '<br>');
+            // Clean up extra <br> inside pre blocks
+            html = html.replace(/<pre><code>([\s\S]*?)<\/code><\/pre>/g, function(match, code) {
+                return '<pre><code>' + code.replace(/<br>/g, '\n') + '</code></pre>';
+            });
+            return html;
+        }
+
+        function sendDevAIQuickAction(command, message) {
+            const input = document.getElementById('devAIInput');
+            input.value = message;
+            sendDevAIMessage(command);
+        }
+
+        async function sendDevAIMessage(command = null) {
             const input = document.getElementById('devAIInput');
             const message = input.value.trim();
-            if (!message) return;
+            if (!message && !command) return;
 
-            const container = document.getElementById('devAIChatContainer');
+            const container = document.getElementById('devAIChatMessages');
+            const sendBtn = document.getElementById('devAISendBtn');
 
-            if (container.innerHTML.includes('Ask me about')) {
-                container.innerHTML = '';
-            }
+            // Clear welcome screen on first message
+            const welcome = container.querySelector('.dev-ai-welcome');
+            if (welcome) welcome.remove();
 
-            container.innerHTML += `
-                <div style="background: #667eea; color: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; max-width: 85%; margin-left: auto;">
-                    <strong>You:</strong><br>${message}
-                </div>
-            `;
+            // Show user message bubble
+            const userMsg = message || '(Quick action)';
+            const now = new Date();
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'dev-ai-msg user';
+            msgDiv.innerHTML = escapeHtml(userMsg) + '<div class="msg-timestamp">' + formatTimestamp(now.toISOString()) + '</div>';
+            container.appendChild(msgDiv);
 
             input.value = '';
+            sendBtn.disabled = true;
             container.scrollTop = container.scrollHeight;
 
-            container.innerHTML += `
-                <div id="aiLoading" style="background: #f0f0f0; padding: 15px; border-radius: 12px; margin-bottom: 15px; max-width: 85%;">
-                    <strong>AI:</strong><br>Thinking...
-                </div>
-            `;
+            // Show thinking animation
+            const thinkingId = 'dev-thinking-' + Date.now();
+            const thinkingDiv = document.createElement('div');
+            thinkingDiv.className = 'dev-ai-msg assistant';
+            thinkingDiv.id = thinkingId;
+            thinkingDiv.innerHTML = '<div class="ai-thinking"><div class="thinking-dots"><span></span><span></span><span></span></div><span>Thinking...</span></div>';
+            container.appendChild(thinkingDiv);
             container.scrollTop = container.scrollHeight;
 
             try {
+                const body = { username: currentUser, message: userMsg };
+                if (command) body.command = command;
+
                 const response = await fetch('/api/developer/ai/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        username: currentUser,
-                        message
-                    })
+                    credentials: 'include',
+                    body: JSON.stringify(body)
                 });
 
                 const data = await response.json();
 
-                document.getElementById('aiLoading').remove();
+                // Remove thinking bubble
+                const thinkingEl = document.getElementById(thinkingId);
+                if (thinkingEl) thinkingEl.remove();
 
                 if (response.ok) {
-                    container.innerHTML += `
-                        <div style="background: white; border: 2px solid #e0e0e0; padding: 15px; border-radius: 12px; margin-bottom: 15px; max-width: 85%;">
-                            <strong>AI:</strong><br>${data.response.replace(/\n/g, '<br>')}
-                        </div>
-                    `;
+                    const formatted = formatDevAIResponse(data.response);
+                    const aiDiv = document.createElement('div');
+                    aiDiv.className = 'dev-ai-msg assistant';
+                    aiDiv.innerHTML = formatted + '<div class="msg-timestamp">' + formatTimestamp(new Date().toISOString()) + '</div>';
+                    container.appendChild(aiDiv);
                 } else {
-                    container.innerHTML += `
-                        <div style="background: #ffebee; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
-                            <strong>Error:</strong> ${data.error}
-                        </div>
-                    `;
+                    const errDiv = document.createElement('div');
+                    errDiv.className = 'dev-ai-msg assistant';
+                    errDiv.style.borderColor = '#e53935';
+                    errDiv.innerHTML = '<strong>Error:</strong> ' + escapeHtml(data.error || 'Unknown error');
+                    container.appendChild(errDiv);
                 }
             } catch (error) {
-                document.getElementById('aiLoading').remove();
-                container.innerHTML += `
-                    <div style="background: #ffebee; padding: 15px; border-radius: 12px; margin-bottom: 15px;">
-                        <strong>Network Error:</strong> ${error.message}
-                    </div>
-                `;
+                const thinkingEl = document.getElementById(thinkingId);
+                if (thinkingEl) thinkingEl.remove();
+                const errDiv = document.createElement('div');
+                errDiv.className = 'dev-ai-msg assistant';
+                errDiv.style.borderColor = '#e53935';
+                errDiv.innerHTML = '<strong>Network Error:</strong> ' + escapeHtml(error.message);
+                container.appendChild(errDiv);
             }
 
+            sendBtn.disabled = false;
             container.scrollTop = container.scrollHeight;
         }
 
         function clearDevAIChat() {
-            document.getElementById('devAIChatContainer').innerHTML = `
-                <div style="text-align: center; color: #999; padding: 60px 20px;">
-                    <div style="font-size: 48px;">🤖</div>
-                    <div style="margin-top: 15px; font-size: 18px;">Developer AI Assistant</div>
-                    <div style="margin-top: 10px;">Ask me about code, database, architecture, debugging, or support drafts!</div>
+            document.getElementById('devAIChatMessages').innerHTML = `
+                <div class="dev-ai-welcome">
+                    <div style="font-size: 48px;">&#129302;</div>
+                    <div class="dev-ai-welcome-title">Developer AI Assistant</div>
+                    <div class="dev-ai-welcome-subtitle">Ask about the codebase, debug issues, analyze tests, or get architecture advice.</div>
                 </div>
             `;
         }
