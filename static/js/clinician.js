@@ -831,7 +831,7 @@ async function sendNewMessage() {
         document.getElementById('clinMessageSubject').value = '';
         
         showSuccess('Message sent successfully');
-        switchMessageTab('inbox', document.querySelector('[onclick*="switchMessageTab(\\'inbox\\'"]'));
+        loadClinicalMessages('inbox');
     } catch (error) {
         console.error('Error sending message:', error);
     }
@@ -992,5 +992,314 @@ window.clinician = {
     searchPatients,
     createAppointment,
     showNewAppointmentForm,
-    cancelNewAppointment
+    cancelNewAppointment,
+    showLoadingOverlay,
+    hideLoadingOverlay,
+    showToast,
+    createCalendar,
+    updateChartStyles,
+    enhanceMobileExperience
 };
+
+/**
+ * ============================================================================
+ * PHASE 5: UX ENHANCEMENTS - LOADING SPINNERS, TOASTS, CALENDAR, CHARTS
+ * ============================================================================
+ */
+
+/**
+ * Loading Overlay Management
+ */
+function showLoadingOverlay(message = 'Loading...') {
+    let overlay = document.getElementById('clinicianLoadingOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'clinicianLoadingOverlay';
+        overlay.className = 'loading-overlay';
+        overlay.innerHTML = `
+            <div class="loading-overlay-content">
+                <div class="loading-spinner lg"></div>
+                <p>${message}</p>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+    }
+    overlay.classList.add('active');
+}
+
+function hideLoadingOverlay() {
+    const overlay = document.getElementById('clinicianLoadingOverlay');
+    if (overlay) {
+        overlay.classList.remove('active');
+    }
+}
+
+/**
+ * Toast Notification System
+ */
+function showToast(type = 'info', title = '', message = '', duration = 4000) {
+    // Ensure toast container exists
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toastContainer';
+        container.className = 'toast-container';
+        document.body.appendChild(container);
+    }
+    
+    // Icons for toast types
+    const icons = {
+        'success': '✅',
+        'error': '❌',
+        'warning': '⚠️',
+        'info': 'ℹ️'
+    };
+    
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <div class="toast-icon">${icons[type] || icons.info}</div>
+        <div class="toast-content">
+            ${title ? `<div class="toast-title">${sanitizeHTML(title)}</div>` : ''}
+            <div class="toast-message">${sanitizeHTML(message)}</div>
+        </div>
+        <button class="toast-close" onclick="this.parentElement.classList.add('exiting'); setTimeout(() => this.parentElement.remove(), 300);">×</button>
+    `;
+    
+    container.appendChild(toast);
+    
+    // Auto-dismiss after duration
+    if (duration > 0) {
+        setTimeout(() => {
+            if (toast.parentElement) {
+                toast.classList.add('exiting');
+                setTimeout(() => toast.remove(), 300);
+            }
+        }, duration);
+    }
+    
+    return toast;
+}
+
+/**
+ * Calendar Component
+ */
+function createCalendar(containerId, onDateSelect = null) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    
+    function renderCalendar(y, m) {
+        container.innerHTML = '';
+        
+        // Header
+        const header = document.createElement('div');
+        header.className = 'calendar-header';
+        header.innerHTML = `
+            <h3>Appointments</h3>
+            <div class="calendar-nav">
+                <button onclick="window.nextCalendarMonth(-1)" title="Previous">◀</button>
+                <span class="calendar-month-year">${new Date(y, m).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+                <button onclick="window.nextCalendarMonth(1)" title="Next">▶</button>
+            </div>
+        `;
+        container.appendChild(header);
+        
+        // Weekday headers
+        const weekdaysDiv = document.createElement('div');
+        weekdaysDiv.className = 'calendar-weekdays';
+        const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        weekdays.forEach(day => {
+            const weekday = document.createElement('div');
+            weekday.className = 'calendar-weekday';
+            weekday.textContent = day;
+            weekdaysDiv.appendChild(weekday);
+        });
+        container.appendChild(weekdaysDiv);
+        
+        // Days grid
+        const daysDiv = document.createElement('div');
+        daysDiv.className = 'calendar-days';
+        
+        const firstDay = new Date(y, m, 1).getDay();
+        const daysInMonth = new Date(y, m + 1, 0).getDate();
+        const daysInPrevMonth = new Date(y, m, 0).getDate();
+        
+        // Previous month days
+        for (let i = firstDay - 1; i >= 0; i--) {
+            const day = document.createElement('div');
+            day.className = 'calendar-day other-month';
+            day.textContent = daysInPrevMonth - i;
+            daysDiv.appendChild(day);
+        }
+        
+        // Current month days
+        for (let i = 1; i <= daysInMonth; i++) {
+            const day = document.createElement('div');
+            day.className = 'calendar-day';
+            day.textContent = i;
+            
+            const date = new Date(y, m, i);
+            const today = new Date();
+            
+            // Mark today
+            if (date.toDateString() === today.toDateString()) {
+                day.classList.add('today');
+            }
+            
+            // Mark days with events (mock data - would be real appointments)
+            if (i % 5 === 0) {
+                day.classList.add('has-event');
+            }
+            
+            // Click handler
+            day.addEventListener('click', () => {
+                document.querySelectorAll('#' + containerId + ' .calendar-day.selected').forEach(d => d.classList.remove('selected'));
+                day.classList.add('selected');
+                if (onDateSelect) onDateSelect(new Date(y, m, i));
+                showToast('info', 'Date Selected', `${new Date(y, m, i).toLocaleDateString()}`);
+            });
+            
+            daysDiv.appendChild(day);
+        }
+        
+        // Next month days
+        const totalCells = daysDiv.children.length;
+        const remainingCells = 42 - totalCells; // 6 rows × 7 days
+        for (let i = 1; i <= remainingCells; i++) {
+            const day = document.createElement('div');
+            day.className = 'calendar-day other-month';
+            day.textContent = i;
+            daysDiv.appendChild(day);
+        }
+        
+        container.appendChild(daysDiv);
+    }
+    
+    // Store month navigation functions globally
+    window.nextCalendarMonth = function(offset) {
+        const newMonth = month + offset;
+        if (newMonth < 0) {
+            year--;
+            month = 11;
+        } else if (newMonth > 11) {
+            year++;
+            month = 0;
+        } else {
+            month = newMonth;
+        }
+        renderCalendar(year, month);
+    };
+    
+    renderCalendar(year, month);
+}
+
+/**
+ * Enhance Chart Visualizations with Smooth Updates
+ */
+function updateChartStyles() {
+    // Add smooth transitions to all chart containers
+    const charts = document.querySelectorAll('.chart-container');
+    charts.forEach(chart => {
+        chart.style.transition = 'all 0.3s ease';
+    });
+    
+    // Ensure Chart.js charts have proper styling
+    const canvases = document.querySelectorAll('canvas[id*="Chart"]');
+    canvases.forEach(canvas => {
+        const container = canvas.parentElement;
+        if (container && !container.classList.contains('chart-container')) {
+            container.classList.add('chart-container');
+        }
+    });
+}
+
+/**
+ * Mobile Experience Enhancements
+ */
+function enhanceMobileExperience() {
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isMobile) {
+        // Adjust loading overlay text size
+        const overlayContent = document.querySelector('.loading-overlay-content');
+        if (overlayContent) {
+            overlayContent.style.padding = '20px';
+        }
+        
+        // Ensure toasts don't overflow
+        const toasts = document.querySelectorAll('.toast');
+        toasts.forEach(toast => {
+            toast.style.maxWidth = 'calc(100vw - 20px)';
+        });
+        
+        // Make calendar more touch-friendly
+        const calendarDays = document.querySelectorAll('.calendar-day');
+        calendarDays.forEach(day => {
+            day.style.minHeight = '44px'; // Touch-friendly minimum
+            day.style.padding = '4px';
+        });
+    }
+}
+
+/**
+ * Wrap API calls with loading overlay
+ */
+const originalCallClinicianAPI = callClinicianAPI;
+async function callClinicianAPIWithLoader(endpoint, method = 'GET', body = null, showLoader = true) {
+    if (showLoader) showLoadingOverlay('Loading data...');
+    try {
+        const result = await originalCallClinicianAPI(endpoint, method, body);
+        if (showLoader) hideLoadingOverlay();
+        return result;
+    } catch (error) {
+        if (showLoader) hideLoadingOverlay();
+        showToast('error', 'Error', error.message, 5000);
+        throw error;
+    }
+}
+
+// Initialize enhancements on page load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        updateChartStyles();
+        enhanceMobileExperience();
+    });
+} else {
+    updateChartStyles();
+    enhanceMobileExperience();
+}
+
+// Update on window resize
+window.addEventListener('resize', () => {
+    enhanceMobileExperience();
+});
+
+// Override original API function to use loader version for key operations
+const originalLoadAnalyticsDashboard = loadAnalyticsDashboard;
+async function loadAnalyticsDashboardWithLoader() {
+    showLoadingOverlay('Loading dashboard...');
+    try {
+        await originalLoadAnalyticsDashboard();
+        hideLoadingOverlay();
+    } catch (error) {
+        hideLoadingOverlay();
+        showToast('error', 'Dashboard Error', 'Failed to load dashboard');
+    }
+}
+
+const originalLoadPatients = loadPatients;
+async function loadPatientsWithLoader() {
+    showLoadingOverlay('Loading patients...');
+    try {
+        await originalLoadPatients();
+        hideLoadingOverlay();
+    } catch (error) {
+        hideLoadingOverlay();
+        showToast('error', 'Patients Error', 'Failed to load patients');
+    }
+}
