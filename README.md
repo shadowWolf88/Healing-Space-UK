@@ -255,12 +255,14 @@ Or jump directly to:
 - 🔄 1.5 Session Management (upcoming)
 - 🔄 1.6-1.10 Error handling, access control, XSS, connection pooling (upcoming)
 
-### TIER 2: Clinical Features 🔄 PLANNED
-- 2.1 C-SSRS Assessment endpoints
-- 2.2 Crisis Alert System
-- 2.3 Safety Planning Workflow
-- 2.4 Treatment Goals Module
-- ... (5 more clinical features)
+### TIER 2: Clinical Features ✅ PARTIALLY COMPLETE (2/7)
+- ✅ 2.1 C-SSRS Assessment endpoints (COMPLETE Feb 11)
+- ✅ 2.2 Crisis Alert System (COMPLETE Feb 11 - 6 endpoints, 14 functions, 37 tests)
+- 🔄 2.3 Safety Planning Workflow
+- 🔄 2.4 Treatment Goals Module
+- 🔄 2.5 Session Notes & Homework
+- 🔄 2.6 CORE-OM/ORS Outcome Measures
+- 🔄 2.7 Relapse Prevention Planning
 
 ### TIER 3: Compliance 🔄 PLANNED
 - 3.1 Clinical Governance
