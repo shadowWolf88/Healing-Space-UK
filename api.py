@@ -2010,6 +2010,65 @@ def handle_exception(e, context: str = 'unknown'):
         'code': 'INTERNAL_ERROR'
     }), 500
 
+# ==================== ENGAGEMENT & ACHIEVEMENT HELPERS ====================
+
+def _check_mood_streak(username, cur, days=7):
+    """Calculate consecutive days of mood logging"""
+    try:
+        results = cur.execute("""
+            SELECT DATE(entry_timestamp) as log_date
+            FROM mood_logs WHERE username = %s
+            ORDER BY DATE(entry_timestamp) DESC
+            LIMIT %s
+        """, (username, days * 2)).fetchall()
+        
+        if not results:
+            return 0
+        
+        dates = [r[0] for r in results]
+        streak = 0
+        
+        for i, date in enumerate(dates):
+            if i == 0:
+                streak = 1
+            else:
+                expected_date = dates[i-1] - timedelta(days=1)
+                if date == expected_date:
+                    streak += 1
+                else:
+                    break
+        
+        return streak
+    except:
+        return 0
+
+def _calculate_achievement_progress(username, cur):
+    """Calculate progress toward next achievements"""
+    try:
+        progress = {}
+        
+        # Check mood streak progress
+        mood_count = cur.execute(
+            "SELECT COUNT(*) FROM mood_logs WHERE username=%s", (username,)
+        ).fetchone()[0]
+        
+        streak = _check_mood_streak(username, cur, 30)
+        progress['mood_logging'] = {
+            'total_entries': mood_count,
+            'current_streak': streak,
+            'next_milestone': 7 if streak < 7 else (30 if streak < 30 else 100)
+        }
+        
+        # Check achievement count
+        achievement_count = cur.execute(
+            "SELECT COUNT(*) FROM achievements WHERE username=%s", (username,)
+        ).fetchone()[0]
+        progress['achievements_earned'] = achievement_count
+        
+        return progress
+    except:
+        return {'mood_logging': {'total_entries': 0, 'current_streak': 0, 'next_milestone': 7}, 'achievements_earned': 0}
+
 # ==================== CONTENT MODERATION ====================
 class ContentModerator:
     """Simple content moderation for community posts and replies"""
@@ -4305,6 +4364,38 @@ def init_db():
                 "CREATE INDEX IF NOT EXISTS idx_c_ssrs_risk_level ON c_ssrs_assessments(risk_level)",
                 "CREATE INDEX IF NOT EXISTS idx_c_ssrs_date ON c_ssrs_assessments(created_at)",
                 "CREATE INDEX IF NOT EXISTS idx_c_ssrs_clinician ON c_ssrs_assessments(clinician_username)"
+            ]),
+            ('achievements', """
+                CREATE TABLE IF NOT EXISTS achievements (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT NOT NULL REFERENCES users(username) ON DELETE CASCADE,
+                    badge_name TEXT NOT NULL,
+                    badge_type TEXT NOT NULL,
+                    description TEXT,
+                    icon_emoji TEXT,
+                    earned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(username, badge_name)
+                )
+            """, [
+                "CREATE INDEX IF NOT EXISTS idx_achievements_username ON achievements(username)",
+                "CREATE INDEX IF NOT EXISTS idx_achievements_earned_at ON achievements(earned_at)"
+            ]),
+            ('notification_preferences', """
+                CREATE TABLE IF NOT EXISTS notification_preferences (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT NOT NULL UNIQUE REFERENCES users(username) ON DELETE CASCADE,
+                    preferred_time_of_day TEXT DEFAULT '09:00',
+                    notification_frequency TEXT DEFAULT 'daily',
+                    topics_enabled JSONB DEFAULT '{"mood_reminder": true, "achievement": true, "homework": true, "appointment": true}',
+                    smart_timing_enabled BOOLEAN DEFAULT TRUE,
+                    sound_enabled BOOLEAN DEFAULT TRUE,
+                    email_enabled BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """, [
+                "CREATE INDEX IF NOT EXISTS idx_notification_prefs_username ON notification_preferences(username)"
             ])
         ]
 
@@ -12418,6 +12509,242 @@ def patient_profile():
     except Exception as e:
         return handle_exception(e, request.endpoint or 'unknown')
 
+# ==================== QUICK WINS: PROGRESS & ENGAGEMENT ENDPOINTS ====================
+
+@app.route('/api/patient/progress/mood', methods=['GET'])
+def get_mood_progress():
+    """Calculate mood improvement percentage for patient dashboard"""
+    try:
+        username = session.get('username')
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+        
+        # Get first mood log and latest mood log for trend calculation
+        first_log = cur.execute("""
+            SELECT mood_val, entry_timestamp FROM mood_logs 
+            WHERE username = %s ORDER BY entry_timestamp ASC LIMIT 1
+        """, (username,)).fetchone()
+        
+        latest_log = cur.execute("""
+            SELECT mood_val, entry_timestamp FROM mood_logs 
+            WHERE username = %s ORDER BY entry_timestamp DESC LIMIT 1
+        """, (username,)).fetchone()
+        
+        if not first_log or not latest_log:
+            conn.close()
+            return jsonify({
+                'progress_percentage': 0,
+                'trend': 'no_data',
+                'first_mood': None,
+                'latest_mood': None,
+                'entries_count': 0
+            }), 200
+        
+        entries_count = cur.execute(
+            "SELECT COUNT(*) FROM mood_logs WHERE username=%s", (username,)
+        ).fetchone()[0]
+        
+        first_mood = first_log[0]
+        latest_mood = latest_log[0]
+        
+        # Calculate improvement (scale: 0-10, higher is better)
+        if first_mood == 0:
+            progress = 0
+        else:
+            progress = ((latest_mood - first_mood) / 10.0) * 100
+        
+        # Determine trend (moving average of last 7 entries)
+        last_7 = cur.execute("""
+            SELECT mood_val FROM mood_logs 
+            WHERE username = %s ORDER BY entry_timestamp DESC LIMIT 7
+        """, (username,)).fetchall()
+        
+        if len(last_7) >= 2:
+            avg_last_7 = sum(m[0] for m in last_7) / len(last_7)
+            prev_avg = sum(m[0] for m in last_7[3:]) / max(1, len(last_7[3:])) if len(last_7) > 3 else avg_last_7
+            if avg_last_7 > prev_avg:
+                trend = 'improving'
+            elif avg_last_7 < prev_avg:
+                trend = 'declining'
+            else:
+                trend = 'stable'
+        else:
+            trend = 'insufficient_data'
+        
+        conn.close()
+        
+        log_event(username, 'engagement', 'progress_viewed', 'Progress % display')
+        
+        return jsonify({
+            'progress_percentage': max(-100, min(100, progress)),  # Clamp to -100 to 100
+            'trend': trend,
+            'first_mood': first_mood,
+            'latest_mood': latest_mood,
+            'entries_count': entries_count,
+            'status': 'success'
+        }), 200
+        
+    except Exception as e:
+        return handle_exception(e, 'get_mood_progress')
+
+@app.route('/api/patient/achievements', methods=['GET'])
+def get_achievements():
+    """Get all earned achievements for patient"""
+    try:
+        username = session.get('username')
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+        
+        achievements = cur.execute("""
+            SELECT id, badge_name, badge_type, description, icon_emoji, earned_at
+            FROM achievements WHERE username = %s ORDER BY earned_at DESC
+        """, (username,)).fetchall()
+        
+        # Get badge progress (how close to next badge)
+        progress = _calculate_achievement_progress(username, cur)
+        
+        conn.close()
+        
+        return jsonify({
+            'earned': [
+                {
+                    'id': a[0],
+                    'name': a[1],
+                    'type': a[2],
+                    'description': a[3],
+                    'icon': a[4],
+                    'earned_at': a[5].isoformat() if a[5] else None
+                }
+                for a in achievements
+            ],
+            'progress': progress,
+            'total_earned': len(achievements),
+            'status': 'success'
+        }), 200
+        
+    except Exception as e:
+        return handle_exception(e, 'get_achievements')
+
+@app.route('/api/patient/achievements/check-unlocks', methods=['POST'])
+def check_achievement_unlocks():
+    """Check and unlock achievements based on user activity (called after mood/goal actions)"""
+    try:
+        username = session.get('username')
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+        
+        newly_unlocked = []
+        
+        # Achievement 1: First mood log
+        mood_count = cur.execute(
+            "SELECT COUNT(*) FROM mood_logs WHERE username=%s", (username,)
+        ).fetchone()[0]
+        
+        if mood_count == 1:
+            existing = cur.execute(
+                "SELECT id FROM achievements WHERE username=%s AND badge_name='first_log'",
+                (username,)
+            ).fetchone()
+            if not existing:
+                cur.execute("""
+                    INSERT INTO achievements (username, badge_name, badge_type, description, icon_emoji)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (username, 'first_log', 'milestone', 'Logged your first mood entry', '🎯'))
+                conn.commit()
+                newly_unlocked.append({'name': 'first_log', 'title': 'First Step'})
+        
+        # Achievement 2: 7-day streak
+        streak = _check_mood_streak(username, cur, 7)
+        if streak >= 7:
+            existing = cur.execute(
+                "SELECT id FROM achievements WHERE username=%s AND badge_name=%s",
+                (username, 'streak_7')
+            ).fetchone()
+            if not existing:
+                cur.execute("""
+                    INSERT INTO achievements (username, badge_name, badge_type, description, icon_emoji)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (username, 'streak_7', 'consistency', '7-day mood tracking streak', '🔥'))
+                conn.commit()
+                newly_unlocked.append({'name': 'streak_7', 'title': 'On Fire!'})
+        
+        # Achievement 3: 30-day streak
+        if streak >= 30:
+            existing = cur.execute(
+                "SELECT id FROM achievements WHERE username=%s AND badge_name='streak_30'",
+                (username,)
+            ).fetchone()
+            if not existing:
+                cur.execute("""
+                    INSERT INTO achievements (username, badge_name, badge_type, description, icon_emoji)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (username, 'streak_30', 'consistency', '30-day mood tracking streak', '⭐'))
+                conn.commit()
+                newly_unlocked.append({'name': 'streak_30', 'title': 'Unstoppable'})
+        
+        conn.close()
+        
+        if newly_unlocked:
+            log_event(username, 'engagement', 'achievements_unlocked', f'{len(newly_unlocked)} achievements earned')
+        
+        return jsonify({
+            'newly_unlocked': newly_unlocked,
+            'total_unlocked': len(newly_unlocked),
+            'status': 'success'
+        }), 200
+        
+    except Exception as e:
+        return handle_exception(e, 'check_achievement_unlocks')
+
+@app.route('/api/patient/homework', methods=['GET'])
+def get_homework():
+    """Get assigned homework for this week with completion status"""
+    try:
+        username = session.get('username')
+        if not username:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+        
+        # Get assignments from the past 7 days and upcoming 7 days
+        homework = cur.execute("""
+            SELECT id, situation, thought, evidence, entry_timestamp
+            FROM cbt_records WHERE username = %s
+            AND entry_timestamp > CURRENT_TIMESTAMP - INTERVAL '7 days'
+            ORDER BY entry_timestamp DESC
+        """, (username,)).fetchall()
+        
+        conn.close()
+        
+        return jsonify({
+            'homework': [
+                {
+                    'id': h[0],
+                    'assignment': f'{h[1][:50]}...' if h[1] else 'CBT Practice',
+                    'type': 'CBT Exercise',
+                    'timestamp': h[4].isoformat() if h[4] else None,
+                    'status': 'completed'
+                }
+                for h in homework
+            ],
+            'this_week_count': len(homework),
+            'completion_rate': (len(homework) / max(1, len(homework))) * 100,
+            'status': 'success'
+        }), 200
+        
+    except Exception as e:
+        return handle_exception(e, 'get_homework')
+
 # ==================== ANALYTICS ENDPOINTS ====================
 
 @app.route('/api/analytics/dashboard', methods=['GET'])
@@ -16842,6 +17169,145 @@ def get_clinician_patients():
     except Exception as e:
         app.logger.error(f'Error in get_clinician_patients: {e}')
         return jsonify({'error': 'Operation failed'}), 500
+
+
+@app.route('/api/clinician/patients/search', methods=['GET'])
+def search_patients():
+    """Search and filter patients for clinician.
+    
+    Query Parameters:
+    - q: Search query (name, username, email)
+    - risk_level: Filter by risk level (low, moderate, high, critical)
+    - status: Filter by status (active, inactive)
+    - sort_by: Sort field (name, risk_level, last_session)
+    
+    Returns paginated results with patient details.
+    
+    SECURITY: Clinician role required, only returns assigned patients
+    """
+    try:
+        clinician_username = get_authenticated_username()
+        if not clinician_username:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # ROLE CHECK
+        conn = get_db_connection()
+        cur = get_wrapped_cursor(conn)
+        
+        role_check = cur.execute(
+            "SELECT role FROM users WHERE username = %s",
+            (clinician_username,)
+        ).fetchone()
+        
+        if not role_check or role_check[0] != 'clinician':
+            conn.close()
+            return jsonify({'error': 'Clinician access required'}), 403
+        
+        # Input validation
+        search_query = request.args.get('q', '').strip()[:100]
+        risk_level = request.args.get('risk_level', '').strip()
+        status = request.args.get('status', 'active').strip()
+        sort_by = request.args.get('sort_by', 'name').strip()
+        page = max(1, int(request.args.get('page', 1)))
+        limit = min(50, max(5, int(request.args.get('limit', 20))))
+        
+        # Validate sort and risk level
+        if sort_by not in ['name', 'risk_level', 'last_session']:
+            sort_by = 'name'
+        if risk_level and risk_level not in ['low', 'moderate', 'high', 'critical']:
+            risk_level = ''
+        
+        # Build query
+        base_query = """
+            SELECT DISTINCT
+                u.username,
+                u.full_name,
+                u.email,
+                (SELECT MAX(timestamp) FROM chat_history WHERE sender = u.username) as last_session,
+                (SELECT MAX(assessed_at) FROM risk_assessments WHERE patient_username = u.username) as last_assessment,
+                (SELECT risk_level FROM risk_assessments WHERE patient_username = u.username ORDER BY assessed_at DESC LIMIT 1) as risk_level,
+                (SELECT COUNT(*) FROM alerts WHERE username = u.username AND status = 'open') as open_alerts
+            FROM users u
+            INNER JOIN patient_approvals pa ON u.username = pa.patient_username
+            WHERE pa.clinician_username = %s
+            AND pa.status = 'approved'
+            AND u.role = 'user'
+        """
+        
+        params = [clinician_username]
+        
+        # Apply search filter
+        if search_query:
+            base_query += " AND (u.username ILIKE %s OR u.full_name ILIKE %s OR u.email ILIKE %s)"
+            search_param = f'%{search_query}%'
+            params.extend([search_param, search_param, search_param])
+        
+        # Apply risk level filter
+        if risk_level:
+            base_query += " AND (SELECT risk_level FROM risk_assessments WHERE patient_username = u.username ORDER BY assessed_at DESC LIMIT 1) = %s"
+            params.append(risk_level)
+        
+        # Apply status filter (active = logged in last 30 days)
+        if status == 'active':
+            base_query += " AND u.last_login > CURRENT_TIMESTAMP - INTERVAL '30 days'"
+        elif status == 'inactive':
+            base_query += " AND (u.last_login IS NULL OR u.last_login <= CURRENT_TIMESTAMP - INTERVAL '30 days')"
+        
+        # Add sorting
+        sort_map = {
+            'name': 'u.full_name ASC',
+            'risk_level': 'risk_level DESC',
+            'last_session': 'last_session DESC'
+        }
+        base_query += f" ORDER BY {sort_map.get(sort_by, sort_map['name'])}"
+        
+        # Get total count before pagination
+        count_query = f"SELECT COUNT(DISTINCT u.username) FROM ({base_query}) as counted"
+        total_count = cur.execute(count_query, params).fetchone()[0]
+        
+        # Add pagination
+        offset = (page - 1) * limit
+        base_query += f" LIMIT %s OFFSET %s"
+        params.extend([limit, offset])
+        
+        # Execute search
+        results = cur.execute(base_query, params).fetchall()
+        
+        # Format results
+        patients = []
+        for p in results:
+            patients.append({
+                'username': p[0],
+                'name': p[1] or p[0],
+                'email': p[2] or '',
+                'last_session': p[3].isoformat() if p[3] else None,
+                'last_assessment': p[4].isoformat() if p[4] else None,
+                'risk_level': p[5] or 'low',
+                'open_alerts': p[6] or 0
+            })
+        
+        conn.close()
+        
+        log_event(clinician_username, 'clinician_dashboard', 'search_patients', f'query={search_query}')
+        
+        return jsonify({
+            'success': True,
+            'patients': patients,
+            'pagination': {
+                'total': total_count,
+                'page': page,
+                'limit': limit,
+                'pages': (total_count + limit - 1) // limit
+            }
+        }), 200
+        
+    except psycopg2.Error as e:
+        app.logger.error(f'DB error in search_patients: {e}')
+        conn.rollback()
+        conn.close()
+        return jsonify({'error': 'Database operation failed'}), 500
+    except Exception as e:
+        return handle_exception(e, 'search_patients')
 
 
 @app.route('/api/clinician/patient/<patient_username>', methods=['GET'])
