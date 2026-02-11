@@ -1303,3 +1303,454 @@ async function loadPatientsWithLoader() {
         showToast('error', 'Patients Error', 'Failed to load patients');
     }
 }
+
+// ========== TIER 2.1: C-SSRS ASSESSMENT UI FUNCTIONS ==========
+
+/**
+ * Start a new C-SSRS assessment session
+ * @param {string} username - Patient username
+ * @returns {Promise<Object>} Assessment session with questions
+ */
+async function startCSSRSAssessment(username) {
+    showLoadingOverlay('Starting C-SSRS Assessment...');
+    try {
+        const response = await fetch('/api/c-ssrs/start', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCsrfToken()
+            },
+            body: JSON.stringify({
+                clinician_username: currentUser
+            })
+        });
+        
+        if (!response.ok) throw new Error('Failed to start assessment');
+        
+        const data = await response.json();
+        hideLoadingOverlay();
+        return data;
+    } catch (error) {
+        hideLoadingOverlay();
+        showToast('error', 'Assessment Error', error.message);
+        return null;
+    }
+}
+
+/**
+ * Display C-SSRS assessment form modal
+ * @param {Object} questions - Array of C-SSRS questions
+ * @param {Object} answerOptions - Available answer choices
+ */
+function displayCSSRSForm(questions, answerOptions) {
+    const modal = document.createElement('div');
+    modal.id = 'cssrs-modal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content cssrs-assessment-form">
+            <div class="modal-header">
+                <h2>Columbia-Suicide Severity Rating Scale (C-SSRS)</h2>
+                <p class="assessment-subtitle">6-Question Assessment | Please answer all questions honestly</p>
+                <button class="close-btn" onclick="closeCSSRSModal()">✕</button>
+            </div>
+            
+            <div class="assessment-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="cssrs-progress"></div>
+                </div>
+                <span id="cssrs-question-count">Question 1 of 6</span>
+            </div>
+            
+            <form id="cssrs-form" onsubmit="submitCSSRSResponse(event)">
+                <div id="cssrs-questions-container"></div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeCSSRSModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Submit Assessment</button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.classList.add('active');
+    
+    // Render questions
+    renderCSSRSQuestions(questions, answerOptions);
+}
+
+/**
+ * Render C-SSRS questions in the form
+ */
+function renderCSSRSQuestions(questions, answerOptions) {
+    const container = document.getElementById('cssrs-questions-container');
+    container.innerHTML = '';
+    
+    questions.forEach((question, index) => {
+        const questionDiv = document.createElement('div');
+        questionDiv.className = 'cssrs-question-group';
+        questionDiv.innerHTML = `
+            <div class="question-header">
+                <span class="question-number">Q${question.id}:</span>
+                <span class="question-text">${question.text}</span>
+            </div>
+            
+            <div class="question-options">
+                ${Object.entries(answerOptions).map(([score, label]) => `
+                    <label class="radio-option">
+                        <input type="radio" 
+                               name="q${question.id}" 
+                               value="${score}" 
+                               required>
+                        <span class="option-label">
+                            <strong>${score}</strong> - ${label}
+                        </span>
+                    </label>
+                `).join('')}
+            </div>
+        `;
+        
+        container.appendChild(questionDiv);
+        
+        // Add event listener to update progress
+        const radios = questionDiv.querySelectorAll('input[type="radio"]');
+        radios.forEach(radio => {
+            radio.addEventListener('change', () => updateCSSRSProgress(questions.length));
+        });
+    });
+}
+
+/**
+ * Update progress bar and question counter
+ */
+function updateCSSRSProgress(totalQuestions) {
+    const form = document.getElementById('cssrs-form');
+    const answeredQuestions = form.querySelectorAll('input[type="radio"]:checked').length;
+    
+    const progressPercent = (answeredQuestions / totalQuestions) * 100;
+    document.getElementById('cssrs-progress').style.width = progressPercent + '%';
+    document.getElementById('cssrs-question-count').textContent = 
+        `Question ${Math.min(answeredQuestions + 1, totalQuestions)} of ${totalQuestions}`;
+}
+
+/**
+ * Submit C-SSRS assessment responses
+ */
+async function submitCSSRSResponse(event) {
+    event.preventDefault();
+    
+    showLoadingOverlay('Scoring Assessment...');
+    
+    try {
+        const form = document.getElementById('cssrs-form');
+        const formData = new FormData(form);
+        
+        const responses = {
+            q1: parseInt(formData.get('q1')),
+            q2: parseInt(formData.get('q2')),
+            q3: parseInt(formData.get('q3')),
+            q4: parseInt(formData.get('q4')),
+            q5: parseInt(formData.get('q5')),
+            q6: parseInt(formData.get('q6')),
+            clinician_username: currentUser
+        };
+        
+        const response = await fetch('/api/c-ssrs/submit', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCsrfToken()
+            },
+            body: JSON.stringify(responses)
+        });
+        
+        if (!response.ok) throw new Error('Failed to submit assessment');
+        
+        const result = await response.json();
+        
+        hideLoadingOverlay();
+        closeCSSRSModal();
+        
+        // Display results
+        displayCSSRSResults(result);
+        
+        // If high/critical risk, trigger safety plan
+        if (result.requires_safety_plan) {
+            setTimeout(() => displaySafetyPlanForm(result.assessment_id), 1000);
+        }
+        
+    } catch (error) {
+        hideLoadingOverlay();
+        showToast('error', 'Assessment Failed', error.message);
+    }
+}
+
+/**
+ * Display C-SSRS assessment results to patient
+ */
+function displayCSSRSResults(result) {
+    const riskColors = {
+        'low': '#4CAF50',
+        'moderate': '#FFC107',
+        'high': '#FF9800',
+        'critical': '#F44336'
+    };
+    
+    const modal = document.createElement('div');
+    modal.id = 'cssrs-results-modal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content cssrs-results">
+            <div class="modal-header">
+                <h2>Assessment Complete</h2>
+            </div>
+            
+            <div class="assessment-results">
+                <div class="risk-score-display" style="border-color: ${riskColors[result.risk_level]}">
+                    <div class="risk-level" style="color: ${riskColors[result.risk_level]}">
+                        ${result.risk_level.toUpperCase()}
+                    </div>
+                    <div class="risk-score">Score: ${result.total_score}/30</div>
+                </div>
+                
+                <div class="patient-message">
+                    <p>${result.patient_message}</p>
+                </div>
+                
+                ${result.next_steps ? `
+                    <div class="next-steps">
+                        <h4>Next Steps:</h4>
+                        <ul>
+                            ${result.next_steps.map(step => `<li>${step}</li>`).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+                
+                ${result.emergency_contacts ? `
+                    <div class="emergency-contacts">
+                        <h4>Emergency Support:</h4>
+                        <div class="contact-list">
+                            ${Object.entries(result.emergency_contacts).map(([type, value]) => `
+                                <div class="contact-item">
+                                    <strong>${type}:</strong> ${value}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+            </div>
+            
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="closeCSSRSResultsModal()">
+                    Continue
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.classList.add('active');
+}
+
+/**
+ * Display safety plan form modal
+ */
+function displaySafetyPlanForm(assessmentId) {
+    const modal = document.createElement('div');
+    modal.id = 'safety-plan-modal';
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+        <div class="modal-content safety-plan-form">
+            <div class="modal-header">
+                <h2>Create Your Safety Plan</h2>
+                <p class="form-subtitle">Complete this plan to keep yourself safe</p>
+            </div>
+            
+            <form id="safety-plan-form" onsubmit="submitSafetyPlan(event, ${assessmentId})">
+                <div class="safety-plan-section">
+                    <h4>1. Warning Signs</h4>
+                    <p>What signs tell you that a crisis is developing?</p>
+                    <textarea name="warning_signs" placeholder="e.g., unable to sleep, increased substance use, social withdrawal" rows="3" required></textarea>
+                </div>
+                
+                <div class="safety-plan-section">
+                    <h4>2. Internal Coping Strategies</h4>
+                    <p>What can you do on your own when you feel suicidal?</p>
+                    <textarea name="internal_coping" placeholder="e.g., distraction, mindfulness, exercise, journaling" rows="3" required></textarea>
+                </div>
+                
+                <div class="safety-plan-section">
+                    <h4>3. People & Places for Distraction</h4>
+                    <p>Who and where can help distract you?</p>
+                    <textarea name="distraction_people" placeholder="e.g., trusted friends, family, support groups, safe places" rows="3" required></textarea>
+                </div>
+                
+                <div class="safety-plan-section">
+                    <h4>4. People to Contact for Help</h4>
+                    <p>Who can you call when in crisis?</p>
+                    <textarea name="people_for_help" placeholder="Include names, relationships, phone numbers" rows="3" required></textarea>
+                </div>
+                
+                <div class="safety-plan-section">
+                    <h4>5. Professional Resources</h4>
+                    <p>Emergency and professional contacts</p>
+                    <div class="default-resources">
+                        • Samaritans: 116 123 (24/7, free)<br>
+                        • Emergency: 999 (immediate danger)<br>
+                        • Your Clinician: [Contact will be provided]
+                    </div>
+                </div>
+                
+                <div class="safety-plan-section">
+                    <h4>6. Making Your Environment Safer</h4>
+                    <p>Ways to make your environment safer right now</p>
+                    <textarea name="means_safety" placeholder="e.g., secure medications, remove sharp objects" rows="3" required></textarea>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary btn-large">Save Safety Plan</button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    modal.classList.add('active');
+}
+
+/**
+ * Submit safety plan
+ */
+async function submitSafetyPlan(event, assessmentId) {
+    event.preventDefault();
+    
+    showLoadingOverlay('Saving Safety Plan...');
+    
+    try {
+        const form = document.getElementById('safety-plan-form');
+        const formData = new FormData(form);
+        
+        const safetyPlan = {
+            warning_signs: formData.get('warning_signs').split('\n').filter(s => s.trim()),
+            internal_coping: formData.get('internal_coping').split('\n').filter(s => s.trim()),
+            distraction_people: formData.get('distraction_people').split('\n').filter(s => s.trim()),
+            people_for_help: formData.get('people_for_help').split('\n').filter(s => s.trim()),
+            professionals: ['Samaritans: 116 123', 'Emergency: 999'],
+            means_safety: formData.get('means_safety').split('\n').filter(s => s.trim())
+        };
+        
+        const response = await fetch(`/api/c-ssrs/${assessmentId}/safety-plan`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCsrfToken()
+            },
+            body: JSON.stringify(safetyPlan)
+        });
+        
+        if (!response.ok) throw new Error('Failed to save safety plan');
+        
+        hideLoadingOverlay();
+        closeSafetyPlanModal();
+        
+        showToast('success', 'Safety Plan Saved', 'Your safety plan has been saved and will be reviewed by your clinician');
+        
+    } catch (error) {
+        hideLoadingOverlay();
+        showToast('error', 'Save Failed', error.message);
+    }
+}
+
+/**
+ * Display C-SSRS assessment history for patient
+ */
+async function displayCSSRSHistory(username) {
+    showLoadingOverlay('Loading Assessment History...');
+    
+    try {
+        const response = await fetch(`/api/c-ssrs/history`, {
+            headers: { 'X-CSRF-Token': getCsrfToken() }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load history');
+        
+        const data = await response.json();
+        hideLoadingOverlay();
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-content cssrs-history">
+                <div class="modal-header">
+                    <h2>Assessment History</h2>
+                </div>
+                
+                <div class="history-list">
+                    ${data.assessments.length > 0 ? data.assessments.map(assessment => `
+                        <div class="history-item">
+                            <div class="history-date">${new Date(assessment.created_at).toLocaleDateString()}</div>
+                            <div class="history-risk" style="color: ${getRiskColor(assessment.risk_level)}">
+                                ${assessment.risk_level.toUpperCase()} - Score: ${assessment.total_score}
+                            </div>
+                            <div class="history-reasoning">${assessment.reasoning}</div>
+                            <button class="btn btn-sm" onclick="viewAssessmentDetails(${assessment.assessment_id})">
+                                View Details
+                            </button>
+                        </div>
+                    `).join('') : '<p>No assessments completed yet.</p>'}
+                </div>
+                
+                <div class="modal-footer">
+                    <button class="btn btn-primary" onclick="this.closest('.modal-overlay').remove()">Close</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        modal.classList.add('active');
+        
+    } catch (error) {
+        hideLoadingOverlay();
+        showToast('error', 'History Error', error.message);
+    }
+}
+
+/**
+ * Close C-SSRS modals
+ */
+function closeCSSRSModal() {
+    const modal = document.getElementById('cssrs-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => modal.remove(), 300);
+    }
+}
+
+function closeCSSRSResultsModal() {
+    const modal = document.getElementById('cssrs-results-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => modal.remove(), 300);
+    }
+}
+
+function closeSafetyPlanModal() {
+    const modal = document.getElementById('safety-plan-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => modal.remove(), 300);
+    }
+}
+
+/**
+ * Get color for risk level
+ */
+function getRiskColor(riskLevel) {
+    const colors = {
+        'low': '#4CAF50',
+        'moderate': '#FFC107',
+        'high': '#FF9800',
+        'critical': '#F44336'
+    };
+    return colors[riskLevel] || '#999';
+}
