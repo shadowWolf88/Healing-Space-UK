@@ -15545,6 +15545,13 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
 
         // ========== USER MESSAGES (Inbox for patients/clinicians) - Phase 3 Messaging ==========
         // ========== MESSAGING SYSTEM (New UI) ==========
+        // Cache for message tabs to prevent re-loading on every switch
+        const messageTabCache = {
+            inbox: null,
+            sent: null,
+            lastLoadTime: {}
+        };
+
         async function switchMessageTab(tabName, buttonEl) {
             // Hide all message subtabs
             document.querySelectorAll('.message-subtab-content').forEach(tab => {
@@ -15559,7 +15566,14 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             });
             
             // Determine which set of tabs to use (Patient vs non-patient)
-            const capitalizedTab = tabName.charAt(0).toUpperCase() + tabName.slice(1);
+            // Handle 'newmessage' as special case (becomes 'New' not 'Newmessage')
+            let capitalizedTab;
+            if (tabName === 'newmessage') {
+                capitalizedTab = 'New';
+            } else {
+                capitalizedTab = tabName.charAt(0).toUpperCase() + tabName.slice(1);
+            }
+            
             let tabId = `messages${capitalizedTab}TabPatient`; // Try patient version first
             let tab = document.getElementById(tabId);
             
@@ -15577,12 +15591,17 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     buttonEl.style.borderColor = '#667eea';
                 }
                 
-                // Load content based on tab
-                if (tabName === 'inbox') {
+                // Load content based on tab (only if not cached or cache is old)
+                const now = Date.now();
+                const cacheAge = messageTabCache.lastLoadTime[tabName] ? now - messageTabCache.lastLoadTime[tabName] : Infinity;
+                const CACHE_DURATION = 30000; // 30 seconds
+                
+                if (tabName === 'inbox' && (messageTabCache.inbox === null || cacheAge > CACHE_DURATION)) {
                     loadMessagesInbox();
-                } else if (tabName === 'sent') {
+                } else if (tabName === 'sent' && (messageTabCache.sent === null || cacheAge > CACHE_DURATION)) {
                     loadMessagesSent();
                 }
+                // New message tab doesn't need loading - just show the form
             }
         }
 
@@ -15609,6 +15628,8 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 }
                 
                 const data = await response.json();
+                messageTabCache.inbox = data; // Cache the response
+                messageTabCache.lastLoadTime.inbox = Date.now();
                 
                 if (!data.conversations || data.conversations.length === 0) {
                     container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">📭 No messages in your inbox</p>';
@@ -15662,6 +15683,8 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 }
                 
                 const data = await response.json();
+                messageTabCache.sent = data; // Cache the response
+                messageTabCache.lastLoadTime.sent = Date.now();
                 
                 if (!data.messages || data.messages.length === 0) {
                     container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">📤 No sent messages</p>';

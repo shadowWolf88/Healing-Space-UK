@@ -355,6 +355,38 @@ class MessageService:
             'message_count': len(messages)
         }
     
+    def get_sent_messages(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Get messages sent by the authenticated user"""
+        if not self.username:
+            return []
+        
+        if limit < 1 or limit > 1000:
+            limit = 100
+        
+        # Get sent messages
+        self.cur.execute("""
+            SELECT id, recipient_username, subject, content, is_read, sent_at, 
+                   message_type, conversation_id
+            FROM messages
+            WHERE sender_username = %s AND (is_deleted_by_sender = 0 OR is_deleted_by_sender IS NULL)
+            ORDER BY sent_at DESC LIMIT %s
+        """, (self.username, limit))
+        
+        messages = []
+        for row in self.cur.fetchall():
+            messages.append({
+                'id': row[0],
+                'recipient': row[1],
+                'subject': row[2],
+                'content': row[3],
+                'is_read': bool(row[4]),
+                'sent_at': row[5].isoformat() if row[5] else None,
+                'message_type': row[6],
+                'conversation_id': row[7]
+            })
+        
+        return messages
+    
     def search_messages(self, query: str, limit: int = 50) -> Dict[str, Any]:
         """Full-text search across user's messages"""
         if not self.username:
