@@ -15553,74 +15553,89 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
         };
 
         async function switchMessageTab(tabName, buttonEl) {
-            console.log(`[switchMessageTab] Called with tabName: "${tabName}"`);
+            console.log(`[switchMessageTab] === START === tabName: "${tabName}", buttonEl:`, buttonEl);
             
-            // Hide all message subtabs
-            const allTabs = document.querySelectorAll('.message-subtab-content');
-            console.log(`[switchMessageTab] Found ${allTabs.length} total subtabs`);
-            allTabs.forEach(tab => {
-                tab.style.display = 'none';
-            });
-            
-            // Reset all message subtab buttons
-            const allButtons = document.querySelectorAll('.message-subtab-btn');
-            console.log(`[switchMessageTab] Found ${allButtons.length} total buttons`);
-            allButtons.forEach(btn => {
-                btn.style.background = 'transparent';
-                btn.style.color = '#667eea';
-                btn.style.borderColor = '#667eea';
-            });
-            
-            // Determine which set of tabs to use (Patient vs non-patient)
-            // Handle 'newmessage' as special case (becomes 'New' not 'Newmessage')
-            let capitalizedTab;
-            if (tabName === 'newmessage') {
-                capitalizedTab = 'New';
-            } else {
-                capitalizedTab = tabName.charAt(0).toUpperCase() + tabName.slice(1);
-            }
-            
-            let tabId = `messages${capitalizedTab}TabPatient`; // Try patient version first
-            console.log(`[switchMessageTab] Looking for patient tab: "${tabId}"`);
-            let tab = document.getElementById(tabId);
-            
-            // Fallback to non-patient version if patient version not found
-            if (!tab) {
-                tabId = `messages${capitalizedTab}Tab`;
-                console.log(`[switchMessageTab] Patient version not found, trying: "${tabId}"`);
-                tab = document.getElementById(tabId);
-            }
-            
-            if (tab) {
-                console.log(`[switchMessageTab] Found tab! Displaying it.`);
-                tab.style.display = 'block';
-                if (buttonEl) {
-                    buttonEl.style.background = '#667eea';
-                    buttonEl.style.color = 'white';
-                    buttonEl.style.borderColor = '#667eea';
-                }
-                
-                // Load content based on tab (only if not cached or cache is old)
-                const now = Date.now();
-                const cacheAge = messageTabCache.lastLoadTime[tabName] ? now - messageTabCache.lastLoadTime[tabName] : Infinity;
-                const CACHE_DURATION = 30000; // 30 seconds
-                
-                if (tabName === 'inbox' && (messageTabCache.inbox === null || cacheAge > CACHE_DURATION)) {
-                    console.log(`[switchMessageTab] Loading inbox (cache age: ${cacheAge}ms)`);
-                    loadMessagesInbox();
-                } else if (tabName === 'sent' && (messageTabCache.sent === null || cacheAge > CACHE_DURATION)) {
-                    console.log(`[switchMessageTab] Loading sent messages (cache age: ${cacheAge}ms)`);
-                    loadMessagesSent();
-                } else {
-                    console.log(`[switchMessageTab] Using cached data for "${tabName}"`);
-                }
-                // New message tab doesn't need loading - just show the form
-            } else {
-                console.error(`[switchMessageTab] ERROR: Could not find tab with ID: "${tabId}"`);
-                console.log(`[switchMessageTab] Available elements with 'message' in ID:`);
-                document.querySelectorAll('[id*="message"]').forEach(el => {
-                    console.log(`  - ${el.id}`);
+            try {
+                // Hide all message subtabs
+                const allTabs = document.querySelectorAll('.message-subtab-content');
+                console.log(`[switchMessageTab] Found ${allTabs.length} .message-subtab-content elements to hide`);
+                allTabs.forEach((tab, idx) => {
+                    console.log(`  [${idx}] Hiding:`, tab.id || '(no id)');
+                    tab.style.display = 'none';
                 });
+                
+                // Reset all message subtab buttons
+                const allButtons = document.querySelectorAll('.message-subtab-btn');
+                console.log(`[switchMessageTab] Found ${allButtons.length} .message-subtab-btn buttons to reset`);
+                allButtons.forEach((btn, idx) => {
+                    btn.style.background = 'transparent';
+                    btn.style.color = '#667eea';
+                    btn.style.borderColor = '#667eea';
+                });
+                
+                // Determine which set of tabs to use (Patient vs non-patient)
+                // Handle 'newmessage' as special case (becomes 'New' not 'Newmessage')
+                let capitalizedTab;
+                if (tabName === 'newmessage') {
+                    capitalizedTab = 'New';
+                } else {
+                    capitalizedTab = tabName.charAt(0).toUpperCase() + tabName.slice(1);
+                }
+                
+                let tabId = `messages${capitalizedTab}TabPatient`; // Try patient version first
+                console.log(`[switchMessageTab] Looking for patient tab: "${tabId}"`);
+                let tab = document.getElementById(tabId);
+                
+                if (tab) {
+                    console.log(`[switchMessageTab] ✓ Found patient tab! Displaying now.`);
+                } else {
+                    // Fallback to non-patient version if patient version not found
+                    tabId = `messages${capitalizedTab}Tab`;
+                    console.log(`[switchMessageTab] Patient version not found, trying: "${tabId}"`);
+                    tab = document.getElementById(tabId);
+                    if (tab) {
+                        console.log(`[switchMessageTab] ✓ Found non-patient tab! Displaying now.`);
+                    }
+                }
+                
+                if (tab) {
+                    console.log(`[switchMessageTab] Setting display to "block" for tab:`, tab.id);
+                    tab.style.display = 'block';
+                    
+                    // Verify it's actually visible now
+                    const computed = window.getComputedStyle(tab);
+                    console.log(`[switchMessageTab] After setting display:block, computed display:`, computed.display);
+                    
+                    if (buttonEl) {
+                        buttonEl.style.background = '#667eea';
+                        buttonEl.style.color = 'white';
+                        buttonEl.style.borderColor = '#667eea';
+                    }
+                    
+                    // Load content based on tab (only if not cached or cache is old)
+                    const now = Date.now();
+                    const cacheAge = messageTabCache.lastLoadTime[tabName] ? now - messageTabCache.lastLoadTime[tabName] : Infinity;
+                    const CACHE_DURATION = 30000; // 30 seconds
+                    
+                    if (tabName === 'inbox' && (messageTabCache.inbox === null || cacheAge > CACHE_DURATION)) {
+                        console.log(`[switchMessageTab] Loading inbox (cache age: ${cacheAge}ms)`);
+                        loadMessagesInbox();
+                    } else if (tabName === 'sent' && (messageTabCache.sent === null || cacheAge > CACHE_DURATION)) {
+                        console.log(`[switchMessageTab] Loading sent messages (cache age: ${cacheAge}ms)`);
+                        loadMessagesSent();
+                    } else {
+                        console.log(`[switchMessageTab] Using cached data or no load needed for "${tabName}"`);
+                    }
+                    // New message tab doesn't need loading - just show the form
+                } else {
+                    console.error(`[switchMessageTab] ❌ ERROR: Could not find tab with ID: "${tabId}"`);
+                    console.log(`[switchMessageTab] Available message-related elements:`);
+                    document.querySelectorAll('[id*="message"]').forEach(el => {
+                        console.log(`  - ${el.id} (class: "${el.className}")`);
+                    });
+                }
+            } catch (error) {
+                console.error('[switchMessageTab] EXCEPTION:', error);
             }
         }
 
