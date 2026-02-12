@@ -15553,13 +15553,19 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
         };
 
         async function switchMessageTab(tabName, buttonEl) {
+            console.log(`[switchMessageTab] Called with tabName: "${tabName}"`);
+            
             // Hide all message subtabs
-            document.querySelectorAll('.message-subtab-content').forEach(tab => {
+            const allTabs = document.querySelectorAll('.message-subtab-content');
+            console.log(`[switchMessageTab] Found ${allTabs.length} total subtabs`);
+            allTabs.forEach(tab => {
                 tab.style.display = 'none';
             });
             
             // Reset all message subtab buttons
-            document.querySelectorAll('.message-subtab-btn').forEach(btn => {
+            const allButtons = document.querySelectorAll('.message-subtab-btn');
+            console.log(`[switchMessageTab] Found ${allButtons.length} total buttons`);
+            allButtons.forEach(btn => {
                 btn.style.background = 'transparent';
                 btn.style.color = '#667eea';
                 btn.style.borderColor = '#667eea';
@@ -15575,15 +15581,18 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
             }
             
             let tabId = `messages${capitalizedTab}TabPatient`; // Try patient version first
+            console.log(`[switchMessageTab] Looking for patient tab: "${tabId}"`);
             let tab = document.getElementById(tabId);
             
             // Fallback to non-patient version if patient version not found
             if (!tab) {
                 tabId = `messages${capitalizedTab}Tab`;
+                console.log(`[switchMessageTab] Patient version not found, trying: "${tabId}"`);
                 tab = document.getElementById(tabId);
             }
             
             if (tab) {
+                console.log(`[switchMessageTab] Found tab! Displaying it.`);
                 tab.style.display = 'block';
                 if (buttonEl) {
                     buttonEl.style.background = '#667eea';
@@ -15597,17 +15606,32 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 const CACHE_DURATION = 30000; // 30 seconds
                 
                 if (tabName === 'inbox' && (messageTabCache.inbox === null || cacheAge > CACHE_DURATION)) {
+                    console.log(`[switchMessageTab] Loading inbox (cache age: ${cacheAge}ms)`);
                     loadMessagesInbox();
                 } else if (tabName === 'sent' && (messageTabCache.sent === null || cacheAge > CACHE_DURATION)) {
+                    console.log(`[switchMessageTab] Loading sent messages (cache age: ${cacheAge}ms)`);
                     loadMessagesSent();
+                } else {
+                    console.log(`[switchMessageTab] Using cached data for "${tabName}"`);
                 }
                 // New message tab doesn't need loading - just show the form
+            } else {
+                console.error(`[switchMessageTab] ERROR: Could not find tab with ID: "${tabId}"`);
+                console.log(`[switchMessageTab] Available elements with 'message' in ID:`);
+                document.querySelectorAll('[id*="message"]').forEach(el => {
+                    console.log(`  - ${el.id}`);
+                });
             }
         }
 
         async function loadMessagesInbox() {
             try {
+                console.log(`[loadMessagesInbox] Starting...`);
                 const container = document.getElementById('messagesInboxContainer');
+                if (!container) {
+                    console.error('[loadMessagesInbox] ERROR: Could not find messagesInboxContainer element');
+                    return;
+                }
                 container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">Loading messages...</p>';
 
                 const response = await fetch(`/api/messages/inbox`, {
@@ -15615,6 +15639,8 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                     credentials: 'include',
                     headers: { 'Content-Type': 'application/json' }
                 });
+                
+                console.log(`[loadMessagesInbox] API response status: ${response.status}`);
                 
                 if (response.status === 401) {
                     container.innerHTML = '<p style="color: #e74c3c; padding: 20px;">⚠️ Session expired. Please <a href="/logout" style="color: #667eea; text-decoration: underline;">log in again</a></p>';
@@ -15630,6 +15656,7 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 const data = await response.json();
                 messageTabCache.inbox = data; // Cache the response
                 messageTabCache.lastLoadTime.inbox = Date.now();
+                console.log(`[loadMessagesInbox] Got ${data.conversations?.length || 0} conversations`);
                 
                 if (!data.conversations || data.conversations.length === 0) {
                     container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">📭 No messages in your inbox</p>';
