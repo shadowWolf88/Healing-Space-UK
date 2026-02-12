@@ -255,20 +255,23 @@ class MessageService:
             latest = self.cur.fetchone()
             
             # Get unread count
-            unread_count = self.cur.execute("""
+            self.cur.execute("""
                 SELECT COUNT(*) FROM messages
                 WHERE conversation_id = %s AND recipient_username = %s
                 AND is_read = FALSE AND deleted_at IS NULL
-            """, (conv_id, self.username)).fetchone()[0]
+            """, (conv_id, self.username))
+            unread_result = self.cur.fetchone()
+            unread_count = unread_result[0] if unread_result else 0
             
             if unread_only and unread_count == 0:
                 continue  # Skip read conversations
             
             # Get conversation details
-            conv_details = self.cur.execute("""
+            self.cur.execute("""
                 SELECT subject, type, participant_count, last_message_at
                 FROM conversations WHERE id = %s
-            """, (conv_id,)).fetchone()
+            """, (conv_id,))
+            conv_details = self.cur.fetchone()
             
             conversations.append({
                 'conversation_id': conv_id,
