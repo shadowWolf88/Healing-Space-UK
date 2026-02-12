@@ -258,7 +258,7 @@ class MessageService:
             self.cur.execute("""
                 SELECT COUNT(*) FROM messages
                 WHERE conversation_id = %s AND recipient_username = %s
-                AND is_read = FALSE AND deleted_at IS NULL
+                AND is_read = 0 AND deleted_at IS NULL
             """, (conv_id, self.username))
             unread_result = self.cur.fetchone()
             unread_count = unread_result[0] if unread_result else 0
@@ -331,7 +331,7 @@ class MessageService:
             # Mark as read if recipient
             if row[2] == self.username and not row[5]:
                 self.cur.execute("""
-                    UPDATE messages SET is_read = TRUE, read_at = CURRENT_TIMESTAMP
+                    UPDATE messages SET is_read = 1, read_at = CURRENT_TIMESTAMP
                     WHERE id = %s
                 """, (row[0],))
             
@@ -415,7 +415,7 @@ class MessageService:
         
         self.cur.execute("""
             UPDATE messages
-            SET is_read = TRUE, read_at = CURRENT_TIMESTAMP
+            SET is_read = 1, read_at = CURRENT_TIMESTAMP
             WHERE id = %s
         """, (message_id,))
         
@@ -759,7 +759,7 @@ class MessageService:
         
         result = self.cur.execute("""
             SELECT COUNT(*) FROM messages
-            WHERE recipient_username = %s AND is_read = FALSE AND deleted_at IS NULL
+            WHERE recipient_username = %s AND is_read = 0 AND deleted_at IS NULL
         """, (self.username,)).fetchone()
         
         return result[0] if result else 0
@@ -772,7 +772,7 @@ class MessageService:
         result = self.cur.execute("""
             SELECT COUNT(*) FROM messages
             WHERE conversation_id = %s AND recipient_username = %s
-            AND is_read = FALSE AND deleted_at IS NULL
+            AND is_read = 0 AND deleted_at IS NULL
         """, (conversation_id, self.username)).fetchone()
         
         return result[0] if result else 0
