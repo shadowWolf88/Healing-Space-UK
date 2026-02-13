@@ -34,6 +34,10 @@ class MessagingSystem {
      * Initialize messaging system
      */
     init() {
+                this.accessibleTabs = ['inbox', 'sent', 'compose'];
+                if (this.userRole === 'clinician' || this.userRole === 'developer') {
+                    this.accessibleTabs.push('group', 'broadcast', 'analytics');
+                }
         this.setupEventListeners();
         this.loadInbox();
         this.startPolling();
@@ -85,6 +89,8 @@ class MessagingSystem {
         // Search messages
         const searchBtn = document.getElementById('search-messages-btn');
         if (searchBtn) {
+                    // Accessibility: Announce inbox loaded
+                    this.announce('Inbox loaded.');
             searchBtn.addEventListener('click', () => this.searchMessages());
         }
 
@@ -107,6 +113,7 @@ class MessagingSystem {
         }
     }
 
+                    this.announce('Sent messages loaded.');
     /**
      * Switch between tabs (inbox, sent, templates, etc.)
      */
@@ -121,6 +128,7 @@ class MessagingSystem {
 
         // Hide all panels
         document.querySelectorAll('[data-messaging-panel]').forEach(panel => {
+                    badge.setAttribute('aria-label', `${this.unreadCount} unread messages`);
             panel.style.display = 'none';
         });
 
@@ -129,6 +137,7 @@ class MessagingSystem {
         if (panel) {
             panel.style.display = 'block';
         }
+                this.announce(message);
 
         // Load appropriate content
         switch (tabName) {
@@ -136,8 +145,21 @@ class MessagingSystem {
                 this.loadInbox();
                 break;
             case 'sent':
+                this.announce(message);
                 this.loadSentMessages();
                 break;
+            announce(message) {
+                // Accessibility: Announce messages to screen readers
+                let liveRegion = document.getElementById('messaging-live-region');
+                if (!liveRegion) {
+                    liveRegion = document.createElement('div');
+                    liveRegion.id = 'messaging-live-region';
+                    liveRegion.setAttribute('aria-live', 'polite');
+                    liveRegion.style.position = 'absolute';
+                    liveRegion.style.left = '-9999px';
+                    document.body.appendChild(liveRegion);
+                }
+                liveRegion.textContent = message;
             case 'templates':
                 this.loadTemplates();
                 break;
