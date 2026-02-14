@@ -3674,6 +3674,84 @@
                 padding: 15px;
             }
         }
+        /* ==================== MESSAGING SYSTEM STYLES ==================== */
+        .msg-tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 2px solid var(--border-color, #e0e0e0); padding-bottom: 0; overflow-x: auto; }
+        .msg-tab-btn { background: transparent; color: var(--text-secondary, #666); border: none; padding: 12px 20px; cursor: pointer; font-weight: 600; white-space: nowrap; border-bottom: 3px solid transparent; transition: all 0.2s; font-size: 14px; }
+        .msg-tab-btn:hover { color: var(--primary-color, #667eea); background: var(--hover-bg, #f5f5f5); }
+        .msg-tab-btn.active { color: var(--primary-color, #667eea); border-bottom-color: var(--primary-color, #667eea); }
+        .msg-tab-btn .badge { background: #e74c3c; color: white; padding: 1px 7px; border-radius: 10px; font-size: 11px; margin-left: 6px; font-weight: bold; }
+        .msg-search-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+        .msg-search-bar input { flex: 1; padding: 10px 14px; border: 2px solid var(--border-color, #e0e0e0); border-radius: 8px; font-size: 14px; background: var(--input-bg, white); color: var(--text-primary, #333); }
+        .msg-search-bar input:focus { border-color: var(--primary-color, #667eea); outline: none; }
+        .msg-card { border: 1px solid var(--border-color, #e0e0e0); padding: 14px 16px; margin-bottom: 8px; background: var(--card-bg, white); border-radius: 10px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 12px; }
+        .msg-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.08); transform: translateY(-1px); }
+        .msg-card.unread { background: var(--unread-bg, #f0f4ff); border-left: 3px solid var(--primary-color, #667eea); }
+        .msg-avatar { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: white; flex-shrink: 0; }
+        .msg-avatar.patient { background: #667eea; }
+        .msg-avatar.clinician { background: #27ae60; }
+        .msg-avatar.developer { background: #e67e22; }
+        .msg-avatar.default { background: #95a5a6; }
+        .msg-content { flex: 1; min-width: 0; }
+        .msg-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+        .msg-sender { font-weight: 600; font-size: 14px; color: var(--text-primary, #333); }
+        .msg-role-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; text-transform: uppercase; margin-left: 6px; }
+        .msg-role-badge.patient { background: #eef0ff; color: #667eea; }
+        .msg-role-badge.clinician { background: #e8f5e9; color: #27ae60; }
+        .msg-role-badge.developer { background: #fff3e0; color: #e67e22; }
+        .msg-time { font-size: 12px; color: var(--text-muted, #999); white-space: nowrap; }
+        .msg-preview { color: var(--text-secondary, #666); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .msg-unread-badge { background: #e74c3c; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; margin-left: 8px; }
+        .msg-status { font-size: 11px; margin-top: 2px; }
+        .msg-status.read { color: #667eea; }
+        .msg-status.sent { color: var(--text-muted, #999); }
+        .msg-empty { text-align: center; padding: 60px 20px; color: var(--text-muted, #999); }
+        .msg-empty-icon { font-size: 48px; margin-bottom: 12px; }
+        .msg-empty p { margin: 0; font-size: 15px; }
+        .msg-quick-actions { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+        .msg-quick-btn { padding: 8px 16px; border: 2px solid var(--border-color, #e0e0e0); border-radius: 20px; background: var(--card-bg, white); color: var(--text-primary, #333); cursor: pointer; font-size: 13px; transition: all 0.2s; }
+        .msg-quick-btn:hover { border-color: var(--primary-color, #667eea); color: var(--primary-color, #667eea); background: var(--hover-bg, #f8f9ff); }
+        .msg-compose-form { display: flex; flex-direction: column; gap: 12px; }
+        .msg-compose-form label { font-weight: 600; font-size: 13px; color: var(--text-secondary, #666); margin-bottom: -4px; }
+        .msg-compose-form input, .msg-compose-form textarea { padding: 10px 14px; border: 2px solid var(--border-color, #e0e0e0); border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--input-bg, white); color: var(--text-primary, #333); }
+        .msg-compose-form input:focus, .msg-compose-form textarea:focus { border-color: var(--primary-color, #667eea); outline: none; }
+        .msg-compose-form textarea { resize: vertical; min-height: 120px; }
+        .msg-char-count { font-size: 12px; color: var(--text-muted, #999); text-align: right; }
+        .msg-char-count.warning { color: #e67e22; }
+        .msg-char-count.danger { color: #e74c3c; }
+        .msg-recipient-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--card-bg, white); border: 1px solid var(--border-color, #e0e0e0); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); max-height: 200px; overflow-y: auto; z-index: 100; }
+        .msg-recipient-item { padding: 10px 14px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.15s; }
+        .msg-recipient-item:hover { background: var(--hover-bg, #f5f5f5); }
+        /* Conversation Modal */
+        .conv-modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 10000; padding: 20px; }
+        .conv-modal { background: var(--card-bg, white); border-radius: 16px; max-width: 720px; margin: 40px auto; height: 82vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .conv-header { padding: 16px 20px; border-bottom: 1px solid var(--border-color, #e0e0e0); display: flex; justify-content: space-between; align-items: center; }
+        .conv-header h3 { margin: 0; font-size: 16px; color: var(--text-primary, #333); display: flex; align-items: center; gap: 10px; }
+        .conv-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-muted, #999); padding: 4px 8px; border-radius: 6px; }
+        .conv-close:hover { background: var(--hover-bg, #f0f0f0); }
+        .conv-messages { flex: 1; overflow-y: auto; padding: 20px; background: var(--bg-secondary, #f8f9fa); }
+        .conv-bubble { max-width: 75%; margin-bottom: 12px; }
+        .conv-bubble.own { margin-left: auto; }
+        .conv-bubble.other { margin-right: auto; }
+        .conv-bubble-inner { padding: 10px 14px; border-radius: 12px; word-wrap: break-word; font-size: 14px; line-height: 1.5; }
+        .conv-bubble.own .conv-bubble-inner { background: var(--primary-color, #667eea); color: white; border-bottom-right-radius: 4px; }
+        .conv-bubble.other .conv-bubble-inner { background: var(--card-bg, white); color: var(--text-primary, #333); border: 1px solid var(--border-color, #e0e0e0); border-bottom-left-radius: 4px; }
+        .conv-bubble-meta { font-size: 11px; color: var(--text-muted, #999); margin-top: 4px; padding: 0 4px; }
+        .conv-bubble.own .conv-bubble-meta { text-align: right; }
+        .conv-reply { padding: 14px 20px; border-top: 1px solid var(--border-color, #e0e0e0); background: var(--card-bg, white); border-radius: 0 0 16px 16px; }
+        .conv-reply-input { display: flex; gap: 10px; align-items: flex-end; }
+        .conv-reply-input textarea { flex: 1; padding: 10px 14px; border: 2px solid var(--border-color, #e0e0e0); border-radius: 10px; resize: none; min-height: 44px; max-height: 120px; font-family: inherit; font-size: 14px; background: var(--input-bg, white); color: var(--text-primary, #333); }
+        .conv-reply-input textarea:focus { border-color: var(--primary-color, #667eea); outline: none; }
+        .conv-send-btn { padding: 10px 20px; background: var(--primary-color, #667eea); color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 14px; white-space: nowrap; }
+        .conv-send-btn:hover { opacity: 0.9; }
+        .conv-send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        /* Dark mode messaging overrides */
+        [data-theme="dark"] .msg-card { background: var(--card-bg); border-color: var(--border-color); }
+        [data-theme="dark"] .msg-card.unread { background: rgba(102,126,234,0.1); }
+        [data-theme="dark"] .conv-modal { background: var(--card-bg); }
+        [data-theme="dark"] .conv-messages { background: var(--bg-secondary); }
+        [data-theme="dark"] .conv-bubble.other .conv-bubble-inner { background: var(--bg-secondary); }
+        [data-theme="dark"] .msg-recipient-dropdown { background: var(--card-bg); border-color: var(--border-color); }
+        [data-theme="dark"] .msg-recipient-item:hover { background: var(--hover-bg); }
     </style>
 </head>
 <body>
@@ -5539,89 +5617,103 @@
 
             <!-- Messages Tab -->
             <div id="messagesTab" class="tab-content">
-                <h3>📬 Messages</h3>
-                <p style="color: #666; margin-bottom: 20px;">Send and receive messages with clinicians, therapists, and the development team.</p>
+                <h3 style="margin-bottom: 4px;">Messages</h3>
+                <p style="color: var(--text-muted, #666); margin-bottom: 16px; font-size: 14px;">Communicate with your care team and the development team.</p>
 
                 <!-- Messages Navigation Tabs -->
-                <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; overflow-x: auto; flex-wrap: wrap;">
-                    <button class="message-subtab-btn" onclick="switchMessageTab('inbox', this)" style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; white-space: nowrap;">
-                        📨 Inbox
+                <div class="msg-tabs">
+                    <button class="msg-tab-btn active" onclick="switchMessageTab('inbox', this)">
+                        Inbox <span id="inboxUnreadBadge" class="badge" style="display:none;"></span>
                     </button>
-                    <button class="message-subtab-btn" onclick="switchMessageTab('sent', this)" style="background: transparent; color: #667eea; border: 2px solid #667eea; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; white-space: nowrap;">
-                        📤 Sent
+                    <button class="msg-tab-btn" onclick="switchMessageTab('sent', this)">
+                        Sent
                     </button>
-                    <button class="message-subtab-btn" onclick="switchMessageTab('newmessage', this)" style="background: transparent; color: #667eea; border: 2px solid #667eea; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; white-space: nowrap;">
-                        ✍️ New Message
+                    <button class="msg-tab-btn" onclick="switchMessageTab('newmessage', this)">
+                        Compose
                     </button>
                 </div>
 
                 <!-- Inbox Subtab -->
                 <div id="messagesInboxTabPatient" class="message-subtab-content" style="display: block;">
-                    <div class="card">
-                        <h4>Inbox</h4>
-                        <div id="messagesInboxContainer" style="max-height: 600px; overflow-y: auto;">
-                            <p style="color: #999; text-align: center; padding: 40px;">Loading messages...</p>
+                    <!-- Search Bar -->
+                    <div class="msg-search-bar">
+                        <input type="text" id="msgSearchInput" placeholder="Search messages..." oninput="debounceMessageSearch(this.value)">
+                    </div>
+                    <div id="messagesInboxContainer" style="max-height: 600px; overflow-y: auto;">
+                        <div class="msg-empty">
+                            <div class="msg-empty-icon">📬</div>
+                            <p>Loading messages...</p>
                         </div>
                     </div>
                 </div>
 
                 <!-- Sent Subtab -->
                 <div id="messagesSentTabPatient" class="message-subtab-content" style="display: none;">
-                    <div class="card">
-                        <h4>Sent Messages</h4>
-                        <div id="messagesSentContainer" style="max-height: 600px; overflow-y: auto;">
-                            <p style="color: #999; text-align: center; padding: 40px;">Loading sent messages...</p>
+                    <div id="messagesSentContainer" style="max-height: 600px; overflow-y: auto;">
+                        <div class="msg-empty">
+                            <div class="msg-empty-icon">📤</div>
+                            <p>Loading sent messages...</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- New Message Subtab -->
+                <!-- Compose Subtab -->
                 <div id="messagesNewTabPatient" class="message-subtab-content" style="display: none;">
-                    <div class="card">
-                        <h4>Send New Message</h4>
-                        <div class="form-group">
-                            <label>To (Username)</label>
-                            <input type="text" id="messageRecipientPatient" class="themed-input" placeholder="Enter recipient username">
+                    <div class="card" style="border: none; box-shadow: none; padding: 0;">
+                        <!-- Quick Action Buttons -->
+                        <div class="msg-quick-actions">
+                            <button class="msg-quick-btn" onclick="prefillMessageTemplate('appointment')">📅 Request Appointment</button>
+                            <button class="msg-quick-btn" onclick="prefillMessageTemplate('checkin')">💬 Check-in</button>
+                            <button class="msg-quick-btn" onclick="prefillMessageTemplate('enquiry')">❓ General Enquiry</button>
+                            <button class="msg-quick-btn" onclick="prefillMessageTemplate('dev')">🛠 Contact Dev Team</button>
                         </div>
-                        <div class="form-group">
-                            <label>Subject</label>
-                            <input type="text" id="messageSubjectPatient" class="themed-input" placeholder="Message subject (optional)">
+
+                        <div class="msg-compose-form">
+                            <label for="messageRecipientPatient">To</label>
+                            <div style="position: relative;">
+                                <input type="text" id="messageRecipientPatient" placeholder="Start typing a username..." autocomplete="off" oninput="searchRecipients(this.value)">
+                                <div id="recipientDropdown" class="msg-recipient-dropdown" style="display:none;"></div>
+                            </div>
+
+                            <label for="messageSubjectPatient">Subject <span style="font-weight:400; color:var(--text-muted,#999);">(optional)</span></label>
+                            <input type="text" id="messageSubjectPatient" placeholder="What's this about?">
+
+                            <label for="messageContentPatient">Message</label>
+                            <textarea id="messageContentPatient" rows="6" placeholder="Type your message..." oninput="updateComposeCharCount()"></textarea>
+                            <div id="composeCharCount" class="msg-char-count">0 / 10,000</div>
+
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <button class="btn" id="composeSendBtn" onclick="sendNewMessage()" style="background: var(--primary-color, #667eea); padding: 12px 28px;">Send Message</button>
+                                <p id="messageSendStatusPatient" style="margin: 0; display: none; font-size: 14px;"></p>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>Message</label>
-                            <textarea id="messageContentPatient" class="themed-textarea" rows="8" placeholder="Type your message here..."></textarea>
-                        </div>
-                        <button class="btn" onclick="sendNewMessage()" style="background: #667eea; width: auto;">📨 Send Message</button>
-                        <p id="messageSendStatusPatient" style="margin-top: 10px; display: none;"></p>
                     </div>
                 </div>
 
-                <!-- Conversation Modal -->
-                <div id="conversationModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 10000; padding: 20px;">
-                    <div style="background: white; border-radius: 12px; max-width: 700px; margin: 50px auto; height: 80vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
-                        <!-- Modal Header -->
-                        <div style="padding: 20px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
-                            <h3 style="margin: 0; color: #333;">Conversation with <span id="conversationWith" style="color: #667eea;"></span></h3>
-                            <button onclick="closeConversationModal()" style="background: none; border: none; font-size: 24px; cursor: pointer;">✕</button>
-                        </div>
-                        
-                        <!-- Messages Container -->
-                        <div id="conversationMessages" style="flex: 1; overflow-y: auto; padding: 20px; background: #f8f9fa;">
-                            <p style="color: #999; text-align: center; padding: 40px;">Loading conversation...</p>
-                        </div>
-                        
-                        <!-- Reply Form -->
-                        <div style="padding: 20px; border-top: 1px solid #e0e0e0; background: white;">
-                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                <input type="text" id="replySearchInput" placeholder="🔍 Search messages..." style="flex: 1; min-width: 150px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 14px;">
-                                <button class="btn" onclick="searchConversation()" style="padding: 10px 20px;">Search</button>
+                <!-- Conversation Modal (Redesigned) -->
+                <div id="conversationModal" class="conv-modal-overlay" onclick="if(event.target===this)closeConversationModal()">
+                    <div class="conv-modal">
+                        <div class="conv-header">
+                            <h3>
+                                <span id="convAvatar" class="msg-avatar default" style="width:32px;height:32px;font-size:14px;"></span>
+                                <span id="conversationWith"></span>
+                                <span id="convRoleBadge" class="msg-role-badge"></span>
+                            </h3>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <button onclick="deleteConversation()" class="conv-close" title="Delete conversation" style="color:#e74c3c;">🗑</button>
+                                <button onclick="closeConversationModal()" class="conv-close" title="Close">&times;</button>
                             </div>
-                            <div style="margin-top: 15px;">
-                                <textarea id="replyContent" placeholder="Type your reply..." style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; resize: vertical; min-height: 80px; font-family: inherit;"></textarea>
+                        </div>
+                        <div id="conversationMessages" class="conv-messages">
+                            <div class="msg-empty">
+                                <div class="msg-empty-icon">💬</div>
+                                <p>Loading conversation...</p>
                             </div>
-                            <div style="display: flex; gap: 10px; margin-top: 10px; justify-content: flex-end;">
-                                <button class="btn" onclick="closeConversationModal()" style="background: #ccc;">Cancel</button>
-                                <button class="btn" onclick="sendReply()" style="background: #667eea;">📤 Send Reply</button>
+                        </div>
+                        <div class="conv-reply">
+                            <div class="conv-reply-input">
+                                <textarea id="replyContent" placeholder="Type your reply..." rows="1" onkeypress="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendReply()}" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px'"></textarea>
+                                <button class="conv-send-btn" onclick="sendReply()" id="replySendBtn">Send</button>
                             </div>
                         </div>
                     </div>
@@ -15664,499 +15756,463 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
 
         // ========== END DEVELOPER DASHBOARD FUNCTIONS ==========
 
-        // ========== USER MESSAGES (Inbox for patients/clinicians) - Phase 3 Messaging ==========
-        // ========== MESSAGING SYSTEM (New UI) ==========
-        // Cache for message tabs to prevent re-loading on every switch
+        // ========== MESSAGING SYSTEM (Complete Overhaul) ==========
         const messageTabCache = {
             inbox: null,
             sent: null,
             lastLoadTime: {}
         };
 
-        function renderInboxFromCache() {
-            try {
-                const data = messageTabCache.inbox;
-                const container = document.getElementById('messagesInboxContainer');
-                if (!container) {
-                    console.error('[renderInboxFromCache] Could not find messagesInboxContainer');
-                    return;
-                }
-                
-                if (!data || !data.conversations || data.conversations.length === 0) {
-                    container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">📭 No messages in your inbox</p>';
-                    return;
-                }
-                
-                // Render cached inbox messages
-                container.innerHTML = data.conversations.map(conv => `
-                    <div style="border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 10px; background: ${conv.unread_count > 0 ? '#f0f7ff' : 'white'}; border-radius: 8px; cursor: pointer; transition: all 0.2s;"
-                         onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'"
-                         onmouseout="this.style.boxShadow='none'"
-                         onclick="openConversation('${sanitizeHTML(conv.with_user)}')">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <div style="flex: 1;">
-                                <strong style="color: #333; font-size: 15px;">📧 ${sanitizeHTML(conv.with_user)}</strong>
-                                ${conv.unread_count > 0 ? `<span style="background: #e74c3c; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-left: 10px; font-weight: bold;">${conv.unread_count}</span>` : ''}
-                            </div>
-                            <span style="color: #999; font-size: 12px; white-space: nowrap;">${new Date(conv.last_message_time).toLocaleString()}</span>
-                        </div>
-                        <div style="color: #666; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 8px;">
-                            ${conv.last_message ? (conv.last_message.length > 100 ? sanitizeHTML(conv.last_message.substring(0, 100)) + '...' : sanitizeHTML(conv.last_message)) : 'No message text'}
-                        </div>
-                    </div>
-                `).join('');
-                console.log(`[renderInboxFromCache] Rendered ${data.conversations.length} conversations`);
-            } catch (error) {
-                console.error('[renderInboxFromCache] Error:', error);
-                const container = document.getElementById('messagesInboxContainer');
-                if (container) {
-                    container.innerHTML = `<p style="color: #e74c3c; padding: 20px;">❌ Error rendering cached messages: ${sanitizeHTML(error.message)}</p>`;
-                }
-            }
+        // --- Helper: Get avatar class from role ---
+        function getMsgAvatarClass(role) {
+            if (!role) return 'default';
+            const r = role.toLowerCase();
+            if (r === 'patient' || r === 'user') return 'patient';
+            if (r === 'clinician' || r === 'therapist') return 'clinician';
+            if (r === 'developer' || r === 'admin') return 'developer';
+            return 'default';
+        }
+        function getMsgInitial(username) {
+            return username ? username.charAt(0).toUpperCase() : '?';
+        }
+        function formatMsgTime(timestamp) {
+            if (!timestamp) return '';
+            const d = new Date(timestamp);
+            const now = new Date();
+            const diffMs = now - d;
+            if (diffMs < 60000) return 'Just now';
+            if (diffMs < 3600000) return Math.floor(diffMs/60000) + 'm ago';
+            if (diffMs < 86400000) return Math.floor(diffMs/3600000) + 'h ago';
+            if (diffMs < 604800000) return d.toLocaleDateString(undefined, {weekday:'short'});
+            return d.toLocaleDateString(undefined, {month:'short', day:'numeric'});
         }
 
-        function renderSentFromCache() {
-            try {
-                const data = messageTabCache.sent;
-                const container = document.getElementById('messagesSentContainer');
-                if (!container) {
-                    console.error('[renderSentFromCache] Could not find messagesSentContainer');
-                    return;
-                }
-                
-                if (!data || !data.messages || data.messages.length === 0) {
-                    container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">📤 No sent messages</p>';
-                    return;
-                }
-                
-                // Render cached sent messages
-                container.innerHTML = data.messages.map(msg => `
-                    <div style="border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 10px; background: #f9f9f9; border-radius: 8px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <div>
-                                <strong style="color: #333; font-size: 15px;">📤 To: ${sanitizeHTML(msg.recipient)}</strong>
-                                <span style="background: ${msg.is_read ? '#4caf50' : '#999'}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 10px; font-weight: bold;">
-                                    ${msg.is_read ? '✓ Read' : 'Unread'}
-                                </span>
-                            </div>
-                            <span style="color: #999; font-size: 12px; white-space: nowrap;">${new Date(msg.sent_at).toLocaleString()}</span>
-                        </div>
-                        ${msg.subject ? `<div style="font-weight: 600; color: #555; margin-bottom: 8px;">Subject: ${sanitizeHTML(msg.subject)}</div>` : ''}
-                        <div style="color: #666; font-size: 14px; background: white; padding: 10px; border-radius: 4px;">
-                            ${sanitizeHTML(msg.content.substring(0, 150))}${msg.content.length > 150 ? '...' : ''}
-                        </div>
-                    </div>
-                `).join('');
-                console.log(`[renderSentFromCache] Rendered ${data.messages.length} sent messages`);
-            } catch (error) {
-                console.error('[renderSentFromCache] Error:', error);
-                const container = document.getElementById('messagesSentContainer');
-                if (container) {
-                    container.innerHTML = `<p style="color: #e74c3c; padding: 20px;">❌ Error rendering cached messages: ${sanitizeHTML(error.message)}</p>`;
-                }
+        // --- Render Inbox ---
+        function renderInbox(data) {
+            const container = document.getElementById('messagesInboxContainer');
+            if (!container) return;
+            if (!data || !data.conversations || data.conversations.length === 0) {
+                container.innerHTML = '<div class="msg-empty"><div class="msg-empty-icon">📭</div><p>No messages yet</p><p style="font-size:13px;margin-top:8px;">Click <strong>Compose</strong> to start a conversation</p></div>';
+                return;
             }
+            container.innerHTML = data.conversations.map(function(conv) {
+                const avatarClass = getMsgAvatarClass(conv.with_role);
+                const initial = getMsgInitial(conv.with_user);
+                const escapedUser = sanitizeHTML(conv.with_user || 'Unknown');
+                return '<div class="msg-card' + (conv.unread_count > 0 ? ' unread' : '') + '" onclick="openConversation(\'' + escapedUser + '\')">' +
+                    '<div class="msg-avatar ' + avatarClass + '">' + initial + '</div>' +
+                    '<div class="msg-content">' +
+                        '<div class="msg-header">' +
+                            '<span class="msg-sender">' + escapedUser + '</span>' +
+                            '<span class="msg-time">' + formatMsgTime(conv.last_message_time) + '</span>' +
+                        '</div>' +
+                        '<div class="msg-preview">' +
+                            (conv.last_message ? sanitizeHTML(conv.last_message.substring(0, 100)) : 'No messages') +
+                            (conv.unread_count > 0 ? '<span class="msg-unread-badge">' + conv.unread_count + '</span>' : '') +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+            updateUnreadBadge(data);
         }
 
-        async function switchMessageTab(tabName, buttonEl) {
-            console.log(`[switchMessageTab] === START === tabName: "${tabName}", buttonEl:`, buttonEl);
-            
+        // --- Render Sent ---
+        function renderSent(data) {
+            const container = document.getElementById('messagesSentContainer');
+            if (!container) return;
+            if (!data || !data.messages || data.messages.length === 0) {
+                container.innerHTML = '<div class="msg-empty"><div class="msg-empty-icon">📤</div><p>No sent messages</p></div>';
+                return;
+            }
+            container.innerHTML = data.messages.map(function(msg) {
+                const initial = getMsgInitial(msg.recipient);
+                return '<div class="msg-card" onclick="openConversation(\'' + sanitizeHTML(msg.recipient) + '\')">' +
+                    '<div class="msg-avatar default">' + initial + '</div>' +
+                    '<div class="msg-content">' +
+                        '<div class="msg-header">' +
+                            '<span class="msg-sender">To: ' + sanitizeHTML(msg.recipient) + '</span>' +
+                            '<span class="msg-time">' + formatMsgTime(msg.sent_at) + '</span>' +
+                        '</div>' +
+                        (msg.subject ? '<div style="font-size:12px;font-weight:600;color:var(--text-secondary,#555);margin-bottom:2px;">' + sanitizeHTML(msg.subject) + '</div>' : '') +
+                        '<div class="msg-preview">' + sanitizeHTML((msg.content || '').substring(0, 120)) + '</div>' +
+                        '<div class="msg-status ' + (msg.is_read ? 'read' : 'sent') + '">' + (msg.is_read ? '✓✓ Read' : '✓ Sent') + '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+        }
+
+        // --- Tab Switching ---
+        function switchMessageTab(tabName, buttonEl) {
             try {
-                // Hide all message subtabs
-                const allTabs = document.querySelectorAll('.message-subtab-content');
-                console.log(`[switchMessageTab] Found ${allTabs.length} .message-subtab-content elements to hide`);
-                allTabs.forEach((tab, idx) => {
-                    console.log(`  [${idx}] Hiding:`, tab.id || '(no id)');
-                    tab.style.display = 'none';
-                });
-                
-                // Reset all message subtab buttons
-                const allButtons = document.querySelectorAll('.message-subtab-btn');
-                console.log(`[switchMessageTab] Found ${allButtons.length} .message-subtab-btn buttons to reset`);
-                allButtons.forEach((btn, idx) => {
-                    btn.style.background = 'transparent';
-                    btn.style.color = '#667eea';
-                    btn.style.borderColor = '#667eea';
-                });
-                
-                // Determine which set of tabs to use (Patient vs non-patient)
-                // Handle 'newmessage' as special case (becomes 'New' not 'Newmessage')
-                let capitalizedTab;
-                if (tabName === 'newmessage') {
-                    capitalizedTab = 'New';
-                } else {
-                    capitalizedTab = tabName.charAt(0).toUpperCase() + tabName.slice(1);
-                }
-                
-                let tabId = `messages${capitalizedTab}TabPatient`; // Try patient version first
-                console.log(`[switchMessageTab] Looking for patient tab: "${tabId}"`);
-                let tab = document.getElementById(tabId);
-                
+                document.querySelectorAll('.message-subtab-content').forEach(function(t) { t.style.display = 'none'; });
+                document.querySelectorAll('.msg-tab-btn').forEach(function(b) { b.classList.remove('active'); });
+
+                var capitalizedTab = tabName === 'newmessage' ? 'New' : tabName.charAt(0).toUpperCase() + tabName.slice(1);
+                var tab = document.getElementById('messages' + capitalizedTab + 'TabPatient') || document.getElementById('messages' + capitalizedTab + 'Tab');
                 if (tab) {
-                    console.log(`[switchMessageTab] ✓ Found patient tab! Displaying now.`);
-                } else {
-                    // Fallback to non-patient version if patient version not found
-                    tabId = `messages${capitalizedTab}Tab`;
-                    console.log(`[switchMessageTab] Patient version not found, trying: "${tabId}"`);
-                    tab = document.getElementById(tabId);
-                    if (tab) {
-                        console.log(`[switchMessageTab] ✓ Found non-patient tab! Displaying now.`);
-                    }
-                }
-                
-                if (tab) {
-                    console.log(`[switchMessageTab] Setting display to "block" for tab:`, tab.id);
                     tab.style.display = 'block';
-                    
-                    // Verify it's actually visible now
-                    const computed = window.getComputedStyle(tab);
-                    console.log(`[switchMessageTab] After setting display:block, computed display:`, computed.display);
-                    
-                    if (buttonEl) {
-                        buttonEl.style.background = '#667eea';
-                        buttonEl.style.color = 'white';
-                        buttonEl.style.borderColor = '#667eea';
-                    }
-                    
-                    // Load content based on tab (only if not cached or cache is old)
-                    const now = Date.now();
-                    const cacheAge = messageTabCache.lastLoadTime[tabName] ? now - messageTabCache.lastLoadTime[tabName] : Infinity;
-                    const CACHE_DURATION = 30000; // 30 seconds
-                    
+                    if (buttonEl) buttonEl.classList.add('active');
+
+                    var now = Date.now();
+                    var age = messageTabCache.lastLoadTime[tabName] ? now - messageTabCache.lastLoadTime[tabName] : Infinity;
+                    var CACHE_TTL = 30000;
+
                     if (tabName === 'inbox') {
-                        if (messageTabCache.inbox === null || cacheAge > CACHE_DURATION) {
-                            console.log(`[switchMessageTab] Loading fresh inbox (cache age: ${cacheAge}ms)`);
-                            loadMessagesInbox();
-                        } else {
-                            console.log(`[switchMessageTab] Rendering cached inbox (age: ${cacheAge}ms)`);
-                            renderInboxFromCache();
-                        }
+                        if (!messageTabCache.inbox || age > CACHE_TTL) { loadMessagesInbox(); } else { renderInbox(messageTabCache.inbox); }
                     } else if (tabName === 'sent') {
-                        if (messageTabCache.sent === null || cacheAge > CACHE_DURATION) {
-                            console.log(`[switchMessageTab] Loading fresh sent messages (cache age: ${cacheAge}ms)`);
-                            loadMessagesSent();
-                        } else {
-                            console.log(`[switchMessageTab] Rendering cached sent messages (age: ${cacheAge}ms)`);
-                            renderSentFromCache();
-                        }
-                    } else {
-                        console.log(`[switchMessageTab] Using default behavior for "${tabName}"`);
+                        if (!messageTabCache.sent || age > CACHE_TTL) { loadMessagesSent(); } else { renderSent(messageTabCache.sent); }
                     }
-                    // New message tab doesn't need loading - just show the form
-                } else {
-                    console.error(`[switchMessageTab] ❌ ERROR: Could not find tab with ID: "${tabId}"`);
-                    console.log(`[switchMessageTab] Available message-related elements:`);
-                    document.querySelectorAll('[id*="message"]').forEach(el => {
-                        console.log(`  - ${el.id} (class: "${el.className}")`);
-                    });
                 }
-            } catch (error) {
-                console.error('[switchMessageTab] EXCEPTION:', error);
-            }
+            } catch (e) { console.error('[switchMessageTab]', e); }
         }
 
+        // --- Load Inbox ---
         async function loadMessagesInbox() {
+            var container = document.getElementById('messagesInboxContainer');
+            if (!container) return;
+            container.innerHTML = '<div class="msg-empty"><div class="msg-empty-icon">⏳</div><p>Loading messages...</p></div>';
             try {
-                console.log(`[loadMessagesInbox] Starting...`);
-                const container = document.getElementById('messagesInboxContainer');
-                if (!container) {
-                    console.error('[loadMessagesInbox] ERROR: Could not find messagesInboxContainer element');
-                    return;
-                }
-                container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">Loading messages...</p>';
-
-                const response = await fetch(`/api/messages/inbox`, {
-                    method: 'GET',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                
-                console.log(`[loadMessagesInbox] API response status: ${response.status}`);
-                
-                if (response.status === 401) {
-                    container.innerHTML = '<p style="color: #e74c3c; padding: 20px;">⚠️ Session expired. Please <a href="/logout" style="color: #667eea; text-decoration: underline;">log in again</a></p>';
-                    console.warn('Session expired - user needs to re-authenticate');
-                    return;
-                }
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || 'Failed to load messages');
-                }
-                
-                const data = await response.json();
-                messageTabCache.inbox = data; // Cache the response
+                var response = await fetch('/api/messages/inbox', { method: 'GET', credentials: 'include' });
+                if (response.status === 401) { container.innerHTML = '<div class="msg-empty"><p>Session expired. Please log in again.</p></div>'; return; }
+                if (!response.ok) throw new Error('Failed to load inbox');
+                var data = await response.json();
+                messageTabCache.inbox = data;
                 messageTabCache.lastLoadTime.inbox = Date.now();
-                console.log(`[loadMessagesInbox] Got ${data.conversations?.length || 0} conversations`);
-                
-                if (!data.conversations || data.conversations.length === 0) {
-                    container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">📭 No messages in your inbox</p>';
-                    return;
-                }
-
-                // Display inbox messages
-                container.innerHTML = data.conversations.map(conv => `
-                    <div style="border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 10px; background: ${conv.unread_count > 0 ? '#f0f7ff' : 'white'}; border-radius: 8px; cursor: pointer; transition: all 0.2s;"
-                         onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'"
-                         onmouseout="this.style.boxShadow='none'"
-                         onclick="openConversation('${sanitizeHTML(conv.with_user)}')">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <div style="flex: 1;">
-                                <strong style="color: #333; font-size: 15px;">📧 ${sanitizeHTML(conv.with_user)}</strong>
-                                ${conv.unread_count > 0 ? `<span style="background: #e74c3c; color: white; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin-left: 10px; font-weight: bold;">${conv.unread_count}</span>` : ''}
-                            </div>
-                            <span style="color: #999; font-size: 12px; white-space: nowrap;">${new Date(conv.last_message_time).toLocaleString()}</span>
-                        </div>
-                        <div style="color: #666; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 8px;">
-                            ${conv.last_message ? (conv.last_message.length > 100 ? sanitizeHTML(conv.last_message.substring(0, 100)) + '...' : sanitizeHTML(conv.last_message)) : 'No message text'}
-                        </div>
-                    </div>
-                `).join('');
-
-            } catch (error) {
-                console.error('Error loading inbox:', error);
-                document.getElementById('messagesInboxContainer').innerHTML = `<p style="color: #e74c3c; padding: 20px;">❌ Error: ${sanitizeHTML(error.message)}</p>`;
+                renderInbox(data);
+            } catch (e) {
+                console.error('[loadMessagesInbox]', e);
+                container.innerHTML = '<div class="msg-empty"><div class="msg-empty-icon">⚠️</div><p>Error loading messages: ' + sanitizeHTML(e.message) + '</p></div>';
             }
         }
 
+        // --- Load Sent ---
         async function loadMessagesSent() {
+            var container = document.getElementById('messagesSentContainer');
+            if (!container) return;
+            container.innerHTML = '<div class="msg-empty"><div class="msg-empty-icon">⏳</div><p>Loading sent messages...</p></div>';
             try {
-                const container = document.getElementById('messagesSentContainer');
-                container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">Loading messages...</p>';
-
-                const response = await fetch(`/api/messages/sent`, {
-                    method: 'GET',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                
-                if (response.status === 401) {
-                    container.innerHTML = '<p style="color: #e74c3c; padding: 20px;">⚠️ Please log in again</p>';
-                    return;
-                }
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || 'Failed to load messages');
-                }
-                
-                const data = await response.json();
-                messageTabCache.sent = data; // Cache the response
+                var response = await fetch('/api/messages/sent', { method: 'GET', credentials: 'include' });
+                if (response.status === 401) { container.innerHTML = '<div class="msg-empty"><p>Session expired.</p></div>'; return; }
+                if (!response.ok) throw new Error('Failed to load sent messages');
+                var data = await response.json();
+                messageTabCache.sent = data;
                 messageTabCache.lastLoadTime.sent = Date.now();
-                
-                if (!data.messages || data.messages.length === 0) {
-                    container.innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">📤 No sent messages</p>';
-                    return;
-                }
-
-                // Display sent messages
-                container.innerHTML = data.messages.map(msg => `
-                    <div style="border: 1px solid #e0e0e0; padding: 15px; margin-bottom: 10px; background: #f9f9f9; border-radius: 8px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                            <div>
-                                <strong style="color: #333; font-size: 15px;">📤 To: ${sanitizeHTML(msg.recipient)}</strong>
-                                <span style="background: ${msg.is_read ? '#4caf50' : '#999'}; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-left: 10px; font-weight: bold;">
-                                    ${msg.is_read ? '✓ Read' : 'Unread'}
-                                </span>
-                            </div>
-                            <span style="color: #999; font-size: 12px; white-space: nowrap;">${new Date(msg.sent_at).toLocaleString()}</span>
-                        </div>
-                        ${msg.subject ? `<div style="font-weight: 600; color: #555; margin-bottom: 8px;">Subject: ${sanitizeHTML(msg.subject)}</div>` : ''}
-                        <div style="color: #666; font-size: 14px; background: white; padding: 10px; border-radius: 4px;">
-                            ${sanitizeHTML(msg.content.substring(0, 150))}${msg.content.length > 150 ? '...' : ''}
-                        </div>
-                    </div>
-                `).join('');
-
-            } catch (error) {
-                console.error('Error loading sent messages:', error);
-                document.getElementById('messagesSentContainer').innerHTML = `<p style="color: #e74c3c; padding: 20px;">❌ Error: ${sanitizeHTML(error.message)}</p>`;
+                renderSent(data);
+            } catch (e) {
+                console.error('[loadMessagesSent]', e);
+                container.innerHTML = '<div class="msg-empty"><div class="msg-empty-icon">⚠️</div><p>Error: ' + sanitizeHTML(e.message) + '</p></div>';
             }
         }
 
+        // --- Message Search (debounced) ---
+        let _msgSearchTimer = null;
+        function debounceMessageSearch(query) {
+            clearTimeout(_msgSearchTimer);
+            _msgSearchTimer = setTimeout(function() { performMessageSearch(query); }, 400);
+        }
+        async function performMessageSearch(query) {
+            if (!query || query.length < 2) { renderInbox(messageTabCache.inbox); return; }
+            try {
+                var response = await fetch('/api/messages/search?q=' + encodeURIComponent(query), { credentials: 'include' });
+                if (!response.ok) return;
+                var data = await response.json();
+                var container = document.getElementById('messagesInboxContainer');
+                if (!data.results || data.results.length === 0) {
+                    container.innerHTML = '<div class="msg-empty"><p>No results for "' + sanitizeHTML(query) + '"</p></div>';
+                    return;
+                }
+                container.innerHTML = data.results.map(function(msg) {
+                    var isOwn = msg.sender === currentUser;
+                    var otherUser = isOwn ? msg.recipient : msg.sender;
+                    return '<div class="msg-card" onclick="openConversation(\'' + sanitizeHTML(otherUser) + '\')">' +
+                        '<div class="msg-avatar default">' + getMsgInitial(otherUser) + '</div>' +
+                        '<div class="msg-content">' +
+                            '<div class="msg-header"><span class="msg-sender">' + sanitizeHTML(otherUser) + '</span><span class="msg-time">' + formatMsgTime(msg.sent_at) + '</span></div>' +
+                            '<div class="msg-preview">' + sanitizeHTML((msg.content || '').substring(0, 120)) + '</div>' +
+                        '</div></div>';
+                }).join('');
+            } catch (e) { console.error('[search]', e); }
+        }
+
+        // --- Recipient Autocomplete ---
+        let _recipientTimer = null;
+        async function searchRecipients(query) {
+            var dropdown = document.getElementById('recipientDropdown');
+            if (!dropdown) return;
+            if (!query || query.length < 2) { dropdown.style.display = 'none'; return; }
+            clearTimeout(_recipientTimer);
+            _recipientTimer = setTimeout(async function() {
+                try {
+                    var response = await fetch('/api/messages/recipients/search?q=' + encodeURIComponent(query), { credentials: 'include' });
+                    if (!response.ok) { dropdown.style.display = 'none'; return; }
+                    var data = await response.json();
+                    var users = data.users || data.results || [];
+                    if (users.length === 0) { dropdown.style.display = 'none'; return; }
+                    dropdown.innerHTML = users.map(function(u) {
+                        var uname = u.username || u;
+                        var role = u.role || '';
+                        var avatarClass = getMsgAvatarClass(role);
+                        return '<div class="msg-recipient-item" onclick="selectRecipient(\'' + sanitizeHTML(uname) + '\')">' +
+                            '<div class="msg-avatar ' + avatarClass + '" style="width:30px;height:30px;font-size:13px;">' + getMsgInitial(uname) + '</div>' +
+                            '<span>' + sanitizeHTML(uname) + '</span>' +
+                            (role ? '<span class="msg-role-badge ' + avatarClass + '">' + sanitizeHTML(role) + '</span>' : '') +
+                        '</div>';
+                    }).join('');
+                    dropdown.style.display = 'block';
+                } catch (e) { dropdown.style.display = 'none'; }
+            }, 300);
+        }
+        function selectRecipient(username) {
+            document.getElementById('messageRecipientPatient').value = username;
+            var dropdown = document.getElementById('recipientDropdown');
+            if (dropdown) dropdown.style.display = 'none';
+        }
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#messageRecipientPatient') && !e.target.closest('#recipientDropdown')) {
+                var dd = document.getElementById('recipientDropdown');
+                if (dd) dd.style.display = 'none';
+            }
+        });
+
+        // --- Compose Character Counter ---
+        function updateComposeCharCount() {
+            var el = document.getElementById('composeCharCount');
+            var textarea = document.getElementById('messageContentPatient');
+            if (!el || !textarea) return;
+            var len = textarea.value.length;
+            el.textContent = len.toLocaleString() + ' / 10,000';
+            el.className = 'msg-char-count' + (len > 9500 ? ' danger' : len > 8000 ? ' warning' : '');
+        }
+
+        // --- Quick Action Templates ---
+        function prefillMessageTemplate(type) {
+            switchMessageTab('newmessage', document.querySelectorAll('.msg-tab-btn')[2]);
+            var recipientEl = document.getElementById('messageRecipientPatient');
+            var subjectEl = document.getElementById('messageSubjectPatient');
+            var contentEl = document.getElementById('messageContentPatient');
+            var templates = {
+                appointment: { recipient: '', subject: 'Appointment Request', content: 'Hi,\n\nI would like to request an appointment. Please could you let me know your available times?\n\nPreferred days: \nPreferred time: \n\nThank you.' },
+                checkin: { recipient: '', subject: 'Check-in', content: 'Hi,\n\nJust checking in to let you know how I\'ve been doing.\n\n' },
+                enquiry: { recipient: '', subject: 'General Enquiry', content: 'Hi,\n\nI have a question about: \n\n' },
+                dev: { recipient: 'dev', subject: 'Feedback / Issue Report', content: 'Hi Development Team,\n\nI wanted to report the following:\n\nType: [Bug / Feature Request / Feedback]\nDetails: \n\nThank you.' }
+            };
+            var t = templates[type];
+            if (t) {
+                if (t.recipient) recipientEl.value = t.recipient;
+                subjectEl.value = t.subject;
+                contentEl.value = t.content;
+                updateComposeCharCount();
+                recipientEl.focus();
+            }
+        }
+
+        // --- Send New Message ---
         async function sendNewMessage() {
-            // Detect which set of elements to use based on what's available
-            let recipientEl = document.getElementById('messageRecipientPatient');
-            let subjectEl = document.getElementById('messageSubjectPatient');
-            let contentEl = document.getElementById('messageContentPatient');
-            let statusEl = document.getElementById('messageSendStatusPatient');
-            
-            // Fallback to non-patient version if patient version not available
-            if (!recipientEl) {
-                recipientEl = document.getElementById('messageRecipient');
-                subjectEl = document.getElementById('messageSubject');
-                contentEl = document.getElementById('messageContent');
-                statusEl = document.getElementById('messageSendStatus');
-            }
-            
-            const recipient = recipientEl.value.trim();
-            const subject = subjectEl.value.trim();
-            const content = contentEl.value.trim();
+            var recipientEl = document.getElementById('messageRecipientPatient') || document.getElementById('messageRecipient');
+            var subjectEl = document.getElementById('messageSubjectPatient') || document.getElementById('messageSubject');
+            var contentEl = document.getElementById('messageContentPatient') || document.getElementById('messageContent');
+            var statusEl = document.getElementById('messageSendStatusPatient') || document.getElementById('messageSendStatus');
+            var sendBtn = document.getElementById('composeSendBtn');
 
-            if (!recipient) {
-                statusEl.textContent = '⚠️ Please enter a recipient username';
-                statusEl.style.color = '#ff9800';
-                statusEl.style.display = 'block';
-                return;
-            }
+            var recipient = recipientEl.value.trim();
+            var subject = subjectEl.value.trim();
+            var content = contentEl.value.trim();
 
-            if (!content) {
-                statusEl.textContent = '⚠️ Please enter a message';
-                statusEl.style.color = '#ff9800';
-                statusEl.style.display = 'block';
-                return;
-            }
+            if (!recipient) { showMsgStatus(statusEl, 'Please enter a recipient', 'warning'); return; }
+            if (!content) { showMsgStatus(statusEl, 'Please enter a message', 'warning'); return; }
+            if (content.length > 10000) { showMsgStatus(statusEl, 'Message exceeds 10,000 characters', 'warning'); return; }
 
             try {
-                statusEl.textContent = '📤 Sending message...';
-                statusEl.style.color = '#667eea';
-                statusEl.style.display = 'block';
+                showMsgStatus(statusEl, 'Sending...', 'info');
+                if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Sending...'; }
 
-                const response = await fetch('/api/messages/send', {
+                var response = await fetch('/api/messages/send', {
                     method: 'POST',
                     credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': csrfToken
-                    },
-                    body: JSON.stringify({
-                        recipient,
-                        subject,
-                        content
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ recipient: recipient, subject: subject, content: content })
                 });
 
-                if (response.status === 403) {
-                    statusEl.textContent = '❌ You cannot send messages to this person';
-                    statusEl.style.color = '#e74c3c';
-                    statusEl.style.display = 'block';
-                    return;
-                }
-
+                if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Send Message'; }
                 if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
+                    var errorData = await response.json().catch(function() { return {}; });
                     throw new Error(errorData.error || 'Failed to send message');
                 }
-
-                statusEl.textContent = '✅ Message sent successfully!';
-                statusEl.style.color = '#4caf50';
-                statusEl.style.display = 'block';
-
-                // Clear form
+                showMsgStatus(statusEl, 'Message sent!', 'success');
                 recipientEl.value = '';
                 subjectEl.value = '';
                 contentEl.value = '';
-
-                // Hide success message after 3 seconds
-                setTimeout(() => {
-                    statusEl.style.display = 'none';
-                }, 3000);
-
-                // Reload sent messages
-                loadMessagesSent();
-
-            } catch (error) {
-                console.error('Error sending message:', error);
-                statusEl.textContent = `❌ ${error.message}`;
-                statusEl.style.color = '#e74c3c';
-                statusEl.style.display = 'block';
+                updateComposeCharCount();
+                messageTabCache.inbox = null;
+                messageTabCache.sent = null;
+                showToast('Message sent successfully', 'success');
+                setTimeout(function() { statusEl.style.display = 'none'; }, 3000);
+            } catch (e) {
+                if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Send Message'; }
+                showMsgStatus(statusEl, e.message, 'error');
+                console.error('[sendNewMessage]', e);
             }
         }
+        function showMsgStatus(el, msg, type) {
+            if (!el) return;
+            el.textContent = msg;
+            el.style.color = type === 'success' ? '#27ae60' : type === 'warning' ? '#e67e22' : type === 'info' ? '#667eea' : '#e74c3c';
+            el.style.display = 'block';
+        }
 
-        // Recipient autocomplete for message composer
-        let recipientAutocompleteTimeout;
-        
-        async function searchMessageRecipients(query) {
-            if (!query || query.length < 1) {
-                const dropdown = document.getElementById('recipientAutocompleteDropdown');
-                if (dropdown) dropdown.style.display = 'none';
-                return;
-            }
-            
+        // --- Open Conversation Modal ---
+        async function openConversation(withUser) {
             try {
-                const response = await fetch(`/api/messages/search-recipients?q=${encodeURIComponent(query)}`, {
-                    method: 'GET',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                
-                if (!response.ok) throw new Error('Search failed');
-                
-                const data = await response.json();
-                showRecipientAutocomplete(data.recipients);
-            } catch (error) {
-                console.error('Error searching recipients:', error);
-            }
-        }
-        
-        function showRecipientAutocomplete(recipients) {
-            let dropdown = document.getElementById('recipientAutocompleteDropdown');
-            
-            if (!dropdown) {
-                // Create dropdown if it doesn't exist
-                dropdown = document.createElement('div');
-                dropdown.id = 'recipientAutocompleteDropdown';
-                dropdown.style.cssText = `
-                    position: absolute;
-                    background: white;
-                    border: 1px solid #e0e0e0;
-                    border-radius: 8px;
-                    max-width: 400px;
-                    max-height: 300px;
-                    overflow-y: auto;
-                    z-index: 1000;
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                `;
-                
-                const recipientInput = document.getElementById('clinMessageRecipient');
-                if (recipientInput) {
-                    recipientInput.parentElement.style.position = 'relative';
-                    recipientInput.parentElement.appendChild(dropdown);
+                document.getElementById('conversationWith').textContent = withUser;
+                document.getElementById('convAvatar').textContent = getMsgInitial(withUser);
+                document.getElementById('replyContent').value = '';
+                document.getElementById('conversationModal').style.display = 'block';
+                var messagesEl = document.getElementById('conversationMessages');
+                messagesEl.innerHTML = '<div class="msg-empty"><div class="msg-empty-icon">⏳</div><p>Loading...</p></div>';
+
+                var response = await fetch('/api/messages/conversation/' + encodeURIComponent(withUser), { method: 'GET', credentials: 'include' });
+                if (!response.ok) throw new Error('Failed to load conversation');
+                var data = await response.json();
+                var messages = data.messages || [];
+
+                if (messages.length === 0) {
+                    messagesEl.innerHTML = '<div class="msg-empty"><div class="msg-empty-icon">💬</div><p>No messages yet. Send the first one!</p></div>';
+                    return;
                 }
-            }
-            
-            if (recipients.length === 0) {
-                dropdown.innerHTML = '<div style="padding: 10px; color: #999;">No recipients found</div>';
-            } else {
-                dropdown.innerHTML = recipients.map(r => `
-                    <div onclick="selectRecipient('${sanitizeHTML(r.username)}', '${sanitizeHTML(r.name)}')"
-                         style="padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background 0.2s;"
-                         onmouseover="this.style.background='#f5f5f5'"
-                         onmouseout="this.style.background='white'">
-                        <strong>${sanitizeHTML(r.username)}</strong><br>
-                        <small style="color: #999;">${sanitizeHTML(r.name)}</small>
-                    </div>
-                `).join('');
-            }
-            
-            dropdown.style.display = 'block';
-        }
-        
-        function selectRecipient(username, name) {
-            document.getElementById('clinMessageRecipient').value = username;
-            const dropdown = document.getElementById('recipientAutocompleteDropdown');
-            if (dropdown) dropdown.style.display = 'none';
-        }
-        
-        // Setup autocomplete on input field change
-        document.addEventListener('DOMContentLoaded', function() {
-            const recipientInput = document.getElementById('clinMessageRecipient');
-            if (recipientInput) {
-                recipientInput.addEventListener('input', function(e) {
-                    clearTimeout(recipientAutocompleteTimeout);
-                    recipientAutocompleteTimeout = setTimeout(() => {
-                        searchMessageRecipients(e.target.value.trim());
-                    }, 300);
-                });
-                
-                // Close dropdown when clicking elsewhere
-                document.addEventListener('click', function(e) {
-                    if (e.target !== recipientInput) {
-                        const dropdown = document.getElementById('recipientAutocompleteDropdown');
-                        if (dropdown) dropdown.style.display = 'none';
+
+                // Mark unread messages as read
+                for (var i = 0; i < messages.length; i++) {
+                    var msg = messages[i];
+                    if (!msg.is_read && msg.recipient_username === currentUser) {
+                        fetch('/api/messages/' + msg.id + '/read', { method: 'PATCH', credentials: 'include' }).catch(function(){});
                     }
+                }
+
+                // Render conversation bubbles
+                var html = '';
+                messages.forEach(function(msg) {
+                    var isOwn = msg.sender === currentUser || msg.sender_username === currentUser;
+                    var senderName = msg.sender || msg.sender_username || 'Unknown';
+                    var timeStr = msg.sent_at ? new Date(msg.sent_at).toLocaleString() : '';
+                    html += '<div class="conv-bubble ' + (isOwn ? 'own' : 'other') + '">' +
+                        '<div class="conv-bubble-inner">' + sanitizeWithLineBreaks(msg.content || '') + '</div>' +
+                        '<div class="conv-bubble-meta">' + sanitizeHTML(senderName) + ' &middot; ' + timeStr +
+                            (isOwn && msg.is_read ? ' &middot; <span class="msg-status read">Read</span>' : '') +
+                        '</div>' +
+                    '</div>';
                 });
+                messagesEl.innerHTML = html;
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+
+                // Invalidate inbox cache to refresh unread counts
+                messageTabCache.inbox = null;
+                updateUnreadBadge(null);
+            } catch (e) {
+                console.error('[openConversation]', e);
+                document.getElementById('conversationMessages').innerHTML = '<div class="msg-empty"><p>Error: ' + sanitizeHTML(e.message) + '</p></div>';
             }
-        });
+        }
+
+        function closeConversationModal() {
+            document.getElementById('conversationModal').style.display = 'none';
+            // Refresh inbox to update unread counts
+            if (!messageTabCache.inbox) loadMessagesInbox();
+        }
+
+        // --- Send Reply in Conversation ---
+        async function sendReply() {
+            var withUser = document.getElementById('conversationWith').textContent;
+            var contentEl = document.getElementById('replyContent');
+            var content = contentEl.value.trim();
+            var sendBtn = document.getElementById('replySendBtn');
+            if (!content) return;
+
+            try {
+                if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Sending...'; }
+                var response = await fetch('/api/messages/send', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ recipient: withUser, content: content })
+                });
+                if (!response.ok) {
+                    var errorData = await response.json().catch(function() { return {}; });
+                    throw new Error(errorData.error || 'Failed to send');
+                }
+                contentEl.value = '';
+                contentEl.style.height = 'auto';
+                messageTabCache.inbox = null;
+                messageTabCache.sent = null;
+                await openConversation(withUser);
+            } catch (e) {
+                showToast('Failed to send: ' + e.message, 'error');
+                console.error('[sendReply]', e);
+            } finally {
+                if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Send'; }
+            }
+        }
+
+        // --- Delete Conversation ---
+        async function deleteConversation() {
+            var withUser = document.getElementById('conversationWith').textContent;
+            if (!confirm('Delete this conversation with ' + withUser + '?')) return;
+            // Get all messages in conversation and delete them
+            try {
+                var response = await fetch('/api/messages/conversation/' + encodeURIComponent(withUser), { credentials: 'include' });
+                if (!response.ok) throw new Error('Failed to load conversation');
+                var data = await response.json();
+                var messages = data.messages || [];
+                for (var i = 0; i < messages.length; i++) {
+                    await fetch('/api/messages/' + messages[i].id, { method: 'DELETE', credentials: 'include' });
+                }
+                showToast('Conversation deleted', 'success');
+                closeConversationModal();
+                messageTabCache.inbox = null;
+                loadMessagesInbox();
+            } catch (e) {
+                showToast('Error deleting conversation', 'error');
+            }
+        }
+
+        // --- Unread Badge ---
+        function updateUnreadBadge(data) {
+            var badge = document.getElementById('inboxUnreadBadge');
+            var navBadge = document.getElementById('messagesBadge');
+            var total = 0;
+            if (data && data.conversations) {
+                data.conversations.forEach(function(c) { total += (c.unread_count || 0); });
+            }
+            if (badge) {
+                if (total > 0) { badge.textContent = total; badge.style.display = 'inline'; }
+                else { badge.style.display = 'none'; }
+            }
+            if (navBadge) {
+                if (total > 0) { navBadge.textContent = total; navBadge.style.display = 'inline'; }
+                else { navBadge.style.display = 'none'; }
+            }
+        }
+
+        // --- Periodic unread check (every 60s) ---
+        setInterval(function() {
+            if (document.visibilityState === 'visible' && currentUser) {
+                fetch('/api/messages/inbox', { credentials: 'include' })
+                    .then(function(r) { return r.ok ? r.json() : null; })
+                    .then(function(data) { if (data) updateUnreadBadge(data); })
+                    .catch(function(){});
+            }
+        }, 60000);
+
+        // --- Load messages when switching to messages tab ---
+        function checkAndLoadMessages() {
+            loadMessagesInbox();
+        }
+        function loadUserMessages() { loadMessagesInbox(); }
+
+        // Legacy function stubs for compatibility
+        function renderInboxFromCache() { renderInbox(messageTabCache.inbox); }
+        function renderSentFromCache() { renderSent(messageTabCache.sent); }
+        // (legacy autocomplete removed - now using searchRecipients above)
         
         async function sendClinicianMessage() {
             const recipient = document.getElementById('clinMessageRecipient').value.trim();
@@ -16239,385 +16295,6 @@ $ <input type="text" id="terminalCommand" placeholder="type command here..."
                 statusEl.textContent = `❌ ${error.message}`;
                 statusEl.style.color = '#e74c3c';
                 statusEl.style.display = 'block';
-            }
-        }
-
-        async function openConversation(withUser) {
-            try {
-                document.getElementById('conversationWith').textContent = withUser;
-                document.getElementById('conversationMessages').innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">Loading conversation...</p>';
-                document.getElementById('replyContent').value = '';
-                document.getElementById('conversationModal').style.display = 'block';
-                
-                // Fetch conversation
-                const response = await fetch(`/api/messages/conversation/${encodeURIComponent(withUser)}`, {
-                    method: 'GET',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                if (!response.ok) {
-                    throw new Error('Failed to load conversation');
-                }
-                
-                const data = await response.json();
-                const messages = data.messages || [];
-                
-                if (messages.length === 0) {
-                    document.getElementById('conversationMessages').innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">No messages in this conversation</p>';
-                    return;
-                }
-                
-                // Render messages
-                let html = '';
-                messages.forEach(msg => {
-                    const isOwn = msg.sender === currentUser;
-                    const bgColor = isOwn ? '#e8eaf6' : '#f5f5f5';
-                    const textAlign = isOwn ? 'right' : 'left';
-                    const marginSide = isOwn ? 'margin-left: 30%;' : 'margin-right: 30%;';
-                    
-                    html += `
-                        <div style="${marginSide} margin-bottom: 15px;">
-                            <div style="background: ${bgColor}; padding: 12px; border-radius: 8px; word-wrap: break-word;">
-                                <div style="font-size: 12px; color: #999; margin-bottom: 5px;">
-                                    <strong>${msg.sender}</strong> · ${new Date(msg.sent_at).toLocaleString()}
-                                </div>
-                                <div style="color: #333;">${document.createTextNode(msg.content).textContent}</div>
-                                ${msg.is_read ? '<div style="font-size: 11px; color: #667eea; margin-top: 5px;">✓ Read</div>' : ''}
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                document.getElementById('conversationMessages').innerHTML = html;
-                document.getElementById('conversationMessages').scrollTop = document.getElementById('conversationMessages').scrollHeight;
-                
-            } catch (error) {
-                console.error('Error opening conversation:', error);
-                document.getElementById('conversationMessages').innerHTML = `<p style="color: #e74c3c; text-align: center; padding: 40px;">Error loading conversation: ${error.message}</p>`;
-            }
-        }
-
-        function closeConversationModal() {
-            document.getElementById('conversationModal').style.display = 'none';
-            document.getElementById('conversationMessages').innerHTML = '';
-            document.getElementById('replyContent').value = '';
-        }
-
-        async function sendReply() {
-            try {
-                const withUser = document.getElementById('conversationWith').textContent;
-                const content = document.getElementById('replyContent').value.trim();
-                
-                if (!content) {
-                    alert('Please enter a message');
-                    return;
-                }
-                
-                // Find the latest message in the conversation to get its ID
-                const response = await fetch(`/api/messages/conversation/${encodeURIComponent(withUser)}`, {
-                    method: 'GET',
-                    credentials: 'include'
-                });
-                
-                if (!response.ok) throw new Error('Failed to get conversation');
-                
-                const data = await response.json();
-                const messages = data.messages || [];
-                if (messages.length === 0) {
-                    alert('No previous message found to reply to');
-                    return;
-                }
-                
-                const latestMessageId = messages[messages.length - 1].id;
-                
-                // Send reply
-                const replyResponse = await fetch(`/api/messages/${latestMessageId}/reply`, {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': csrfToken
-                    },
-                    body: JSON.stringify({ content })
-                });
-                
-                if (!replyResponse.ok) {
-                    const errorData = await replyResponse.json().catch(() => ({}));
-                    throw new Error(errorData.error || 'Failed to send reply');
-                }
-                
-                // Clear and reload
-                document.getElementById('replyContent').value = '';
-                await openConversation(withUser);
-                
-            } catch (error) {
-                console.error('Error sending reply:', error);
-                alert(`Error: ${error.message}`);
-            }
-        }
-
-        async function searchConversation() {
-            try {
-                const withUser = document.getElementById('conversationWith').textContent;
-                const searchQuery = document.getElementById('replySearchInput').value.trim();
-                
-                if (!searchQuery || searchQuery.length < 2) {
-                    alert('Search query must be at least 2 characters');
-                    return;
-                }
-                
-                const response = await fetch(`/api/messages/search?q=${encodeURIComponent(searchQuery)}`, {
-                    method: 'GET',
-                    credentials: 'include'
-                });
-                
-                if (!response.ok) throw new Error('Search failed');
-                
-                const data = await response.json();
-                const results = data.results.filter(msg => 
-                    (msg.sender === withUser || msg.recipient === withUser) &&
-                    msg.sender === currentUser || msg.recipient === currentUser
-                );
-                
-                if (results.length === 0) {
-                    document.getElementById('conversationMessages').innerHTML = '<p style="color: #999; text-align: center; padding: 40px;">No results found</p>';
-                    return;
-                }
-                
-                // Render search results
-                let html = '';
-                results.forEach(msg => {
-                    const isOwn = msg.sender === currentUser;
-                    const bgColor = isOwn ? '#e8eaf6' : '#f5f5f5';
-                    const marginSide = isOwn ? 'margin-left: 30%;' : 'margin-right: 30%;';
-                    
-                    html += `
-                        <div style="${marginSide} margin-bottom: 15px;">
-                            <div style="background: ${bgColor}; padding: 12px; border-radius: 8px; word-wrap: break-word; border: 2px solid #ffc107;">
-                                <div style="font-size: 12px; color: #999; margin-bottom: 5px;">
-                                    <strong>${msg.sender}</strong> · ${new Date(msg.sent_at).toLocaleString()}
-                                </div>
-                                <div style="color: #333;">${document.createTextNode(msg.content).textContent}</div>
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                document.getElementById('conversationMessages').innerHTML = html;
-                
-            } catch (error) {
-                console.error('Search error:', error);
-                alert(`Search error: ${error.message}`);
-            }
-        }
-
-        async function viewMessageThread(withUser, context) {
-            console.log(`Opening conversation with ${withUser} from ${context}`);
-            // This could open a detailed view - for now just log it
-            alert(`Message thread with ${withUser} (detailed view coming soon)`);
-        }
-
-        async function loadUserMessages() {
-            try {
-                console.log('🔄 Loading messages for user:', currentUser, 'role:', currentUserRole);
-                
-                // Silently skip if messages container doesn't exist (not on messages tab yet)
-                const container = document.getElementById('messagesInboxContainer');
-                if (!container) {
-                    console.log('ℹ️ Messages container not found, skipping load');
-                    return;
-                }
-                
-                // Load inbox on first access
-                loadMessagesInbox();
-
-            } catch (error) {
-                // Silently log errors to avoid breaking login flow
-                console.log('ℹ️ Messages load error (expected if session not ready):', error.message);
-            }
-        }
-
-        async function viewMessageConversation(withUser) {
-            try {
-                const response = await fetch(`/api/messages/conversation/${encodeURIComponent(withUser)}`, {
-                    method: 'GET',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Failed to load conversation');
-                }
-                
-                const data = await response.json();
-                const messages = data.messages || [];
-                
-                // Create conversation modal
-                const modal = document.createElement('div');
-                modal.id = 'messageModal';
-                modal.style.cssText = `
-                    position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
-                    background: rgba(0,0,0,0.5); display: flex; align-items: center; 
-                    justify-content: center; z-index: 10000;
-                `;
-                
-                const conversationDiv = document.createElement('div');
-                conversationDiv.style.cssText = `
-                    background: white; border-radius: 8px; width: 90%; max-width: 600px;
-                    max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-                `;
-                
-                // Header
-                const header = document.createElement('div');
-                header.style.cssText = 'padding: 15px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;';
-                header.innerHTML = `
-                    <h3 style="margin: 0; color: #333;">Conversation with ${withUser}</h3>
-                    <button onclick="document.getElementById('messageModal').remove()" 
-                        style="background: #f0f0f0; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 18px;">✕</button>
-                `;
-                conversationDiv.appendChild(header);
-                
-                // Messages container
-                const messagesContainer = document.createElement('div');
-                messagesContainer.style.cssText = 'flex: 1; overflow-y: auto; padding: 15px; background: #f9f9f9;';
-                messagesContainer.innerHTML = messages.map(msg => `
-                    <div style="margin-bottom: 15px; text-align: ${msg.sender_username === currentUser ? 'right' : 'left'};">
-                        <div style="display: inline-block; max-width: 70%; background: ${msg.sender_username === currentUser ? '#667eea' : '#e0e0e0'}; 
-                                    color: ${msg.sender_username === currentUser ? 'white' : '#333'}; padding: 10px 15px; border-radius: 8px; word-wrap: break-word;">
-                            ${sanitizeWithLineBreaks(msg.content)}
-                        </div>
-                        <div style="font-size: 11px; color: #999; margin-top: 4px;">
-                            ${new Date(msg.sent_at).toLocaleString()}
-                            ${msg.is_read ? '✓✓' : '✓'}
-                        </div>
-                    </div>
-                `).join('');
-                conversationDiv.appendChild(messagesContainer);
-                
-                // Reply section (only allow if not patient, or if patient then only mark as read)
-                let replySection = document.createElement('div');
-                replySection.style.cssText = 'padding: 15px; border-top: 1px solid #e0e0e0; background: white;';
-                
-                if (currentUserRole === 'user') {
-                    // Patients can only mark as read, cannot reply
-                    replySection.innerHTML = `
-                        <button onclick="markConversationAsRead('${withUser}')" 
-                            style="width: 100%; background: #667eea; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer;">
-                            ✓ Mark as Read
-                        </button>
-                    `;
-                } else if (currentUserRole === 'clinician' || currentUserRole === 'therapist' || currentUserRole === 'developer') {
-                    // Clinicians/therapists/developers can send replies
-                    replySection.innerHTML = `
-                        <div style="display: flex; gap: 10px;">
-                            <input type="text" id="replyInput" placeholder="Type a message..." 
-                                style="flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                            <button onclick="sendReply('${withUser}')" 
-                                style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">
-                                Send
-                            </button>
-                        </div>
-                    `;
-                }
-                conversationDiv.appendChild(replySection);
-                
-                modal.appendChild(conversationDiv);
-                document.body.appendChild(modal);
-                modal.onclick = function(e) {
-                    if (e.target === modal) modal.remove();
-                };
-                
-            } catch (error) {
-                console.error('Failed to load conversation:', error);
-                alert('❌ Error loading conversation: ' + error.message);
-            }
-        }
-
-        async function sendReply(toUser) {
-            const replyInput = document.getElementById('replyInput');
-            const message = replyInput.value.trim();
-            
-            if (!message) {
-                alert('Please type a message');
-                return;
-            }
-            
-            try {
-                const response = await fetch('/api/messages/send', {
-                    method: 'POST',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        recipient_username: toUser,
-                        content: message
-                    })
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Failed to send message');
-                }
-                
-                alert('✅ Message sent!');
-                document.getElementById('messageModal').remove();
-                loadUserMessages(); // Refresh inbox
-                
-            } catch (error) {
-                console.error('Failed to send message:', error);
-                alert('❌ Error: ' + error.message);
-            }
-        }
-
-        async function markConversationAsRead(withUser) {
-            try {
-                console.log('📖 Marking conversation as read with:', withUser);
-                
-                const response = await fetch(`/api/messages/conversation/${encodeURIComponent(withUser)}`, {
-                    method: 'GET',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                
-                if (!response.ok) throw new Error('Failed to load messages');
-                
-                const data = await response.json();
-                const messages = data.messages || [];
-                console.log('📨 Found', messages.length, 'messages, marking unread ones as read');
-                
-                // Mark all unread messages as read
-                for (const msg of messages) {
-                    if (!msg.is_read && msg.recipient_username === currentUser) {
-                        console.log('  Marking message', msg.id, 'as read');
-                        const readResp = await fetch(`/api/messages/${msg.id}/read`, {
-                            method: 'PATCH',
-                            credentials: 'include',
-                            headers: { 'Content-Type': 'application/json' }
-                        });
-                        if (!readResp.ok) {
-                            console.error('  ❌ Failed to mark message', msg.id, 'as read');
-                        }
-                    }
-                }
-                
-                alert('✅ Messages marked as read!');
-                document.getElementById('messageModal').remove();
-                loadUserMessages(); // Refresh inbox
-                
-            } catch (error) {
-                console.error('❌ Failed to mark as read:', error);
-                alert('❌ Error: ' + error.message);
-            }
-        }
-
-        // Load messages when switching to messages tab
-        function checkAndLoadMessages() {
-            // Load messages for all non-developer users (patients, clinicians, therapists)
-            if (currentUserRole !== 'developer') {
-                loadUserMessages();
             }
         }
 

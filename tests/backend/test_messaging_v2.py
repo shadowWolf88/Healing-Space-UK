@@ -26,7 +26,10 @@ class TestSendMessage:
         conn, cursor = mock_db({
             'SELECT username, role FROM users WHERE username': [('test_patient', 'user')],
             'SELECT role FROM users WHERE username': [('clinician',)],
-            'INSERT INTO messages': [(1,)],
+            'INSERT INTO conversations': [(1,)],
+            'INSERT INTO conversation_participants': [(1,)],
+            'INSERT INTO messages': [(1, datetime.now())],
+            'UPDATE conversations': [(1,)],
         })
         client, user = auth_clinician
 
@@ -96,7 +99,7 @@ class TestSendMessage:
         assert resp.status_code == 400
 
     def test_send_message_recipient_not_found(self, auth_patient, mock_db):
-        """Non-existent recipient returns 404."""
+        """Non-existent recipient returns 400 (validation error)."""
         conn, cursor = mock_db({
             'SELECT username, role FROM users': [],  # no user found
         })
@@ -106,21 +109,27 @@ class TestSendMessage:
             'recipient': 'nonexistent_user',
             'content': 'Hello',
         })
-        assert resp.status_code == 404
+        assert resp.status_code == 400
 
-    def test_user_cannot_initiate_to_clinician(self, auth_patient, mock_db):
-        """Users cannot initiate messages to clinicians (only reply)."""
+    def test_user_can_message_clinician(self, auth_patient, mock_db):
+        """Users can send messages to clinicians."""
         conn, cursor = mock_db({
             'SELECT username, role FROM users WHERE username': [('test_clinician', 'clinician')],
             'SELECT role FROM users WHERE username': [('user',)],
+            'INSERT INTO conversations': [(1,)],
+            'INSERT INTO conversation_participants': [(1,)],
+            'INSERT INTO messages': [(1, datetime.now())],
+            'UPDATE conversations': [(1,)],
         })
         client, _ = auth_patient
 
-        resp = client.post('/api/messages/send', json={
-            'recipient': 'test_clinician',
-            'content': 'Hi doc',
-        })
-        assert resp.status_code == 403
+        with patch.object(api, 'log_event'), \
+             patch.object(api, 'send_notification'):
+            resp = client.post('/api/messages/send', json={
+                'recipient': 'test_clinician',
+                'content': 'Hi doc',
+            })
+        assert resp.status_code == 201
 
 
 # ==================== INBOX (GET /api/messages/inbox) ====================
